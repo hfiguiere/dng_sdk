@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_image.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_image.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  *  Support for working with image data in DNG SDK.
@@ -29,13 +29,15 @@
 #include "dng_rect.h"
 #include "dng_tag_types.h"
 #include "dng_types.h"
+#include "dng_uncopyable.h"
 
 /*****************************************************************************/
 
 /// \brief Class to get resource acquisition is instantiation behavior for tile
 /// buffers. Can be dirty or constant tile access.
 
-class dng_tile_buffer: public dng_pixel_buffer
+class dng_tile_buffer: public dng_pixel_buffer,
+					   private dng_uncopyable
 	{
 	
 	protected:
@@ -69,14 +71,6 @@ class dng_tile_buffer: public dng_pixel_buffer
 			return fRefData;
 			}
 			
-	private:
-
-		// Hidden copy constructor and assignment operator.
-	
-		dng_tile_buffer (const dng_tile_buffer &buffer);
-		
-		dng_tile_buffer & operator= (const dng_tile_buffer &buffer);
-	
 	};
 
 /*****************************************************************************/

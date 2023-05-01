@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_hue_sat_map.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_hue_sat_map.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -71,14 +71,15 @@ dng_hue_sat_map &dng_hue_sat_map::operator= (const dng_hue_sat_map &rhs)
 		else
 			{
 
-			this->SetDivisions (rhs.fHueDivisions,
-								rhs.fSatDivisions, 
-								rhs.fValDivisions);
+			fHueDivisions = rhs.fHueDivisions;
+			fSatDivisions = rhs.fSatDivisions;
+			fValDivisions = rhs.fValDivisions;
 
-			memcpy (this->GetDeltas (),
-					rhs.GetDeltas (),
-					DeltasCount () * sizeof (HSBModify));
+			fHueStep = rhs.fHueStep;
+			fValStep = rhs.fValStep;
 
+			fDeltas = rhs.fDeltas;
+				
 			}
 
 		}
@@ -121,11 +122,13 @@ void dng_hue_sat_map::SetDivisions (uint32 hueDivisions,
 	fHueStep = satDivisions;
 	fValStep = hueDivisions * fHueStep;
 
-	uint32 size = DeltasCount () * sizeof (HSBModify);
+	dng_safe_uint32 size (DeltasCount ());
+
+	size *= (uint32) sizeof (HSBModify);
 	
-	fDeltas.Allocate (size);
+	fDeltas.Allocate (size.Get ());
 	
-	DoZeroBytes (fDeltas.Buffer (), size);
+	DoZeroBytes (fDeltas.Buffer (), size.Get ());
 
 	}
 
@@ -153,7 +156,7 @@ void dng_hue_sat_map::GetDelta (uint32 hueDiv,
 				   hueDiv * fHueStep +
 				   satDiv;
 
-	const HSBModify *deltas = GetDeltas ();
+	const HSBModify *deltas = GetConstDeltas ();
 
 	modify.fHueShift = deltas [offset].fHueShift;
 	modify.fSatScale = deltas [offset].fSatScale;
@@ -163,10 +166,10 @@ void dng_hue_sat_map::GetDelta (uint32 hueDiv,
 
 /*****************************************************************************/
 
-void dng_hue_sat_map::SetDelta (uint32 hueDiv,
-								uint32 satDiv,
-								uint32 valDiv,
-								const HSBModify &modify)
+void dng_hue_sat_map::SetDeltaKnownWriteable (uint32 hueDiv,
+											  uint32 satDiv,
+											  uint32 valDiv,
+											  const HSBModify &modify)
 	{
 
 	if (hueDiv >= fHueDivisions ||
@@ -187,7 +190,7 @@ void dng_hue_sat_map::SetDelta (uint32 hueDiv,
 				   hueDiv * fHueStep +
 				   satDiv;
 
-	GetDeltas () [offset] = modify;
+	SafeGetDeltas () [offset] = modify;
 	
 	// The zero saturation entry is required to have a value scale
 	// of 1.0f.
@@ -204,7 +207,7 @@ void dng_hue_sat_map::SetDelta (uint32 hueDiv,
 						 
 			#endif
 			
-			GetDeltas () [offset] . fValScale = 1.0f;
+			SafeGetDeltas () [offset] . fValScale = 1.0f;
 		
 			}
 		
@@ -249,8 +252,8 @@ bool dng_hue_sat_map::operator== (const dng_hue_sat_map &rhs) const
 	if (!IsValid ())
 		return true;
 
-	return memcmp (GetDeltas (),
-				   rhs.GetDeltas (),
+	return memcmp (GetConstDeltas (),
+				   rhs.GetConstDeltas (),
 				   DeltasCount () * sizeof (HSBModify)) == 0;
 
 	}
@@ -282,8 +285,7 @@ dng_hue_sat_map * dng_hue_sat_map::Interpolate (const dng_hue_sat_map &map1,
 		{
 		
 		if (!map2.IsValid ())
-			{
-			
+			{			
 			DNG_REPORT ("map2 is not valid");
 			
 			ThrowProgramError ();
@@ -331,10 +333,10 @@ dng_hue_sat_map * dng_hue_sat_map::Interpolate (const dng_hue_sat_map &map1,
 	real32 w1 = (real32) weight1;
 	real32 w2 = 1.0f - w1;
 	
-	const HSBModify *data1 = map1.GetDeltas ();
-	const HSBModify *data2 = map2.GetDeltas ();
+	const HSBModify *data1 = map1.GetConstDeltas ();
+	const HSBModify *data2 = map2.GetConstDeltas ();
 	
-	HSBModify *data3 = result->GetDeltas ();
+	HSBModify *data3 = result->SafeGetDeltas ();
 	
 	uint32 count = map1.DeltasCount ();
 	

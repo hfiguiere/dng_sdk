@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2012 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_ifd.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_ifd.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  *  DNG image file directory support.
@@ -50,6 +50,10 @@ class dng_preview_info
 		PreviewColorSpaceEnum fColorSpace;
 		
 		dng_string fDateTime;
+		
+		real64 fRawToPreviewGain;
+		
+		uint32 fCacheVersion;
 		
 	public:
 	
@@ -186,6 +190,11 @@ class dng_ifd
 		dng_urational fDefaultCropSizeH;
 		dng_urational fDefaultCropSizeV;
 		
+		dng_urational fDefaultUserCropT;
+		dng_urational fDefaultUserCropL;
+		dng_urational fDefaultUserCropB;
+		dng_urational fDefaultUserCropR;
+		
 		uint32 fBayerGreenSplit;
 		
 		dng_urational fChromaBlurRadius;
@@ -219,12 +228,18 @@ class dng_ifd
 		
 		uint64 fThisIFD;
 		uint64 fNextIFD;
+		
+		int32 fCompressionQuality;
+		
+		bool fPatchFirstJPEGByte;
 
 	public:
 	
 		dng_ifd ();
 		
 		virtual ~dng_ifd ();
+
+		virtual dng_ifd * Clone () const;
 		
 		virtual bool ParseTag (dng_stream &stream,
 							   uint32 parentCode,
@@ -274,7 +289,9 @@ class dng_ifd
 		
 		virtual void ReadImage (dng_host &host,
 								dng_stream &stream,
-								dng_image &image) const;
+								dng_image &image,
+								dng_jpeg_image *jpegImage = NULL,
+								dng_fingerprint *jpegDigest = NULL) const;
 			
 	protected:
 							   

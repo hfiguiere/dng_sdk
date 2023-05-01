@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_pthread.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_pthread.h#3 $ */ 
+/* $DateTime: 2015/07/08 12:06:54 $ */
+/* $Change: 1029827 $ */
+/* $Author: krishnas $ */
 
 /*****************************************************************************/
 
@@ -45,6 +45,13 @@
 /*****************************************************************************/
 
 #include <stdlib.h>
+
+#if _MSC_VER >= 1600
+
+// Get this included so ETIMEDOUT is predefined.
+#include <errno.h>
+
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -130,18 +137,7 @@ int dng_pthread_rwlock_tryrdlock(dng_pthread_rwlock_t * rwlock);
 int dng_pthread_rwlock_trywrlock(dng_pthread_rwlock_t * rwlock);
 int dng_pthread_rwlock_unlock(dng_pthread_rwlock_t * rwlock);
 int dng_pthread_rwlock_wrlock(dng_pthread_rwlock_t * rwlock);
-
-typedef struct dng_pthread_rwlock_impl *dng_pthread_rwlock_t;
-typedef void *pthread_rwlockattr_t;
-
-int dng_pthread_rwlock_destroy(dng_pthread_rwlock_t * rwlock);
-int dng_pthread_rwlock_init(dng_pthread_rwlock_t * rwlock, const pthread_rwlockattr_t * attrs);
-int dng_pthread_rwlock_rdlock(dng_pthread_rwlock_t * rwlock);
-int dng_pthread_rwlock_tryrdlock(dng_pthread_rwlock_t * rwlock);
-int dng_pthread_rwlock_trywrlock(dng_pthread_rwlock_t * rwlock);
-int dng_pthread_rwlock_unlock(dng_pthread_rwlock_t * rwlock);
-int dng_pthread_rwlock_wrlock(dng_pthread_rwlock_t * rwlock);
-
+    
 // dng_pthread may maintain per-thread global state. This routine frees that global state.
 // there is no need to call this for threads created by dng_pthread and one can call
 // dng_pthread routines of a thread after dng_pthread_disassociate as the global state will
@@ -172,10 +168,13 @@ void dng_pthread_terminate();
 #undef PTHREAD_ONCE_INIT
 #define PTHREAD_ONCE_INIT DNG_PTHREAD_ONCE_INIT
 
+#if !qWinUniversal
 #define timespec dng_timespec
+#endif
 
 /* If it is defined on Windows, it probably has the wrong value... */
 #if defined(WIN32) || !defined(ETIMEDOUT)
+#undef ETIMEDOUT
 #define ETIMEDOUT DNG_ETIMEDOUT
 #endif
 

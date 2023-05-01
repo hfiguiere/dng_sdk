@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_resample.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_resample.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -151,6 +151,13 @@ class dng_resample_weights
 			
 			DNG_ASSERT (fWeights32->Buffer (), "Weights32 is NULL");
 			
+			if (fract >= kResampleSubsampleCount)
+				{
+				
+				ThrowBadFormat ();
+				
+				}
+			
 			return fWeights32->Buffer_real32 () + fract * fWeightStep;
 			
 			}
@@ -159,6 +166,13 @@ class dng_resample_weights
 			{
 			
 			DNG_ASSERT (fWeights16->Buffer (), "Weights16 is NULL");
+			
+			if (fract >= kResampleSubsampleCount)
+				{
+				
+				ThrowBadFormat ();
+				
+				}
 			
 			return fWeights16->Buffer_int16 () + fract * fWeightStep;
 			

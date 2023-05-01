@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_spline.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_spline.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -106,9 +106,9 @@ void dng_spline_solver::Solve ()
 	if ((end - start) > 2)
 		{
 
-		std::vector<real64> E;
-		std::vector<real64> F;
-		std::vector<real64> G;
+		dng_std_vector<real64> E;
+		dng_std_vector<real64> F;
+		dng_std_vector<real64> G;
 		
 		E.resize (count);
 		F.resize (count);

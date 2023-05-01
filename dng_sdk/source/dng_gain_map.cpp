@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_gain_map.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_gain_map.cpp#5 $ */ 
+/* $DateTime: 2016/01/20 16:00:38 $ */
+/* $Change: 1060141 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -136,12 +136,17 @@ dng_gain_map_interpolator::dng_gain_map_interpolator (const dng_gain_map &map,
 	else
 		{
 		
-		fRowIndex1 = (uint32) rowIndexF;
+		if (fMap.Points ().v < 1)
+			{
+			ThrowProgramError ("Empty gain map");
+			}
+
+		uint32 lastRow = static_cast<uint32> (fMap.Points ().v - 1);
 		
-		if ((int32) fRowIndex1 >= fMap.Points ().v - 1)
+		if (rowIndexF >= static_cast<real64> (lastRow))
 			{
 			
-			fRowIndex1 = fMap.Points ().v - 1;
+			fRowIndex1 = lastRow;
 			fRowIndex2 = fRowIndex1;
 			
 			fRowFract = 0.0f;
@@ -151,6 +156,11 @@ dng_gain_map_interpolator::dng_gain_map_interpolator (const dng_gain_map &map,
 		else
 			{
 			
+			// If we got here, we know that rowIndexF can safely be converted to
+			// a uint32 and that static_cast<uint32> (rowIndexF) < lastRow. This
+			// implies fRowIndex2 <= lastRow below.
+
+			fRowIndex1 = static_cast<uint32> (rowIndexF);
 			fRowIndex2 = fRowIndex1 + 1;
 			
 			fRowFract = (real32) (rowIndexF - (real64) fRowIndex1);
@@ -195,12 +205,17 @@ void dng_gain_map_interpolator::ResetColumn ()
 	else
 		{
 	
-		uint32 colIndex = (uint32) colIndexF;
+		if (fMap.Points ().h < 1)
+			{
+			ThrowProgramError ("Empty gain map");
+			}
+
+		uint32 lastCol = static_cast<uint32> (fMap.Points ().h - 1);
 		
-		if ((int32) colIndex >= fMap.Points ().h - 1)
+		if (colIndexF >= static_cast<real64> (lastCol))
 			{
 			
-			fValueBase = InterpolateEntry (fMap.Points ().h - 1);
+			fValueBase = InterpolateEntry (lastCol);
 			
 			fValueStep = 0.0f;
 			
@@ -211,6 +226,13 @@ void dng_gain_map_interpolator::ResetColumn ()
 		else
 			{
 			
+			// If we got here, we know that colIndexF can safely be converted
+			// to a uint32 and that static_cast<uint32> (colIndexF) < lastCol.
+			// This implies colIndex + 1 <= lastCol, i.e. the argument to
+			// InterpolateEntry() below is valid.
+
+			uint32 colIndex = static_cast<uint32> (colIndexF);
+
 			real64 base  = InterpolateEntry (colIndex);
 			real64 delta = InterpolateEntry (colIndex + 1) - base;
 			
@@ -231,6 +253,7 @@ void dng_gain_map_interpolator::ResetColumn ()
 
 /*****************************************************************************/
 
+DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 dng_gain_map::dng_gain_map (dng_memory_allocator &allocator,
 							const dng_point &points,
 							const dng_point_real64 &spacing,
@@ -248,9 +271,10 @@ dng_gain_map::dng_gain_map (dng_memory_allocator &allocator,
 	
 	{
 	
-	fBuffer.Reset (allocator.Allocate (fPoints.v *
-									   fPoints.h *
-									   fPlanes * sizeof (real32)));
+	fBuffer.Reset (allocator.Allocate (ComputeBufferSize (ttFloat, 
+														  fPoints, 
+														  fPlanes, 
+														  padSIMDBytes)));
 	
 	}
 					  
@@ -448,7 +472,7 @@ dng_gain_map * dng_gain_map::GetStream (dng_host &host,
 	if (linesSkipped)
 		{
 		
-		printf ("    ... %u map entries skipped\n", linesSkipped);
+		printf ("    ... %u map entries skipped\n", (unsigned) linesSkipped);
 		
 		}
 	
@@ -538,6 +562,8 @@ void dng_opcode_GainMap::ProcessArea (dng_negative & /* negative */,
 		uint32 cols = overlap.W ();
 		
 		uint32 colPitch = fAreaSpec.ColPitch ();
+		
+		colPitch = Min_uint32 (colPitch, cols);
 		
 		for (uint32 plane = fAreaSpec.Plane ();
 			 plane < fAreaSpec.Plane () + fAreaSpec.Planes () &&

@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_color_space.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_color_space.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  *  Standard gamma functions and color spaces used within the DNG SDK.
@@ -93,21 +93,24 @@ class dng_color_space
 	
 		virtual ~dng_color_space ();
 	
-		/// Return a matrix which transforms source data in this color space into the Profile Connection Space.
+		/// Return a matrix which transforms source data in this color space into the
+		/// Profile Connection Space.
 
 		const dng_matrix & MatrixToPCS () const
 			{
 			return fMatrixToPCS;
 			}
 		
-		/// Return a matrix which transforms Profile Connection Space data into this color space.
+		/// Return a matrix which transforms Profile Connection Space data into this
+		/// color space.
 
 		const dng_matrix & MatrixFromPCS () const
 			{
 			return fMatrixFromPCS;
 			}
 
-		/// Predicate which is true if this color space is monochrome (has only a single column)
+		/// Predicate which is true if this color space is monochrome (has only a
+		/// single column).
 
 		bool IsMonochrome () const
 			{
@@ -132,7 +135,8 @@ class dng_color_space
 			return GammaFunction ().Evaluate (x);
 			}
 
-		/// Map an input value through this color space's decoding gamma (inverse of the encoding gamma).
+		/// Map an input value through this color space's decoding gamma (inverse of
+		/// the encoding gamma).
 
 		real64 GammaDecode (real64 y) const
 			{

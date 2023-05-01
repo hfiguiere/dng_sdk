@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2011 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_tag_codes.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_tag_codes.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -61,6 +61,26 @@
 // TIFF tag number 51041 registered at:
 // http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
 // on 2009-5-7, purpose "Digital Negative".
+
+// TIFF tags numbers 51089 through 51091 registered at:
+// http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
+// on 2011-07-01, purpose "Digital Negative".
+
+// TIFF tags numbers 51107 through 51110 registered at:
+// http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
+// on 2011-09-22, purpose "Digital Negative".
+
+// TIFF tag number 51111 registered at:
+// http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
+// on 2011-10-07, purpose "Digital Negative".
+
+// TIFF tags numbers 51112 through 51114 registered at:
+// http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
+// on 2011-10-25, purpose "Digital Negative".
+
+// TIFF tags number 51125 registered at:
+// http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
+// on 2012-05-31, purpose "Digital Negative".
 
 /*****************************************************************************/
 
@@ -141,11 +161,17 @@ enum
 	tcExposureProgram				= 34850,
 	tcSpectralSensitivity			= 34852,
 	tcGPSInfo						= 34853,
-	tcISOSpeedRatings				= 34855,
+	tcISOSpeedRatings				= 34855,	// EXIF 2.3: PhotographicSensitivity.
 	tcOECF							= 34856,
 	tcInterlace						= 34857,
 	tcTimeZoneOffset				= 34858,
 	tcSelfTimerMode					= 34859,
+	tcSensitivityType				= 34864,
+	tcStandardOutputSensitivity		= 34865,
+	tcRecommendedExposureIndex		= 34866,
+	tcISOSpeed						= 34867,
+	tcISOSpeedLatitudeyyy			= 34868,
+	tcISOSpeedLatitudezzz			= 34869,
 	tcExifVersion					= 36864,
 	tcDateTimeOriginal				= 36867,
 	tcDateTimeDigitized				= 36868,
@@ -164,7 +190,7 @@ enum
 	tcFlashEnergy					= 37387,
 	tcSpatialFrequencyResponse		= 37388,
 	tcNoise							= 37389,
-	tcFocalPlaneXResolution 		= 37390,
+	tcFocalPlaneXResolution			= 37390,
 	tcFocalPlaneYResolution			= 37391,
 	tcFocalPlaneResolutionUnit		= 37392,
 	tcImageNumber					= 37393,
@@ -187,12 +213,12 @@ enum
 	tcRelatedSoundFile				= 40964,
 	tcInteroperabilityIFD			= 40965,
 	tcFlashEnergyExif				= 41483,
-	tcSpatialFrequencyResponseExif 	= 41484,
+	tcSpatialFrequencyResponseExif	= 41484,
 	tcFocalPlaneXResolutionExif		= 41486,
 	tcFocalPlaneYResolutionExif		= 41487,
 	tcFocalPlaneResolutionUnitExif	= 41488,
 	tcSubjectLocation				= 41492,
-	tcExposureIndexExif			    = 41493,
+	tcExposureIndexExif				= 41493,
 	tcSensingMethodExif				= 41495,
 	tcFileSource					= 41728,
 	tcSceneType						= 41729,
@@ -210,6 +236,12 @@ enum
 	tcDeviceSettingDescription		= 41995,
 	tcSubjectDistanceRange			= 41996,
 	tcImageUniqueID					= 42016,
+	tcCameraOwnerNameExif			= 42032,
+	tcCameraSerialNumberExif		= 42033,
+	tcLensSpecificationExif			= 42034,
+	tcLensMakeExif					= 42035,
+	tcLensModelExif					= 42036,
+	tcLensSerialNumberExif			= 42037,
 	tcGamma							= 42240,
 	tcPrintImageMatchingInfo		= 50341,
 	tcDNGVersion					= 50706,
@@ -262,7 +294,7 @@ enum
 	tcCurrentPreProfileMatrix		= 50834,
 	tcColorimetricReference			= 50879,
 	tcCameraCalibrationSignature	= 50931,
-	tcProfileCalibrationSignature  	= 50932,
+	tcProfileCalibrationSignature	= 50932,
 	tcExtraCameraProfiles			= 50933,
 	tcAsShotProfileName				= 50934,
 	tcNoiseReductionApplied			= 50935,
@@ -291,6 +323,18 @@ enum
 	tcOpcodeList2					= 51009,
 	tcOpcodeList3					= 51022,
 	tcNoiseProfile					= 51041,
+	tcOriginalDefaultFinalSize		= 51089,
+	tcOriginalBestQualityFinalSize	= 51090,
+	tcOriginalDefaultCropSize		= 51091,
+	tcProfileHueSatMapEncoding		= 51107,
+	tcProfileLookTableEncoding		= 51108,
+	tcBaselineExposureOffset		= 51109,
+	tcDefaultBlackRender			= 51110,
+	tcNewRawImageDigest				= 51111,
+	tcRawToPreviewGain				= 51112,
+	tcCacheBlob						= 51113,
+	tcCacheVersion					= 51114,
+	tcDefaultUserCrop				= 51125,
 	tcKodakKDCPrivateIFD			= 65024
 	};
 
@@ -311,6 +355,7 @@ enum
 	tcLastMakerNoteIFD				= 0x3FFFF,
 	
 	tcCanonMakerNote				= tcFirstMakerNoteIFD,
+	tcCasioMakerNote,
 	tcEpsonMakerNote,
 	tcFujiMakerNote,
 	tcHasselbladMakerNote,
@@ -332,6 +377,7 @@ enum
 	tcPhaseOneMakerNote,
 	tcRicohMakerNote,
 	tcRicohMakerNoteCameraInfo,
+	tcSamsungMakerNote,
 	tcSonyMakerNote,
 	tcSonyMakerNoteSubInfo,
 	tcSonyPrivateIFD1,
@@ -352,7 +398,8 @@ enum
 	tcPanasonicRAW,
 	tcFoveonX3F,
 	tcJPEG,
-	tcAdobePSD
+	tcAdobePSD,
+	tcPNG
 	
 	};
 
@@ -392,7 +439,8 @@ enum
 	tcGPSProcessingMethod			= 27,
 	tcGPSAreaInformation			= 28,
 	tcGPSDateStamp					= 29,
-	tcGPSDifferential				= 30
+	tcGPSDifferential				= 30,
+	tcGPSHPositioningError			= 31
 	};
 
 /*****************************************************************************/
@@ -417,19 +465,19 @@ enum JpegMarker
 	
 	M_TEM = 0x01,
 
-	M_SOF0  = 0xc0,
-	M_SOF1  = 0xc1,
-	M_SOF2  = 0xc2,
-	M_SOF3  = 0xc3,
-	M_DHT   = 0xc4,
-	M_SOF5  = 0xc5,
-	M_SOF6  = 0xc6,
-	M_SOF7  = 0xc7,
-	M_JPG   = 0xc8,
-	M_SOF9  = 0xc9,
+	M_SOF0	= 0xc0,
+	M_SOF1	= 0xc1,
+	M_SOF2	= 0xc2,
+	M_SOF3	= 0xc3,
+	M_DHT	= 0xc4,
+	M_SOF5	= 0xc5,
+	M_SOF6	= 0xc6,
+	M_SOF7	= 0xc7,
+	M_JPG	= 0xc8,
+	M_SOF9	= 0xc9,
 	M_SOF10 = 0xca,
 	M_SOF11 = 0xcb,
-	M_DAC   = 0xcc,
+	M_DAC	= 0xcc,
 	M_SOF13 = 0xcd,
 	M_SOF14 = 0xce,
 	M_SOF15 = 0xcf,
@@ -452,16 +500,16 @@ enum JpegMarker
 	M_DHP = 0xde,
 	M_EXP = 0xdf,
 
-	M_APP0  = 0xe0,
-	M_APP1  = 0xe1,
-	M_APP2  = 0xe2,
-	M_APP3  = 0xe3,
-	M_APP4  = 0xe4,
-	M_APP5  = 0xe5,
-	M_APP6  = 0xe6,
-	M_APP7  = 0xe7,
-	M_APP8  = 0xe8,
-	M_APP9  = 0xe9,
+	M_APP0	= 0xe0,
+	M_APP1	= 0xe1,
+	M_APP2	= 0xe2,
+	M_APP3	= 0xe3,
+	M_APP4	= 0xe4,
+	M_APP5	= 0xe5,
+	M_APP6	= 0xe6,
+	M_APP7	= 0xe7,
+	M_APP8	= 0xe8,
+	M_APP9	= 0xe9,
 	M_APP10 = 0xea,
 	M_APP11 = 0xeb,
 	M_APP12 = 0xec,
@@ -469,21 +517,21 @@ enum JpegMarker
 	M_APP14 = 0xee,
 	M_APP15 = 0xef,
 
-	M_JPG0  = 0xf0,
-	M_JPG1  = 0xf1,
-	M_JPG2  = 0xf2,
-	M_JPG3  = 0xf3,
-	M_JPG4  = 0xf4,
-	M_JPG5  = 0xf5,
-	M_JPG6  = 0xf6,
-	M_JPG7  = 0xf7,
-	M_JPG8  = 0xf8,
-	M_JPG9  = 0xf9,
+	M_JPG0	= 0xf0,
+	M_JPG1	= 0xf1,
+	M_JPG2	= 0xf2,
+	M_JPG3	= 0xf3,
+	M_JPG4	= 0xf4,
+	M_JPG5	= 0xf5,
+	M_JPG6	= 0xf6,
+	M_JPG7	= 0xf7,
+	M_JPG8	= 0xf8,
+	M_JPG9	= 0xf9,
 	M_JPG10 = 0xfa,
 	M_JPG11 = 0xfb,
 	M_JPG12 = 0xfc,
 	M_JPG13 = 0xfd,
-	M_COM   = 0xfe,
+	M_COM	= 0xfe,
 
 	M_ERROR = 0x100
 	

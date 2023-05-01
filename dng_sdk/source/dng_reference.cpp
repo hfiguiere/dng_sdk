@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_reference.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_reference.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -786,8 +786,8 @@ void RefCopyAreaR32_8 (const real32 *sPtr,
 			      
 			for (uint32 plane = 0; plane < planes; plane++)
 				{
-			
-				*dPtr2 = (uint8) (*sPtr2 * scale + 0.5f);
+				
+				*dPtr2 = (uint8) (Pin_Overrange (*sPtr2) * scale + 0.5f);
 				
 				sPtr2 += sPlaneStep;
 				dPtr2 += dPlaneStep;
@@ -839,7 +839,7 @@ void RefCopyAreaR32_16 (const real32 *sPtr,
 			for (uint32 plane = 0; plane < planes; plane++)
 				{
 			
-				*dPtr2 = (uint16) (*sPtr2 * scale + 0.5f);
+				*dPtr2 = (uint16) (Pin_Overrange (*sPtr2) * scale + 0.5f);
 				
 				sPtr2 += sPlaneStep;
 				dPtr2 += dPlaneStep;
@@ -891,7 +891,7 @@ void RefCopyAreaR32_S16 (const real32 *sPtr,
 			for (uint32 plane = 0; plane < planes; plane++)
 				{
 				
-				int32 x = (int32) (*sPtr2 * scale + 0.5f);
+				int32 x = (int32) (Pin_Overrange (*sPtr2) * scale + 0.5f);
 			
 				*dPtr2 = (int16) (x ^ 0x8000);
 				
@@ -1405,7 +1405,9 @@ void RefBaselineHueSatMap (const real32 *sPtrR,
 						   real32 *dPtrG,
 						   real32 *dPtrB,
 						   uint32 count,
-						   const dng_hue_sat_map &lut)
+						   const dng_hue_sat_map &lut,
+						   const dng_1d_table *encodeTable,
+						   const dng_1d_table *decodeTable)
 	{
 	
 	uint32 hueDivisions;
@@ -1417,14 +1419,19 @@ void RefBaselineHueSatMap (const real32 *sPtrR,
 					  valDivisions);
 					  
 	real32 hScale = (hueDivisions < 2) ? 0.0f : (hueDivisions * (1.0f / 6.0f));
-	real32 sScale = (real32) (satDivisions - 1);
-	real32 vScale = (real32) (valDivisions - 1);
+	real32 sScale = (real32) ((int32) satDivisions - 1);
+	real32 vScale = (real32) ((int32) valDivisions - 1);
 		
-	int32 maxHueIndex0 = hueDivisions - 1;
-	int32 maxSatIndex0 = satDivisions - 2;
-	int32 maxValIndex0 = valDivisions - 2;
-		
-	const dng_hue_sat_map::HSBModify *tableBase = lut.GetDeltas ();
+	int32 maxHueIndex0 = (int32) hueDivisions - 1;
+	int32 maxSatIndex0 = (int32) satDivisions - 2;
+	int32 maxValIndex0 = (int32) valDivisions - 2;
+
+	const bool hasEncodeTable = ((encodeTable != NULL) && (encodeTable->Table () != NULL));
+	const bool hasDecodeTable = ((decodeTable != NULL) && (decodeTable->Table () != NULL));
+
+	const bool hasTable = hasEncodeTable && hasDecodeTable;
+
+	const dng_hue_sat_map::HSBModify *tableBase = lut.GetConstDeltas ();
 	
 	int32 hueStep = satDivisions;
 	int32 valStep = hueDivisions * hueStep;
@@ -1447,9 +1454,11 @@ void RefBaselineHueSatMap (const real32 *sPtrR,
 		real32 b = sPtrB [j];
 		
 		real32 h, s, v;
-		
+
 		DNG_RGBtoHSV (r, g, b, h, s, v);
-		
+
+		real32 vEncoded = v;
+
 		real32 hueShift;
 		real32 satScale;
 		real32 valScale;
@@ -1514,9 +1523,14 @@ void RefBaselineHueSatMap (const real32 *sPtrR,
 		else
 			{
 		
-			real32 hScaled = h * hScale;
-			real32 sScaled = s * sScale;
-			real32 vScaled = v * vScale;
+			if (hasTable)
+				{
+				vEncoded = encodeTable->Interpolate (Pin_real32 (v));
+				}
+
+			real32 hScaled = h		  * hScale;
+			real32 sScaled = s		  * sScale;
+			real32 vScaled = vEncoded * vScale;
 			
 			int32 hIndex0 = (int32) hScaled;
 			int32 sIndex0 = (int32) sScaled;
@@ -1596,10 +1610,13 @@ void RefBaselineHueSatMap (const real32 *sPtrR,
 		h += hueShift;
 		
 		s = Min_real32 (s * satScale, 1.0f);
-		v = Min_real32 (v * valScale, 1.0f);
+
+		vEncoded = Pin_real32 (vEncoded * valScale);
+
+		v = hasTable ? decodeTable->Interpolate (vEncoded) : vEncoded;
 		
 		DNG_HSVtoRGB (h, s, v, r, g, b);
-		
+
 		dPtrR [j] = r;
 		dPtrG [j] = g;
 		dPtrB [j] = b;
@@ -2407,6 +2424,192 @@ void RefVignette16 (int16 *sPtr,
 	
 	}
 
+/*****************************************************************************/
+
+void RefVignette32 (real32 *sPtr,
+					const uint16 *mPtr,
+					uint32 rows,
+					uint32 cols,
+					uint32 planes,
+					int32 sRowStep,
+					int32 sPlaneStep,
+					int32 mRowStep,
+					uint32 mBits)
+	{
+	
+	const real32 kNorm = 1.0f / (1 << mBits);
+
+	switch (planes)
+		{
+		
+		case 1:
+			{
+			
+			for (uint32 row = 0; row < rows; row++)
+				{
+		
+				for (uint32 col = 0; col < cols; col++)
+					{
+			
+					real32 s = sPtr [col];
+
+					uint16 m = mPtr [col];
+
+					real32 scale = m * kNorm;
+			
+					s = Min_real32 (s * scale, 1.0f);
+			
+					sPtr [col] = s;
+			
+					}
+		
+				sPtr += sRowStep;
+		
+				mPtr += mRowStep;
+		
+				}
+
+			break;
+			
+			}
+
+		case 3:
+			{
+
+			real32 *rPtr = sPtr;
+			real32 *gPtr = rPtr + sPlaneStep;
+			real32 *bPtr = gPtr + sPlaneStep;
+			
+			for (uint32 row = 0; row < rows; row++)
+				{
+		
+				for (uint32 col = 0; col < cols; col++)
+					{
+			
+					real32 r = rPtr [col];
+					real32 g = gPtr [col];
+					real32 b = bPtr [col];
+			
+					uint16 m = mPtr [col];
+			
+					real32 scale = m * kNorm;
+
+					r = Min_real32 (r * scale, 1.0f);
+					g = Min_real32 (g * scale, 1.0f);
+					b = Min_real32 (b * scale, 1.0f);
+			
+					rPtr [col] = r;
+					gPtr [col] = g;
+					bPtr [col] = b;
+			
+					}
+		
+				rPtr += sRowStep;
+				gPtr += sRowStep;
+				bPtr += sRowStep;
+		
+				mPtr += mRowStep;
+		
+				}
+
+			break;
+			
+			}
+
+		case 4:
+			{
+			
+			real32 *aPtr = sPtr;
+			real32 *bPtr = aPtr + sPlaneStep;
+			real32 *cPtr = bPtr + sPlaneStep;
+			real32 *dPtr = cPtr + sPlaneStep;
+			
+			for (uint32 row = 0; row < rows; row++)
+				{
+		
+				for (uint32 col = 0; col < cols; col++)
+					{
+
+					real32 a = aPtr [col];
+					real32 b = bPtr [col];
+					real32 c = cPtr [col];
+					real32 d = dPtr [col];
+			
+					uint16 m = mPtr [col];
+
+					real32 scale = m * kNorm;
+
+					a = Min_real32 (a * scale, 1.0f);
+					b = Min_real32 (b * scale, 1.0f);
+					c = Min_real32 (c * scale, 1.0f);
+					d = Min_real32 (d * scale, 1.0f);
+			
+					aPtr [col] = a;
+					bPtr [col] = b;
+					cPtr [col] = c;
+					dPtr [col] = d;
+			
+					}
+		
+				aPtr += sRowStep;
+				bPtr += sRowStep;
+				cPtr += sRowStep;
+				dPtr += sRowStep;
+		
+				mPtr += mRowStep;
+		
+				}
+
+			break;
+			
+			}
+
+		default:
+			{
+			
+			for (uint32 plane = 0; plane < planes; plane++)
+				{
+
+				real32 *planePtr = sPtr;
+
+				const uint16 *maskPtr = mPtr;
+						
+				for (uint32 row = 0; row < rows; row++)
+					{
+		
+					for (uint32 col = 0; col < cols; col++)
+						{
+
+						real32 s = planePtr [col];
+			
+						uint16 m = maskPtr [col];
+
+						real32 scale = m * kNorm;
+			
+						s = Min_real32 (s * scale, 1.0f);
+			
+						planePtr [col] = s;
+
+						}
+		
+					planePtr += sRowStep;
+		
+					maskPtr += mRowStep;
+
+					}
+
+				sPtr += sPlaneStep;
+		
+				}
+
+			break;
+			
+			}
+	
+		}
+	
+	}
+
 /******************************************************************************/
 
 void RefMapArea16 (uint16 *dPtr,
@@ -2573,6 +2776,203 @@ void RefMapArea16 (uint16 *dPtr,
 			
 		}
 		
+	}
+
+/*****************************************************************************/
+
+void RefBaselineMapPoly32 (real32 *dPtr,
+						   const int32 rowStep,
+						   const uint32 rows,
+						   const uint32 cols,
+						   const uint32 rowPitch,
+						   const uint32 colPitch,
+						   const real32 *coefficients,
+						   const uint32 degree)
+	{
+
+	for (uint32 row = 0; row < rows; row += rowPitch)
+		{
+				
+		switch (degree)
+			{
+
+			case 0:
+				{
+
+				real32 y = Pin_real32 (0.0f,
+									   coefficients [0],
+									   1.0f);
+
+				for (uint32 col = 0; col < cols; col += colPitch)
+					{
+
+					dPtr [col] = y;
+
+					}
+
+				break;
+
+				}
+
+			case 1:
+				{
+
+				real32 c0 = coefficients [0];
+				real32 c1 = coefficients [1];
+
+				if (c0 == 0.0f)
+					{
+
+					if (c1 > 0.0f)
+						{
+
+						for (uint32 col = 0; col < cols; col += colPitch)
+							{
+
+							real32 x = dPtr [col];
+
+							real32 y = c1 * x;
+
+							dPtr [col] = Min_real32 (y, 1.0f);
+
+							}
+
+						}
+
+					else
+						{
+
+						for (uint32 col = 0; col < cols; col += colPitch)
+							{
+
+							dPtr [col] = 0.0f;
+
+							}
+
+						}
+
+					}
+
+				else
+					{
+
+					for (uint32 col = 0; col < cols; col += colPitch)
+						{
+
+						real32 x = dPtr [col];
+
+						real32 y = c0 +
+								   c1 * x;
+
+						dPtr [col] = Pin_real32 (0.0f, y, 1.0f);
+
+						}
+
+					}
+
+				break;
+
+				}
+
+			case 2:
+				{
+
+				for (uint32 col = 0; col < cols; col += colPitch)
+					{
+
+					real32 x = dPtr [col];
+
+					real32 y =	coefficients [0] + x *
+							   (coefficients [1] + x *
+							   (coefficients [2]));
+
+					dPtr [col] = Pin_real32 (0.0f, y, 1.0f);
+
+					}
+
+				break;
+
+				}
+
+			case 3:
+				{
+
+				for (uint32 col = 0; col < cols; col += colPitch)
+					{
+
+					real32 x = dPtr [col];
+
+					real32 y =	coefficients [0] + x *
+							   (coefficients [1] + x *
+							   (coefficients [2] + x *
+							   (coefficients [3])));
+
+					dPtr [col] = Pin_real32 (0.0f, y, 1.0f);
+
+					}
+
+				break;
+
+				}
+
+			case 4:
+				{
+
+				for (uint32 col = 0; col < cols; col += colPitch)
+					{
+
+					real32 x = dPtr [col];
+
+					real32 y =	coefficients [0] + x *
+							   (coefficients [1] + x *
+							   (coefficients [2] + x *
+							   (coefficients [3] + x *
+							   (coefficients [4]))));
+
+					dPtr [col] = Pin_real32 (0.0f, y, 1.0f);
+
+					}
+
+				break;
+
+				}
+
+			default:
+				{
+
+				for (uint32 col = 0; col < cols; col += colPitch)
+					{
+
+					real32 x = dPtr [col];
+
+					real32 y = coefficients [0];
+
+					real32 xx = x;
+
+					for (uint32 j = 1; j <= degree; j++)
+						{
+
+						y += coefficients [j] * xx;
+
+						xx *= x;
+
+						}
+
+					dPtr [col] = Pin_real32 (0.0f, y, 1.0f);
+
+					}
+
+				}
+
+			}
+
+		// Advance to the next row. Note that rowStep already accounts for the
+		// row pitch.
+
+		dPtr += rowStep;
+
+		}
+
 	}
 
 /*****************************************************************************/

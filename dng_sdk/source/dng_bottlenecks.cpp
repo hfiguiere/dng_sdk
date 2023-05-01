@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_bottlenecks.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_bottlenecks.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -65,7 +65,9 @@ dng_suite gDNGSuite =
 	RefEqualArea32,
 	RefVignetteMask16,
 	RefVignette16,
-	RefMapArea16
+	RefVignette32,
+	RefMapArea16,
+	RefBaselineMapPoly32
 	};
 
 /*****************************************************************************/

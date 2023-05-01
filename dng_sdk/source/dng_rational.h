@@ -6,10 +6,14 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_rational.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_rational.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
+
+/** \file
+ * Signed and unsigned rational data types.
+ */
 
 /*****************************************************************************/
 
@@ -60,6 +64,17 @@ class dng_srational
 			return !IsValid ();
 			}
 			
+		bool operator== (const dng_srational &r) const
+			{
+			return (n == r.n) &&
+				   (d == r.d);
+			}
+			
+		bool operator!= (const dng_srational &r) const
+			{
+			return !(*this == r);
+			}
+			
 		real64 As_real64 () const;
 		
 		void Set_real64 (real64 x, int32 dd = 0);
@@ -106,6 +121,17 @@ class dng_urational
 		bool NotValid () const
 			{
 			return !IsValid ();
+			}
+			
+		bool operator== (const dng_urational &r) const
+			{
+			return (n == r.n) &&
+				   (d == r.d);
+			}
+			
+		bool operator!= (const dng_urational &r) const
+			{
+			return !(*this == r);
 			}
 			
 		real64 As_real64 () const;

@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_bottlenecks.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_bottlenecks.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Indirection mechanism for performance-critical routines that might be replaced
@@ -384,7 +384,9 @@ typedef void (BaselineHueSatMapProc)
 			  real32 *dPtrG,
 			  real32 *dPtrB,
 			  uint32 count,
-			  const dng_hue_sat_map &lut);
+			  const dng_hue_sat_map &lut,
+			  const dng_1d_table *encodeTable,
+			  const dng_1d_table *decodeTable);
 			 
 /*****************************************************************************/
 
@@ -539,6 +541,19 @@ typedef void (Vignette16Proc)
 
 /*****************************************************************************/
 
+typedef void (Vignette32Proc)
+			 (real32 *sPtr,
+			  const uint16 *mPtr,
+			  uint32 rows,
+			  uint32 cols,
+			  uint32 planes,
+			  int32 sRowStep,
+			  int32 sPlaneStep,
+			  int32 mRowStep,
+			  uint32 mBits);
+
+/*****************************************************************************/
+
 typedef void (MapArea16Proc)
 			 (uint16 *dPtr,
 			  uint32 count0,
@@ -548,6 +563,18 @@ typedef void (MapArea16Proc)
 			  int32 step1,
 			  int32 step2,
 			  const uint16 *map);
+
+/*****************************************************************************/
+
+typedef void (BaselineMapPoly32Proc)
+			 (real32 *dPtr,
+			  const int32 rowStep,
+			  const uint32 rows,
+			  const uint32 cols,
+			  const uint32 rowPitch,
+			  const uint32 colPitch,
+			  const real32 *coefficients,
+			  const uint32 degree);
 
 /*****************************************************************************/
 
@@ -597,7 +624,9 @@ struct dng_suite
 	EqualArea32Proc			*EqualArea32;
 	VignetteMask16Proc		*VignetteMask16;
 	Vignette16Proc			*Vignette16;
+	Vignette32Proc			*Vignette32;
 	MapArea16Proc			*MapArea16;
+	BaselineMapPoly32Proc   *BaselineMapPoly32;
 	};
 
 /*****************************************************************************/
@@ -1322,7 +1351,9 @@ inline void DoBaselineHueSatMap (const real32 *sPtrR,
 								 real32 *dPtrG,
 								 real32 *dPtrB,
 								 uint32 count,
-								 const dng_hue_sat_map &lut)
+								 const dng_hue_sat_map &lut,
+								 const dng_1d_table *encodeTable,
+								 const dng_1d_table *decodeTable)
 	{
 	
 	(gDNGSuite.BaselineHueSatMap) (sPtrR,
@@ -1332,7 +1363,9 @@ inline void DoBaselineHueSatMap (const real32 *sPtrR,
 								   dPtrG,
 								   dPtrB,
 								   count,
-								   lut);
+								   lut,
+								   encodeTable,
+								   decodeTable);
 	
 	}
 
@@ -1642,6 +1675,31 @@ inline void DoVignette16 (int16 *sPtr,
 
 /*****************************************************************************/
 
+inline void DoVignette32 (real32 *sPtr,
+						  const uint16 *mPtr,
+						  uint32 rows,
+						  uint32 cols,
+						  uint32 planes,
+						  int32 sRowStep,
+						  int32 sPlaneStep,
+						  int32 mRowStep,
+						  uint32 mBits)
+	{
+	
+	(gDNGSuite.Vignette32) (sPtr,
+							mPtr,
+							rows,
+							cols,
+							planes,
+							sRowStep,
+							sPlaneStep,
+							mRowStep,
+							mBits);
+
+	}
+
+/*****************************************************************************/
+
 inline void DoMapArea16 (uint16 *dPtr,
 						 uint32 count0,
 						 uint32 count1,
@@ -1661,6 +1719,29 @@ inline void DoMapArea16 (uint16 *dPtr,
 						   step2,
 						   map);
 
+	}
+
+/*****************************************************************************/
+
+inline void DoBaselineMapPoly32 (real32 *dPtr,
+								 const int32 rowStep,
+								 const uint32 rows,
+								 const uint32 cols,
+								 const uint32 rowPitch,
+								 const uint32 colPitch,
+								 const real32 *coefficients,
+								 const uint32 degree)
+	{
+	
+	(gDNGSuite.BaselineMapPoly32) (dPtr,
+								   rowStep,
+								   rows,
+								   cols,
+								   rowPitch,
+								   colPitch,
+								   coefficients,
+								   degree);
+	
 	}
 
 /*****************************************************************************/

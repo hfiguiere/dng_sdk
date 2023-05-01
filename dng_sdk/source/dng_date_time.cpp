@@ -6,16 +6,17 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_date_time.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_date_time.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
 #include "dng_date_time.h"
 
 #include "dng_exceptions.h"
+#include "dng_globals.h"
 #include "dng_mutex.h"
 #include "dng_stream.h"
 #include "dng_string.h"
@@ -74,9 +75,9 @@ bool dng_date_time::IsValid () const
 	return fYear   >= 1 && fYear   <= 9999 &&
 		   fMonth  >= 1 && fMonth  <= 12   &&
 		   fDay    >= 1 && fDay    <= 31   &&
-		   fHour   >= 0 && fHour   <= 23   &&
-		   fMinute >= 0 && fMinute <= 59   &&
-		   fSecond >= 0 && fSecond <= 59;
+		   fHour   <= 23   &&
+		   fMinute <= 59   &&
+		   fSecond <= 59;
 	
 	}
 			
@@ -270,12 +271,14 @@ void dng_date_time_info::Decode_ISO_8601 (const char *s)
 			unsigned hour   = 0;
 			unsigned minute = 0;
 			unsigned second = 0;
+			
+			int items = sscanf (s + j + 1,
+								"%u:%u:%u",
+								&hour,
+								&minute,
+								&second);
 
-			if (sscanf (s + j + 1,
-						"%u:%u:%u",
-						&hour,
-						&minute,
-						&second) == 3)
+			if (items >= 2 && items <= 3)
 				{
 				
 				SetTime ((uint32) hour,
@@ -288,28 +291,33 @@ void dng_date_time_info::Decode_ISO_8601 (const char *s)
 					return;
 					}
 					
-				for (uint32 k = j + 1; k < len; k++)
+				if (items == 3)
 					{
 					
-					if (s [k] == '.')
+					for (uint32 k = j + 1; k < len; k++)
 						{
 						
-						while (++k < len && s [k] >= '0' && s [k] <= '9')
+						if (s [k] == '.')
 							{
 							
-							char ss [2];
+							while (++k < len && s [k] >= '0' && s [k] <= '9')
+								{
+								
+								char ss [2];
+								
+								ss [0] = s [k];
+								ss [1] = 0;
+								
+								fSubseconds.Append (ss);
+								
+								}
 							
-							ss [0] = s [k];
-							ss [1] = 0;
-							
-							fSubseconds.Append (ss);
+							break;
 							
 							}
 						
-						break;
-						
 						}
-					
+						
 					}
 					
 				for (uint32 k = j + 1; k < len; k++)
@@ -415,19 +423,37 @@ dng_string dng_date_time_info::Encode_ISO_8601 () const
 					}
 					
 				}
-			
-			// Kludge: Early versions of the XMP toolkit assume Zulu time
-			// if the time zone is missing.  It is safer for fill in the
-			// local time zone. 
-			
-			dng_time_zone tempZone = fTimeZone;
 				
-			if (tempZone.NotValid ())
+			if (gDNGUseFakeTimeZonesInXMP)
 				{
-				tempZone = LocalTimeZone (fDateTime);
+			
+				// Kludge: Early versions of the XMP toolkit assume Zulu time
+				// if the time zone is missing.  It is safer for fill in the
+				// local time zone. 
+				
+				dng_time_zone tempZone = fTimeZone;
+					
+				if (tempZone.NotValid ())
+					{
+					tempZone = LocalTimeZone (fDateTime);
+					}
+					
+				result.Append (tempZone.Encode_ISO_8601 ().Get ());
+				
 				}
 				
-			result.Append (tempZone.Encode_ISO_8601 ().Get ());
+			else
+				{
+						
+				// MWG: Now we don't fill in the local time zone.  So only
+				// add the time zone if it is known and valid.
+				
+				if (fTimeZone.IsValid ())
+					{
+					result.Append (fTimeZone.Encode_ISO_8601 ().Get ());
+					}
+					
+				}
 			
 			}
 			     
@@ -480,9 +506,9 @@ dng_string dng_date_time_info::Encode_IPTC_Date () const
 		
 		sprintf (s,
 			     "%04u%02u%02u",
-			     fDateTime.fYear,
-			     fDateTime.fMonth,
-			     fDateTime.fDay);
+			     (unsigned) fDateTime.fYear,
+			     (unsigned) fDateTime.fMonth,
+			     (unsigned) fDateTime.fDay);
 				 
 		result.Set (s);
 			     
@@ -549,7 +575,49 @@ void dng_date_time_info::Decode_IPTC_Time (const char *s)
 			}
 		
 		}
+		
+	else if (strlen (s) == 6)
+		{
+		
+		unsigned hour   = 0;
+		unsigned minute = 0;
+		unsigned second = 0;
+		
+		if (sscanf (s,
+					"%2u%2u%2u",
+					&hour,
+					&minute,
+					&second) == 3)
+			{
+					
+			SetTime ((uint32) hour,
+					 (uint32) minute,
+					 (uint32) second);
+										  
+			}
+
+		}
 	
+	else if (strlen (s) == 4)
+		{
+		
+		unsigned hour   = 0;
+		unsigned minute = 0;
+		
+		if (sscanf (s,
+					"%2u%2u",
+					&hour,
+					&minute) == 2)
+			{
+					
+			SetTime ((uint32) hour,
+					 (uint32) minute,
+					 0);
+										  
+			}
+
+		}
+
 	}
 		
 /*****************************************************************************/
@@ -559,19 +627,35 @@ dng_string dng_date_time_info::Encode_IPTC_Time () const
 	
 	dng_string result;
 	
-	if (IsValid () && !fDateOnly && fTimeZone.IsValid ())
+	if (IsValid () && !fDateOnly)
 		{
 		
 		char s [64];
 		
-		sprintf (s,
-				 "%02u%02u%02u%c%02u%02u",
-				 fDateTime.fHour,
-				 fDateTime.fMinute,
-				 fDateTime.fSecond,
-				 fTimeZone.OffsetMinutes () >= 0 ? '+' : '-',
-				 Abs_int32 (fTimeZone.OffsetMinutes ()) / 60,
-				 Abs_int32 (fTimeZone.OffsetMinutes ()) % 60);
+		if (fTimeZone.IsValid ())
+			{
+		
+			sprintf (s,
+					 "%02u%02u%02u%c%02u%02u",
+					 (unsigned) fDateTime.fHour,
+					 (unsigned) fDateTime.fMinute,
+					 (unsigned) fDateTime.fSecond,
+					 (int) (fTimeZone.OffsetMinutes () >= 0 ? '+' : '-'),
+					 (unsigned) (Abs_int32 (fTimeZone.OffsetMinutes ()) / 60),
+					 (unsigned) (Abs_int32 (fTimeZone.OffsetMinutes ()) % 60));
+					 
+			}
+			
+		else
+			{
+			
+			sprintf (s,
+					 "%02u%02u%02u",
+					 (unsigned) fDateTime.fHour,
+					 (unsigned) fDateTime.fMinute,
+					 (unsigned) fDateTime.fSecond);
+					 
+			}
 				 
 		result.Set (s);
 			     
@@ -717,11 +801,11 @@ dng_time_zone LocalTimeZone (const dng_date_time &dt)
 			CFGregorianDate gregDate;
 
 			gregDate.year   = dt.fYear;
-			gregDate.month  = dt.fMonth;
-			gregDate.day    = dt.fDay;
-			gregDate.hour   = dt.fHour;
-			gregDate.minute = dt.fMinute;
-			gregDate.second = dt.fSecond;
+			gregDate.month  = (SInt8) dt.fMonth;
+			gregDate.day    = (SInt8) dt.fDay;
+			gregDate.hour   = (SInt8) dt.fHour;
+			gregDate.minute = (SInt8) dt.fMinute;
+			gregDate.second = (SInt8) dt.fSecond;
 			
 			CFAbsoluteTime absTime = CFGregorianDateGetAbsoluteTime (gregDate, zoneRef);
 			
@@ -729,7 +813,7 @@ dng_time_zone LocalTimeZone (const dng_date_time &dt)
 		
 			CFRelease (zoneRef);
 			
-			result.SetOffsetSeconds (secondsDelta);
+			result.SetOffsetSeconds (Round_int32 (secondsDelta));
 			
 			if (result.IsValid ())
 				{

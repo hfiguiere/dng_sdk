@@ -6,10 +6,14 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_string.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_string.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
+
+/** \file
+ * Text string representation.
+ */
 
 /*****************************************************************************/
 
@@ -61,7 +65,12 @@ class dng_string
 		void Set_JIS_X208_1990 (const char *s);
 				  
 		static uint32 DecodeUTF8 (const char *&s,
-								  uint32 maxBytes = 6);
+								  uint32 maxBytes = 6,
+								  bool *isValid = NULL);
+								  
+		static bool IsUTF8 (const char *s);
+		
+		void Set_UTF8_or_System (const char *s);
 
 		uint32 Get_UTF16 (dng_memory_data &buffer) const;
 		
@@ -116,6 +125,9 @@ class dng_string
 					  const char *new_string,
 					  bool case_sensitive = true);
 		
+        void ReplaceChars (char oldChar,
+                           char newChar);
+		
 		bool TrimLeading (const char *s,
 						  bool case_sensitive = false);
 						  
@@ -124,7 +136,7 @@ class dng_string
 		void SetUppercase ();
 		
 		void SetLowercase ();
-		
+        
 		void SetLineEndings (char ending);
 		
 		void SetLineEndingsToNewLines ()
@@ -142,6 +154,10 @@ class dng_string
 		void ForceASCII ();
 		
 		int32 Compare (const dng_string &s) const;
+
+		// A utility to convert fields of numbers into comma separated numbers.
+
+		void NormalizeAsCommaSeparatedNumbers ();
 
 	};
 	

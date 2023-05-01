@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_mosaic_info.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_mosaic_info.cpp#5 $ */ 
+/* $DateTime: 2016/01/20 16:00:38 $ */
+/* $Change: 1060141 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -104,7 +104,7 @@ void dng_bilinear_kernel::Add (const dng_point &delta,
 		
 	// Add element to list.
 		
-	DNG_ASSERT (fCount < kMaxCount, "Too many kernel entries")
+    DNG_ASSERT (fCount < kMaxCount, "Too many kernel entries");
 	
 	fDelta    [fCount] = delta;
 	fWeight32 [fCount] = weight;
@@ -286,20 +286,22 @@ class dng_bilinear_pattern
 		
 	private:
 	
+		DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 		uint32 DeltaRow (uint32 row, int32 delta)
 			{
-			return (row + fPatRows + delta) % fPatRows;
+			return (row + fPatRows + (uint32) delta) % fPatRows;
 			}
 			
+		DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 		uint32 DeltaCol (uint32 col, int32 delta)
 			{
-			return (col + fPatCols + delta) % fPatCols;
+			return (col + fPatCols + (uint32) delta) % fPatCols;
 			}
 	
 		real32 LinearWeight1 (int32 d1, int32 d2)
 			{
 			if (d1 == d2)
-				return 1.0;
+				return 1.0f;
 			else
 				return d2 / (real32) (d2 - d1);
 			}
@@ -307,7 +309,7 @@ class dng_bilinear_pattern
 		real32 LinearWeight2 (int32 d1, int32 d2)
 			{
 			if (d1 == d2)
-				return 0.0;
+				return 0.0f;
 			else
 				return -d1 / (real32) (d2 - d1);
 			}
@@ -1125,7 +1127,8 @@ dng_fast_interpolator::dng_fast_interpolator (const dng_mosaic_info &info,
 											  const dng_point &downScale,
 											  uint32 srcPlane)
 	
-	:	dng_filter_task (srcImage,
+	:	dng_filter_task ("dng_fast_interpolator",
+						 srcImage,
 						 dstImage)
 	
 	,	fInfo       (info     )
@@ -1288,7 +1291,7 @@ void dng_fast_interpolator::ProcessArea (uint32 /* threadIndex */,
 				{
 				
 				uint32 t = total [plane];
-				uint32 c = count [plane];
+				uint32 c = Max_uint32 (count [plane], 1);
 				
 				dPtr [plane * dstPlaneStep] = (uint16) ((t + (c >> 1)) / c);
 				
@@ -1345,7 +1348,7 @@ void dng_mosaic_info::Parse (dng_host & /* host */,
 	
 	// Find main image IFD.
 	
-	dng_ifd &rawIFD = *info.fIFD [info.fMainIndex].Get ();
+	dng_ifd &rawIFD = *info.fIFD [info.fMainIndex];
 	
 	// This information only applies to CFA images.
 	
@@ -1533,10 +1536,10 @@ bool dng_mosaic_info::IsSafeDownScale (const dng_point &downScale) const
 	test.v = Min_int32 (downScale.v, fCFAPatternSize.v);
 	test.h = Min_int32 (downScale.h, fCFAPatternSize.h);
 		
-	for (int32 phaseV = 0; phaseV <= fCFAPatternSize.v - test.v; phaseV++)
+	for (int32 phaseV = 0; phaseV < fCFAPatternSize.v; phaseV++)
 		{
 		
-		for (int32 phaseH = 0; phaseH <= fCFAPatternSize.h - test.h; phaseH++)
+		for (int32 phaseH = 0; phaseH < fCFAPatternSize.h; phaseH++)
 			{
 			
 			uint32 plane;
@@ -1556,8 +1559,8 @@ bool dng_mosaic_info::IsSafeDownScale (const dng_point &downScale) const
 				for (int32 srcCol = 0; srcCol < test.h; srcCol++)
 					{
 					
-					uint8 srcKey = fCFAPattern [srcRow + phaseV]
-											   [srcCol + phaseH];
+					uint8 srcKey = fCFAPattern [(srcRow + phaseV) % fCFAPatternSize.v]
+											   [(srcCol + phaseH) % fCFAPatternSize.h];
 											   
 					for (plane = 0; plane < fColorPlanes; plane++)
 						{
@@ -1820,18 +1823,17 @@ void dng_mosaic_info::InterpolateGeneric (dng_host &host,
 	
 	// Allocate source buffer.
 	
-	dng_pixel_buffer srcBuffer;
+	dng_pixel_buffer srcBuffer (dng_rect (srcTileSize), 
+								srcPlane, 
+								1,
+								srcImage.PixelType (), 
+								pcInterleaved, 
+								NULL);
 	
-	srcBuffer.fPlane = srcPlane;
-	
-	srcBuffer.fRowStep = srcTileSize.h;
-
-	srcBuffer.fPixelType = srcImage.PixelType ();
-	srcBuffer.fPixelSize = srcImage.PixelSize ();
-	
-	uint32 srcBufferSize = srcBuffer.fPixelSize *
-						   srcBuffer.fRowStep *
-						   srcTileSize.v;
+	uint32 srcBufferSize = ComputeBufferSize (srcBuffer.fPixelType,
+											  srcTileSize, 
+											  srcBuffer.fPlanes,
+											  padNone);
 	
 	AutoPtr<dng_memory_block> srcData (host.Allocate (srcBufferSize));
 	
@@ -1839,30 +1841,28 @@ void dng_mosaic_info::InterpolateGeneric (dng_host &host,
 	
 	// Allocate destination buffer.
 	
-	dng_pixel_buffer dstBuffer;
+	dng_pixel_buffer dstBuffer (dng_rect (dstTileSize), 
+								0, 
+								fColorPlanes,
+								dstImage.PixelType (), 
+								pcRowInterleaved, 
+								NULL);
 	
-	dstBuffer.fPlanes = fColorPlanes;
-	
-	dstBuffer.fRowStep   = dstTileSize.h * fColorPlanes;
-	dstBuffer.fPlaneStep = dstTileSize.h;
-	
-	dstBuffer.fPixelType = dstImage.PixelType ();
-	dstBuffer.fPixelSize = dstImage.PixelSize ();
-	
-	uint32 dstBufferSize = dstBuffer.fPixelSize *
-						   dstBuffer.fRowStep *
-						   dstTileSize.v;
+	uint32 dstBufferSize = ComputeBufferSize (dstBuffer.fPixelType,
+											  dstTileSize, 
+											  dstBuffer.fPlanes,
+											  padNone);
 	
 	AutoPtr<dng_memory_block> dstData (host.Allocate (dstBufferSize));
 	
 	dstBuffer.fData = dstData->Buffer ();
 	
 	// Create interpolator.
-	
-	dng_bilinear_interpolator interpolator (*this,
-											srcBuffer.fRowStep,
-											srcBuffer.fColStep);
-											
+
+	AutoPtr<dng_bilinear_interpolator> interpolator (new dng_bilinear_interpolator (*this,
+																					srcBuffer.fRowStep,
+																					srcBuffer.fColStep));
+
 	// Iterate over destination tiles.
 	
 	dng_rect dstArea;
@@ -1911,8 +1911,8 @@ void dng_mosaic_info::InterpolateGeneric (dng_host &host,
 						  
 			// Process data.
 			
-			interpolator.Interpolate (srcBuffer,
-									  dstBuffer);
+			interpolator->Interpolate (srcBuffer,
+									   dstBuffer);
 									  
 			// Save results.
 			
@@ -1960,8 +1960,23 @@ void dng_mosaic_info::Interpolate (dng_host &host,
 							  	   const dng_image &srcImage,
 								   dng_image &dstImage,
 								   const dng_point &downScale,
-								   uint32 srcPlane) const
+								   uint32 srcPlane,
+                                   dng_matrix *scaleTransforms) const
 	{
+    
+    if (scaleTransforms && downScale != dng_point (1, 1))
+        {
+        
+        for (uint32 plane = 0; plane < dstImage.Planes (); plane++)
+            {
+        
+            scaleTransforms [plane] = dng_matrix_3by3 (1.0 / downScale.v, 0.0, 0.0,
+                                                       0.0, 1.0 / downScale.h, 0.0,
+                                                       0.0, 0.0, 1.0);
+                
+            }
+        
+        }
 	
 	if (downScale == dng_point (1, 1))
 		{

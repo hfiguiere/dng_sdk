@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_orientation.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_orientation.h#3 $ */ 
+/* $DateTime: 2015/08/19 14:48:17 $ */
+/* $Change: 1036960 $ */
+/* $Author: erichan $ */
 
 /******************************************************************************/
 
@@ -18,6 +18,7 @@
 
 /******************************************************************************/
 
+#include "dng_matrix.h"
 #include "dng_types.h"
 
 /******************************************************************************/
@@ -30,6 +31,10 @@ class dng_orientation
 		// We internally use an orientation encoding ("Adobe") that is
 		// different than the TIFF orientation encoding ("TIFF").
 		
+		uint32 fAdobeOrientation;
+
+	public:
+
 		enum
 			{
 			kNormal      = 0,
@@ -42,10 +47,6 @@ class dng_orientation
 			kMirror90CCW = 7,
 			kUnknown     = 8
 			};
-	
-		uint32 fAdobeOrientation;
-		
-	public:
 	
 		dng_orientation ()
 		
@@ -179,6 +180,20 @@ class dng_orientation
 			{
 			*this = *this - b;
 			}
+
+		// If horizontalFirstRow is true, then the x (horizontal h) component
+		// of the transform will be in the first row of the resulting matrix,
+		// and the y (vertical v) component will be in the second row.
+		// 
+		// If horizontalFirstRow is false, then the y (vertical v) component
+		// of the transform will be in the first row of the resulting matrix,
+		// and the x (horizontal h) component will be in the second row.
+
+		bool CalcForwardMatrix3by3 (dng_matrix &matrix,
+									bool horizontalFirstRow) const;
+		
+		bool CalcForwardMatrix4by4 (dng_matrix &matrix,
+									bool horizontalFirstRow) const;
 		
 	};
 

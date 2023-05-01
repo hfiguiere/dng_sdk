@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_xmp.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_xmp.cpp#7 $ */ 
+/* $DateTime: 2016/03/19 02:24:19 $ */
+/* $Change: 1068189 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -78,7 +78,23 @@ dng_xmp::~dng_xmp ()
 		}
 	
 	}
+
+/*****************************************************************************/
+
+dng_xmp * dng_xmp::Clone () const
+	{
 	
+	dng_xmp *result = new dng_xmp (*this);
+	
+	if (!result)
+		{
+		ThrowMemoryFull ();
+		}
+	
+	return result;
+	
+	}
+
 /*****************************************************************************/
 
 void dng_xmp::TrimDecimal (char *s)
@@ -109,24 +125,18 @@ void dng_xmp::TrimDecimal (char *s)
 	
 /*****************************************************************************/
 
-dng_string dng_xmp::EncodeFingerprint (const dng_fingerprint &f)
+dng_string dng_xmp::EncodeFingerprint (const dng_fingerprint &f,
+									   bool allowInvalid)
 	{
 	
 	dng_string result;
 	
-	if (f.IsValid ())
+	if (f.IsValid () || allowInvalid)
 		{
 		
-		char s [33];
+		char s [dng_fingerprint::kDNGFingerprintSize * 2 + 1];
 		
-		for (uint32 j = 0; j < 16; j++)
-			{
-			
-			sprintf (s + j * 2,
-					 "%02X",
-					 f.data [j]);
-					
-			}
+		f.ToUtf8HexString (s);
 			
 		result.Set (s);
 		
@@ -144,20 +154,7 @@ dng_fingerprint dng_xmp::DecodeFingerprint (const dng_string &s)
 	dng_fingerprint result;
 	
 	if (s.Length () == 32)
-		{
-		
-		for (uint32 j = 0; j < 16; j++)
-			{
-			
-			unsigned x = 0;
-			
-			sscanf (s.Get () + j * 2, "%02X", &x);
-			
-			result.data [j] = (uint8) x;
-			
-			}
-			
-		}
+		result.FromUtf8HexString (s.Get ());
 	
 	return result;
 	
@@ -268,9 +265,9 @@ dng_string dng_xmp::EncodeGPSCoordinate (const dng_string &ref,
 								
 				sprintf (s,
 						 "%u,%u,%u%c",
-						 coord [0].n,
-						 coord [1].n,
-						 coord [2].n,
+						 (unsigned) coord [0].n,
+						 (unsigned) coord [1].n,
+						 (unsigned) coord [2].n,
 						 refChar);
 			
 				}
@@ -303,7 +300,7 @@ dng_string dng_xmp::EncodeGPSCoordinate (const dng_string &ref,
 				
 				sprintf (s,
 						 "%u,%s%c",
-						 d,
+						 (unsigned) d,
 						 min,
 						 refChar);
 
@@ -347,28 +344,37 @@ void dng_xmp::DecodeGPSCoordinate (const dng_string &s,
 			
 			ss.Truncate (ss.Length () - 1);
 			
-			unsigned degrees = 0;
+			ss.NormalizeAsCommaSeparatedNumbers();
+				
+			int degrees = 0;
 			
 			real64 minutes = 0.0;
 			real64 seconds = 0.0;
 			
 			int count = sscanf (ss.Get (),
-								"%u,%lf,%lf",
+								"%d,%lf,%lf",
 								&degrees,
 								&minutes,
 								&seconds);
 								
-			if (count < 2)
+			if (count < 1)
+				{
+				return;
+				}
+				
+			// The degree, minute, second values should always be positive.
+			
+			if (degrees < 0 || minutes < 0 || seconds < 0)
 				{
 				return;
 				}
 				
 			coord [0] = dng_urational ((uint32) degrees, 1);
 			
-			if (count == 2)
+			if (count <= 2)
 				{
 				coord [1].Set_real64 (minutes, 10000);
-				coord [2].Clear ();
+				coord [2] = dng_urational (0, 1);
 				}
 			else
 				{
@@ -504,7 +510,7 @@ void dng_xmp::DecodeGPSDateTime (const dng_string &s,
 				char ss [64];
 				
 				sprintf (ss,
-						 "%04u-%02u-%02u",
+						 "%04u:%02u:%02u",
 						 year,
 						 month,
 						 day);
@@ -553,14 +559,16 @@ void dng_xmp::Parse (dng_host &host,
 dng_memory_block * dng_xmp::Serialize (bool asPacket,
 									   uint32 targetBytes,
 									   uint32 padBytes,
-									   bool forJPEG) const
+									   bool forJPEG,
+									   bool compact) const
 	{
 	
 	return fSDK->Serialize (fAllocator,
 							asPacket,
 							targetBytes,
 							padBytes,
-							forJPEG);
+							forJPEG,
+							compact);
 	
 	}
 	
@@ -593,6 +601,15 @@ bool dng_xmp::HasMeta () const
 	{
 	
 	return fSDK->HasMeta ();
+	
+	}
+
+/*****************************************************************************/
+
+void * dng_xmp::GetPrivateMeta ()
+	{
+	
+	return fSDK->GetPrivateMeta ();
 	
 	}
 
@@ -648,6 +665,54 @@ void dng_xmp::RemoveProperties (const char *ns)
 
 /*****************************************************************************/
 
+void dng_xmp::RemoveEmptyStringOrArray (const char *ns,
+								        const char *path)
+	{
+	
+	if (path == NULL || path [0] == 0)
+		{
+		return;
+		}
+	
+	if (fSDK->IsEmptyString (ns, path) ||
+		fSDK->IsEmptyArray  (ns, path))
+		{
+		
+		Remove (ns, path);
+		
+		}
+	
+	}
+
+/*****************************************************************************/
+
+static bool RemoveEmptyStringsAndArraysCallback (const char *ns,
+												 const char *path,
+												 void *callbackData)
+	{
+	
+	dng_xmp *xmp = (dng_xmp *) callbackData;
+	
+	xmp->RemoveEmptyStringOrArray (ns, path);
+	
+	return true;
+	
+	}
+
+/*****************************************************************************/
+
+void dng_xmp::RemoveEmptyStringsAndArrays (const char *ns)
+	{
+	
+	IteratePaths (RemoveEmptyStringsAndArraysCallback,
+				  (void *) this,
+				  ns,
+				  NULL);
+	
+	}
+		
+/*****************************************************************************/
+
 void dng_xmp::Set (const char *ns,
 				   const char *path,
 				   const char *text)
@@ -694,7 +759,7 @@ bool dng_xmp::SyncString (const char *ns,
 	if (options & ignoreXMP)
 		{
 		
-		if (isDefault)
+		if (isDefault || (options & removeXMP))
 			{
 			
 			Remove (ns, path);
@@ -717,7 +782,19 @@ bool dng_xmp::SyncString (const char *ns,
 	if ((options & preferNonXMP) && !isDefault)
 		{
 		
-		SetString (ns, path, s);
+		if (options & removeXMP)
+			{
+			
+			Remove (ns, path);
+			
+			}
+			
+		else
+			{
+		
+			SetString (ns, path, s);
+			
+			}
 				   
 		return false;
 		
@@ -731,35 +808,13 @@ bool dng_xmp::SyncString (const char *ns,
 		if (GetString (ns, path, s))
 			{
 			
-			if (options & requireASCII)
+			if (options & removeXMP)
 				{
 				
-				if (options & preferNonXMP)
-					{
-					
-					if (!s.IsASCII ())
-						{
-						
-						// We prefer non-XMP, but we also require
-						// ASCII and the XMP contains non-ASCII
-						// charactors.  So keep the non-XMP as a
-						// null string.
-					
-						s.Clear ();
-						
-						}
-					
-					}
-					
-				else
-					{
-					
-					s.ForceASCII ();
-					
-					}
+				Remove (ns, path);
 				
 				}
-				
+
 			return true;
 						
 			}
@@ -768,7 +823,14 @@ bool dng_xmp::SyncString (const char *ns,
 		
 	// Sync 4: From non-XMP to XMP.
 	
-	if (!isDefault)
+	if (options & removeXMP)
+		{
+		
+		Remove (ns, path);
+		
+		}
+		
+	else if (!isDefault)
 		{
 		
 		SetString (ns, path, s);
@@ -947,12 +1009,34 @@ void dng_xmp::SetAltLangDefault (const char *ns,
 
 /*****************************************************************************/
 
+void dng_xmp::SetLocalString (const char *ns,
+							  const char *path,
+							  const dng_local_string &s)
+	{
+		
+	fSDK->SetLocalString (ns, path, s);
+
+	}
+
+/*****************************************************************************/
+
 bool dng_xmp::GetAltLangDefault (const char *ns,
 								 const char *path,
 								 dng_string &s) const
 	{
 			
 	return fSDK->GetAltLangDefault (ns, path, s);
+
+	}
+
+/*****************************************************************************/
+
+bool dng_xmp::GetLocalString (const char *ns,
+							  const char *path,
+							  dng_local_string &s) const
+	{
+			
+	return fSDK->GetLocalString (ns, path, s);
 
 	}
 
@@ -1007,36 +1091,7 @@ bool dng_xmp::SyncAltLangDefault (const char *ns,
 		
 		if (GetAltLangDefault (ns, path, s))
 			{
-			
-			if (options & requireASCII)
-				{
-				
-				if (options & preferNonXMP)
-					{
-					
-					if (!s.IsASCII ())
-						{
-						
-						// We prefer non-XMP, but we also require
-						// ASCII and the XMP contains non-ASCII
-						// charactors.  So keep the non-XMP as a
-						// null string.
-					
-						s.Clear ();
-						
-						}
-					
-					}
-					
-				else
-					{
-					
-					s.ForceASCII ();
-					
-					}
-				
-				}
-				
+							
 			return true;
 						
 			}
@@ -1225,7 +1280,7 @@ void dng_xmp::Sync_uint32 (const char *ns,
 	if (options & ignoreXMP)
 		{
 		
-		if (isDefault)
+		if (isDefault || (options & removeXMP))
 			{
 			
 			Remove (ns, path);
@@ -1248,7 +1303,19 @@ void dng_xmp::Sync_uint32 (const char *ns,
 	if ((options & preferNonXMP) && !isDefault)
 		{
 		
-		Set_uint32 (ns, path, x);
+		if (options & removeXMP)
+			{
+			
+			Remove (ns, path);
+			
+			}
+			
+		else
+			{
+			
+			Set_uint32 (ns, path, x);
+			
+			}
 				   
 		return;
 		
@@ -1262,6 +1329,13 @@ void dng_xmp::Sync_uint32 (const char *ns,
 		if (Get_uint32 (ns, path, x))
 			{
 							
+			if (options & removeXMP)
+				{
+				
+				Remove (ns, path);
+				
+				}
+
 			return;
 						
 			}
@@ -1270,7 +1344,14 @@ void dng_xmp::Sync_uint32 (const char *ns,
 		
 	// Sync 4: From non-XMP to XMP.
 	
-	if (!isDefault)
+	if (options & removeXMP)
+		{
+		
+		Remove (ns, path);
+		
+		}
+		
+	else if (!isDefault)
 		{
 		
 		Set_uint32 (ns, path, x);
@@ -1484,7 +1565,7 @@ void dng_xmp::Sync_urational (const char *ns,
 	if (options & ignoreXMP)
 		{
 		
-		if (isDefault)
+		if (isDefault || (options & removeXMP))
 			{
 			
 			Remove (ns, path);
@@ -1507,7 +1588,19 @@ void dng_xmp::Sync_urational (const char *ns,
 	if ((options & preferNonXMP) && !isDefault)
 		{
 		
-		Set_urational (ns, path, r);
+		if (options & removeXMP)
+			{
+			
+			Remove (ns, path);
+			
+			}
+			
+		else
+			{
+			
+			Set_urational (ns, path, r);
+			
+			}
 				   
 		return;
 		
@@ -1521,6 +1614,13 @@ void dng_xmp::Sync_urational (const char *ns,
 		if (Get_urational (ns, path, r))
 			{
 							
+			if (options & removeXMP)
+				{
+				
+				Remove (ns, path);
+				
+				}
+
 			return;
 						
 			}
@@ -1529,7 +1629,14 @@ void dng_xmp::Sync_urational (const char *ns,
 		
 	// Sync 4: From non-XMP to XMP.
 	
-	if (!isDefault)
+	if (options & removeXMP)
+		{
+		
+		Remove (ns, path);
+		
+		}
+		
+	else if (!isDefault)
 		{
 		
 		Set_urational (ns, path, r);
@@ -1611,7 +1718,7 @@ void dng_xmp::Sync_srational (const char *ns,
 	if (options & ignoreXMP)
 		{
 		
-		if (isDefault)
+		if (isDefault || (options & removeXMP))
 			{
 			
 			Remove (ns, path);
@@ -1634,7 +1741,19 @@ void dng_xmp::Sync_srational (const char *ns,
 	if ((options & preferNonXMP) && !isDefault)
 		{
 		
-		Set_srational (ns, path, r);
+		if (options & removeXMP)
+			{
+			
+			Remove (ns, path);
+			
+			}
+			
+		else
+			{
+			
+			Set_srational (ns, path, r);
+			
+			}
 				   
 		return;
 		
@@ -1648,6 +1767,13 @@ void dng_xmp::Sync_srational (const char *ns,
 		if (Get_srational (ns, path, r))
 			{
 							
+			if (options & removeXMP)
+				{
+				
+				Remove (ns, path);
+				
+				}
+
 			return;
 						
 			}
@@ -1656,7 +1782,14 @@ void dng_xmp::Sync_srational (const char *ns,
 		
 	// Sync 4: From non-XMP to XMP.
 	
-	if (!isDefault)
+	if (options & removeXMP)
+		{
+		
+		Remove (ns, path);
+		
+		}
+		
+	else if (!isDefault)
 		{
 		
 		Set_srational (ns, path, r);
@@ -1698,10 +1831,11 @@ bool dng_xmp::GetFingerprint (const char *ns,
 
 void dng_xmp::SetFingerprint (const char *ns,
 							  const char *tag,
-							  const dng_fingerprint &print)
+							  const dng_fingerprint &print,
+							  bool allowInvalid)
 	{
 	
-	dng_string s = EncodeFingerprint (print);
+	dng_string s = EncodeFingerprint (print, allowInvalid);
 	
 	if (s.IsEmpty ())
 		{
@@ -1716,6 +1850,58 @@ void dng_xmp::SetFingerprint (const char *ns,
 		SetString (ns, tag, s);
 		
 		}
+	
+	}
+
+/******************************************************************************/
+
+void dng_xmp::SetVersion2to4 (const char *ns,
+							  const char *path,
+							  uint32 version)
+	{
+	
+	char buf [32];
+
+	if (version & 0x000000ff)
+		{
+	
+		// x.x.x.x
+	
+		sprintf (buf,
+				 "%u.%u.%u.%u",
+				 (unsigned) ((version >> 24) & 0xff),
+				 (unsigned) ((version >> 16) & 0xff),
+				 (unsigned) ((version >>  8) & 0xff),
+				 (unsigned) ((version	   ) & 0xff));
+	
+		}
+
+	else if (version & 0x0000ff00)
+		{
+	
+		// x.x.x
+	
+		sprintf (buf,
+				 "%u.%u.%u",
+				 (unsigned) ((version >> 24) & 0xff),
+				 (unsigned) ((version >> 16) & 0xff),
+				 (unsigned) ((version >>  8) & 0xff));
+	
+		}
+
+	else
+		{
+	
+		// x.x
+	
+		sprintf (buf,
+				 "%u.%u",
+				 (unsigned) ((version >> 24) & 0xff),
+				 (unsigned) ((version >> 16) & 0xff));
+	
+		}
+		
+	Set (ns, path, buf);
 	
 	}
 
@@ -1748,6 +1934,15 @@ void dng_xmp::SetIPTCDigest (dng_fingerprint &digest)
 					"LegacyIPTCDigest",
 					digest);
 		
+	}
+		
+/******************************************************************************/
+
+void dng_xmp::ClearIPTCDigest ()
+	{
+	
+	Remove (XMP_NS_PHOTOSHOP, "LegacyIPTCDigest");
+
 	}
 		
 /*****************************************************************************/
@@ -1783,7 +1978,7 @@ void dng_xmp::SyncIPTC (dng_iptc &iptc,
 					 x == 0xFFFFFFFF,
 					 options);
 					 
-		if (x >= 0 && x <= 9)
+		if (x <= 9)
 			{
 			
 			iptc.fUrgency = (int32) x;
@@ -1824,11 +2019,28 @@ void dng_xmp::SyncIPTC (dng_iptc &iptc,
 			}
 		
 		}
+		
+		{
+		
+		dng_string s = iptc.fDigitalCreationDateTime.Encode_ISO_8601 ();
+		
+		if (SyncString (XMP_NS_EXIF,
+						"DateTimeDigitized",
+						s,
+						options))
+			{
 			
-	SyncString (XMP_NS_PHOTOSHOP,
-			    "Author",
-			    iptc.fAuthor,
-			    options);
+			iptc.fDigitalCreationDateTime.Decode_ISO_8601 (s.Get ());
+			
+			}
+					
+		}
+		
+	SyncStringList (XMP_NS_DC,
+			        "creator",
+			        iptc.fAuthors,
+					false,
+					options);
 			
 	SyncString (XMP_NS_PHOTOSHOP,
 			    "AuthorsPosition",
@@ -1899,33 +2111,26 @@ void dng_xmp::SyncIPTC (dng_iptc &iptc,
 		
 /*****************************************************************************/
 
-void dng_xmp::IngestIPTC (dng_negative &negative,
+void dng_xmp::IngestIPTC (dng_metadata &metadata,
 					      bool xmpIsNewer)
 	{
 	
-	if (negative.IPTCLength ())
+	if (metadata.IPTCLength ())
 		{
 		
 		// Parse the IPTC block.
 	
 		dng_iptc iptc;
 		
-		iptc.Parse (negative.IPTCData   (),
-					negative.IPTCLength (),
-					negative.IPTCOffset ());
-					
-		if (iptc.fForceUTF8)
-			{
-			
-			negative.SetUsedUTF8forIPTC (true);
-			
-			}
+		iptc.Parse (metadata.IPTCData   (),
+					metadata.IPTCLength (),
+					metadata.IPTCOffset ());
 					
 		// Compute fingerprint of IPTC data both ways, including and
 		// excluding the padding data.
 		
-		dng_fingerprint iptcDigest1 = negative.IPTCDigest (true );
-		dng_fingerprint iptcDigest2 = negative.IPTCDigest (false);
+		dng_fingerprint iptcDigest1 = metadata.IPTCDigest (true );
+		dng_fingerprint iptcDigest2 = metadata.IPTCDigest (false);
 		
 		// See if there is an IPTC fingerprint stored in the XMP.
 			
@@ -1963,6 +2168,17 @@ void dng_xmp::IngestIPTC (dng_negative &negative,
 			
 			}
 			
+		else
+			{
+			
+			// There is no IPTC digest.  Previously we would
+			// prefer the IPTC in this case, but the MWG suggests
+			// that we prefer the XMP in this case.
+			
+			xmpIsNewer = true;
+			
+			}
+			
 		// Remember the fingerprint of the IPTC we are syncing with.
 			
 		SetIPTCDigest (iptcDigest1);
@@ -1980,15 +2196,15 @@ void dng_xmp::IngestIPTC (dng_negative &negative,
 
 	// After the IPTC data is moved to XMP, we don't need it anymore.
 	
-	negative.ClearIPTC ();
+	metadata.ClearIPTC ();
 
 	}
 		
 /*****************************************************************************/
 
-void dng_xmp::RebuildIPTC (dng_negative &negative,
-						   bool padForTIFF,
-						   bool forceUTF8)
+void dng_xmp::RebuildIPTC (dng_metadata &metadata,
+						   dng_memory_allocator &allocator,
+						   bool padForTIFF)
 	{
 	
 	// If there is no XMP, then there is no IPTC.
@@ -2009,12 +2225,10 @@ void dng_xmp::RebuildIPTC (dng_negative &negative,
 	if (iptc.NotEmpty ())
 		{
 		
-		iptc.fForceUTF8 = forceUTF8;
-		
-		AutoPtr<dng_memory_block> block (iptc.Spool (negative.Allocator (),
+		AutoPtr<dng_memory_block> block (iptc.Spool (allocator,
 													 padForTIFF));
 		
-		negative.SetIPTC (block);
+		metadata.SetIPTC (block);
 		
 		}
 
@@ -2050,7 +2264,7 @@ void dng_xmp::SyncFlash (uint32 &flashState,
 			
 			char s [8];
 		
-			sprintf (s, "%u", (flashState >> 1) & 3);
+			sprintf (s, "%u", (unsigned) ((flashState >> 1) & 3));
 			
 			fSDK->SetStructField (XMP_NS_EXIF,
 								  "Flash",
@@ -2065,7 +2279,7 @@ void dng_xmp::SyncFlash (uint32 &flashState,
 		
 			char s [8];
 		
-			sprintf (s, "%u", (flashState >> 3) & 3);
+			sprintf (s, "%u", (unsigned) ((flashState >> 3) & 3));
 			
 			fSDK->SetStructField (XMP_NS_EXIF,
 								  "Flash",
@@ -2197,9 +2411,84 @@ void dng_xmp::SyncFlash (uint32 &flashState,
 
 /*****************************************************************************/
 
+void dng_xmp::GenerateDefaultLensName (dng_exif &exif)
+	{
+	
+	// Generate default lens name from lens info if required.
+	// Ignore names names that end in "f/0.0" due to third party bug.
+	
+	if ((exif.fLensName.IsEmpty () ||
+		 exif.fLensName.EndsWith ("f/0.0")) && exif.fLensInfo [0].IsValid ())
+		{
+		
+		char s [256];
+		
+		real64 minFL = exif.fLensInfo [0].As_real64 ();
+		real64 maxFL = exif.fLensInfo [1].As_real64 ();
+		
+		// The f-stop numbers are optional.
+		
+		if (exif.fLensInfo [2].IsValid ())
+			{
+			
+			real64 minFS = exif.fLensInfo [2].As_real64 ();
+			real64 maxFS = exif.fLensInfo [3].As_real64 ();
+			
+			if (minFL == maxFL)
+				sprintf (s, "%.1f mm f/%.1f", minFL, minFS);
+			
+			else if (minFS == maxFS)
+				sprintf (s, "%.1f-%.1f mm f/%.1f", minFL, maxFL, minFS);
+			
+			else
+				sprintf (s, "%.1f-%.1f mm f/%.1f-%.1f", minFL, maxFL, minFS, maxFS);
+			
+			}
+		
+		else
+			{
+			
+			if (minFL == maxFL)
+				sprintf (s, "%.1f mm", minFL);
+			
+			else
+				sprintf (s, "%.1f-%.1f mm", minFL, maxFL);
+			
+			}
+		
+		exif.fLensName.Set (s);
+		
+		SetString (XMP_NS_AUX,
+				   "Lens",
+				   exif.fLensName);
+		
+		}
+	
+	}
+
+/*****************************************************************************/
+
+void dng_xmp::SyncLensName (dng_exif &exif)
+	{
+	
+	// EXIF lens names are sometimes missing or wrong (esp. when non-OEM lenses
+	// are used). So prefer the value from XMP.
+		
+	SyncString (XMP_NS_AUX,
+				"Lens",
+				exif.fLensName,
+				preferXMP);
+		
+	GenerateDefaultLensName (exif);
+	
+	}
+
+/*****************************************************************************/
+
 void dng_xmp::SyncExif (dng_exif &exif,
 						const dng_exif *originalExif,
-						bool doingUpdateFromXMP)
+						bool doingUpdateFromXMP,
+						bool removeFromXMP)
 	{
 	
 	DNG_ASSERT (!doingUpdateFromXMP || originalExif,
@@ -2207,22 +2496,27 @@ void dng_xmp::SyncExif (dng_exif &exif,
 	
 	// Default synchronization options for the read-only fields.
 			
-	uint32 options = doingUpdateFromXMP ? ignoreXMP
-								        : preferNonXMP;
+	uint32 readOnly = doingUpdateFromXMP ? ignoreXMP
+								         : preferNonXMP;
+										 
+	// Option for removable fields.
+	
+	uint32 removable = removeFromXMP ? removeXMP
+									 : 0;
 	
 	// Make:
 	
 	SyncString (XMP_NS_TIFF,
 				"Make",
 				exif.fMake,
-				options | requireASCII);
+				readOnly + removable);
 			
 	// Model:
 	
 	SyncString (XMP_NS_TIFF,
 			    "Model",
 			    exif.fModel,
-			    options | requireASCII);
+			    readOnly + removable);
 			    
 	// Exif version number:
 	
@@ -2259,7 +2553,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		SyncString (XMP_NS_EXIF,
 					"ExifVersion",
 					exifVersion,
-					options);
+					readOnly);
 					
 		if (exifVersion.NotEmpty ())
 			{
@@ -2308,6 +2602,13 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "0221");
 					
 			}
+			
+		if (removeFromXMP)
+			{
+			
+			Remove (XMP_NS_EXIF, "ExifVersion");
+			
+			}
 		
 		}
 		
@@ -2326,7 +2627,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 			Sync_urational (XMP_NS_EXIF,
 							"ExposureTime",
 							et,
-							options);
+							readOnly);
 							
 			if (et.IsValid ())
 				{
@@ -2340,7 +2641,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 			Sync_srational (XMP_NS_EXIF,
 						    "ShutterSpeedValue",
 						    ss,
-						    options);
+						    readOnly);
 						    
 			if (ss.IsValid ())
 				{
@@ -2349,6 +2650,15 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				
 				}
 						    
+			}
+			
+		if (removeFromXMP)
+			{
+			
+			Remove (XMP_NS_EXIF, "ExposureTime");
+			
+			Remove (XMP_NS_EXIF, "ShutterSpeedValue");
+			
 			}
 			
 		}
@@ -2365,7 +2675,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 			Sync_urational (XMP_NS_EXIF,
 							"FNumber",
 							fs,
-							options);
+							readOnly);
 							
 			if (fs.IsValid ())
 				{
@@ -2379,7 +2689,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 			Sync_urational (XMP_NS_EXIF,
 							"ApertureValue",
 							av,
-							options);
+							readOnly);
 							
 			if (av.IsValid ())
 				{
@@ -2390,6 +2700,15 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				
 			}
 			
+		if (removeFromXMP)
+			{
+			
+			Remove (XMP_NS_EXIF, "FNumber");
+			
+			Remove (XMP_NS_EXIF, "ApertureValue");
+			
+			}
+			
 		}
 			
 	// Exposure program:
@@ -2398,18 +2717,46 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "ExposureProgram",
 				 exif.fExposureProgram,
 				 exif.fExposureProgram == 0xFFFFFFFF,
-				 options);
+				 readOnly + removable);
 	
 	// ISO Speed Ratings:
 	
 		{
 		
 		uint32 isoSpeedRatingsCount = 0;
+
+		uint32 isoSpeedRatingsOptions = readOnly;
+		
+		uint32 oldISOSpeedRatings [3];
+
+		memcpy (oldISOSpeedRatings,
+				exif.fISOSpeedRatings,
+				sizeof (oldISOSpeedRatings));
+
+		bool checkXMPForHigherISO = false;
 		
 		for (uint32 j = 0; j < 3; j++)
 			{
+
+			// Special case: the EXIF 2.2x standard represents ISO speed ratings with
+			// 2 bytes, which cannot hold ISO speed ratings above 65535 (e.g.,
+			// 102400). If the EXIF ISO speed rating value is 65535, prefer the XMP
+			// ISOSpeedRatings tag value.
+
+			if (exif.fISOSpeedRatings [j] == 65535)
+				{
+
+				isoSpeedRatingsOptions = preferXMP;
+
+				checkXMPForHigherISO = true;
+
+				isoSpeedRatingsCount = 0;
+
+				break;
+
+				}
 			
-			if (exif.fISOSpeedRatings [j] == 0)
+			else if (exif.fISOSpeedRatings [j] == 0)
 				{
 				break;
 				}
@@ -2423,46 +2770,132 @@ void dng_xmp::SyncExif (dng_exif &exif,
 						   exif.fISOSpeedRatings,
 						   isoSpeedRatingsCount,
 						   3,
-						   options);
+						   isoSpeedRatingsOptions);
+
+		// If the EXIF ISO was 65535 and we failed to find anything meaningful in the
+		// XMP, then we fall back to the EXIF ISO.
+
+		if (checkXMPForHigherISO && (isoSpeedRatingsCount == 0))
+			{
+				
+			memcpy (exif.fISOSpeedRatings,
+					oldISOSpeedRatings,
+					sizeof (oldISOSpeedRatings));
+			
+			}
+			
+		// Only remove the ISO tag if there are not ratings over 65535.
+		
+		if (removeFromXMP)
+			{
+			
+			bool hasHighISO = false;
+			
+			for (uint32 j = 0; j < 3; j++)
+				{
+				
+				if (exif.fISOSpeedRatings [j] == 0)
+					{
+					break;
+					}
+
+				hasHighISO = hasHighISO || (exif.fISOSpeedRatings [j] > 65535);
+				
+				}
+				
+			if (!hasHighISO)
+				{
+				
+				Remove (XMP_NS_EXIF, "ISOSpeedRatings");
+				
+				}
+			
+			}
 		
 		}
+
+	// SensitivityType:
+
+	Sync_uint32 (XMP_NS_EXIF,
+				 "SensitivityType",
+				 exif.fSensitivityType,
+				 exif.fSensitivityType == stUnknown,
+				 readOnly + removable);
+		
+	// StandardOutputSensitivity:
+
+	Sync_uint32 (XMP_NS_EXIF,
+				 "StandardOutputSensitivity",
+				 exif.fStandardOutputSensitivity,
+				 exif.fStandardOutputSensitivity == 0,
+				 readOnly + removable);
+		
+	// RecommendedExposureIndex:
+
+	Sync_uint32 (XMP_NS_EXIF,
+				 "RecommendedExposureIndex",
+				 exif.fRecommendedExposureIndex,
+				 exif.fRecommendedExposureIndex == 0,
+				 readOnly + removable);
+		
+	// ISOSpeed:
+
+	Sync_uint32 (XMP_NS_EXIF,
+				 "ISOSpeed",
+				 exif.fISOSpeed,
+				 exif.fISOSpeed == 0,
+				 readOnly + removable);
+		
+	// ISOSpeedLatitudeyyy:
+
+	Sync_uint32 (XMP_NS_EXIF,
+				 "ISOSpeedLatitudeyyy",
+				 exif.fISOSpeedLatitudeyyy,
+				 exif.fISOSpeedLatitudeyyy == 0,
+				 readOnly + removable);
+		
+	// ISOSpeedLatitudezzz:
+
+	Sync_uint32 (XMP_NS_EXIF,
+				 "ISOSpeedLatitudezzz",
+				 exif.fISOSpeedLatitudezzz,
+				 exif.fISOSpeedLatitudezzz == 0,
+				 readOnly + removable);
 		
 	// ExposureIndex:
 	
 	Sync_urational (XMP_NS_EXIF,
 				    "ExposureIndex",
 				    exif.fExposureIndex,
-				    options);
+				    readOnly + removable);
 				    
-	UpdateExifDates( exif );
-		
 	// Brightness Value:
 	
 	Sync_srational (XMP_NS_EXIF,
 				    "BrightnessValue",
 				    exif.fBrightnessValue,
-				    options);
+				    readOnly + removable);
 				    
 	// Exposure Bias:
 	
 	Sync_srational (XMP_NS_EXIF,
 				    "ExposureBiasValue",
 				    exif.fExposureBiasValue,
-				    options);
+				    readOnly + removable);
 				    
 	// Max Aperture:
 	
 	Sync_urational (XMP_NS_EXIF,
 				    "MaxApertureValue",
 				    exif.fMaxApertureValue,
-				    options);
+				    readOnly + removable);
 
 	// Subject Distance:
 	
 	Sync_urational (XMP_NS_EXIF,
 				    "SubjectDistance",
 				    exif.fSubjectDistance,
-				    options);
+				    readOnly + removable);
 	
 	// Metering Mode:
 	
@@ -2470,7 +2903,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "MeteringMode",
 				 exif.fMeteringMode,
 				 exif.fMeteringMode == 0xFFFFFFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Light Source:
 	
@@ -2478,20 +2911,25 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "LightSource",
 				 exif.fLightSource,
 				 exif.fLightSource > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Flash State:
 	
 	SyncFlash (exif.fFlash,
 			   exif.fFlashMask,
-			   options);
+			   readOnly);
+			   
+	if (removeFromXMP)
+		{
+		Remove (XMP_NS_EXIF, "Flash");
+		}
 
 	// Focal Length:
 	
 	Sync_urational (XMP_NS_EXIF,
 					"FocalLength",
 					exif.fFocalLength,
-					options);
+					readOnly + removable);
 	
 	// Sensing Method.
 	
@@ -2499,7 +2937,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "SensingMethod",
 				 exif.fSensingMethod,
 				 exif.fSensingMethod > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// File Source.
 	
@@ -2507,7 +2945,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "FileSource",
 				 exif.fFileSource,
 				 exif.fFileSource > 0x0FF,
-				 options);
+				 readOnly + removable);
 	
 	// Scene Type.
 	
@@ -2515,7 +2953,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "SceneType",
 				 exif.fSceneType,
 				 exif.fSceneType > 0x0FF,
-				 options);
+				 readOnly + removable);
 	
 	// Focal Length in 35mm Film:
 	
@@ -2523,7 +2961,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "FocalLengthIn35mmFilm",
 				 exif.fFocalLengthIn35mmFilm,
 				 exif.fFocalLengthIn35mmFilm == 0,
-				 options);
+				 readOnly + removable);
 	
 	// Custom Rendered:
 	
@@ -2531,7 +2969,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "CustomRendered",
 				 exif.fCustomRendered,
 				 exif.fCustomRendered > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Exposure Mode:
 	
@@ -2539,7 +2977,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "ExposureMode",
 				 exif.fExposureMode,
 				 exif.fExposureMode > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// White Balance:
 	
@@ -2547,7 +2985,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "WhiteBalance",
 				 exif.fWhiteBalance,
 				 exif.fWhiteBalance > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Scene Capture Type:
 	
@@ -2555,7 +2993,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "SceneCaptureType",
 				 exif.fSceneCaptureType,
 				 exif.fSceneCaptureType > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Gain Control:
 	
@@ -2563,7 +3001,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "GainControl",
 				 exif.fGainControl,
 				 exif.fGainControl > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Contrast:
 	
@@ -2571,7 +3009,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "Contrast",
 				 exif.fContrast,
 				 exif.fContrast > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Saturation:
 	
@@ -2579,7 +3017,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "Saturation",
 				 exif.fSaturation,
 				 exif.fSaturation > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Sharpness:
 	
@@ -2587,7 +3025,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "Sharpness",
 				 exif.fSharpness,
 				 exif.fSharpness > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 	
 	// Subject Distance Range:
 	
@@ -2595,7 +3033,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "SubjectDistanceRange",
 				 exif.fSubjectDistanceRange,
 				 exif.fSubjectDistanceRange > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 		
 	// Subject Area:
 	
@@ -2605,32 +3043,37 @@ void dng_xmp::SyncExif (dng_exif &exif,
 					   exif.fSubjectAreaCount,
 					   sizeof (exif.fSubjectArea    ) /
 					   sizeof (exif.fSubjectArea [0]),
-					   options);
+					   readOnly);
+					   
+	if (removeFromXMP)
+		{
+		Remove (XMP_NS_EXIF, "SubjectArea");
+		}
 		
 	// Digital Zoom Ratio:
 	
 	Sync_urational (XMP_NS_EXIF,
 					"DigitalZoomRatio",
 					exif.fDigitalZoomRatio,
-					options);
+					readOnly + removable);
 	
 	// Focal Plane Resolution:
 	
 	Sync_urational (XMP_NS_EXIF,
 					"FocalPlaneXResolution",
 					exif.fFocalPlaneXResolution,
-					options);
+					readOnly + removable);
 	
 	Sync_urational (XMP_NS_EXIF,
 					"FocalPlaneYResolution",
 					exif.fFocalPlaneYResolution,
-					options);
+					readOnly + removable);
 	
 	Sync_uint32 (XMP_NS_EXIF,
 				 "FocalPlaneResolutionUnit",
 				 exif.fFocalPlaneResolutionUnit,
 				 exif.fFocalPlaneResolutionUnit > 0x0FFFF,
-				 options);
+				 readOnly + removable);
 		
 	// ImageDescription:  (XMP is is always preferred)
 	
@@ -2640,13 +3083,6 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		
 		{
 		
-		if (!exif.fImageDescription.IsASCII ())
-			{
-			
-			exif.fImageDescription.Clear ();
-			
-			}
-			
 		}
 		
 	else if (doingUpdateFromXMP)
@@ -2690,12 +3126,64 @@ void dng_xmp::SyncExif (dng_exif &exif,
 			if (xmpList.Count () > 0)
 				{
 				
-				if (xmpList [0].IsASCII ())
+				uint32 j;
+				
+				uint32 bufferSize = xmpList.Count () * 4 + 1;
+				
+				for (j = 0; j < xmpList.Count (); j++)
 					{
 					
-					exif.fArtist = xmpList [0];
+					bufferSize += xmpList [j].Length () * 2;
 					
 					}
+					
+				dng_memory_data temp (bufferSize);
+				
+				char *t = temp.Buffer_char ();
+				
+				for (j = 0; j < xmpList.Count (); j++)
+					{
+					
+					const char *s = xmpList [j].Get ();
+					
+					bool needQuotes = xmpList [j].Contains ("; ") ||
+									  s [0] == '\"';
+									   
+					if (needQuotes)
+						{
+						*(t++) = '\"';
+						}
+						
+					while (s [0] != 0)
+						{
+						
+						if (s [0] == '\"' && needQuotes)
+							{
+							*(t++) = '\"';
+							}
+							
+						*(t++) = *(s++);
+						
+						}
+						
+					if (needQuotes)
+						{
+						*(t++) = '\"';
+						}
+						
+					if (j != xmpList.Count () - 1)
+						{
+						*(t++) = ';';
+						*(t++) = ' ';
+						}
+					else
+						{
+						*t = 0;
+						}
+
+					}
+				
+				exif.fArtist.Set (temp.Buffer_char ());
 				
 				}
 
@@ -2726,9 +3214,134 @@ void dng_xmp::SyncExif (dng_exif &exif,
 			{
 			
 			dng_string_list newList;
+		
+			dng_memory_data temp (exif.fArtist.Length () + 1);
+					
+			const char *s = exif.fArtist.Get ();
 			
-			newList.Append (exif.fArtist);
+			char *t = temp.Buffer_char ();
 			
+			bool first = true;
+			
+			bool quoted = false;
+			
+			bool valid = true;
+				
+			while (s [0] != 0 && valid)
+				{
+				
+				if (first)
+					{
+					
+					if (s [0] == '\"')
+						{
+						
+						quoted = true;
+						
+						s++;
+						
+						}
+					
+					}
+					
+				first = false;
+				
+				if (quoted)
+					{
+					
+					if (s [0] == '\"' &&
+						s [1] == '\"')
+						{
+						
+						s+= 2;
+						
+						*(t++) = '\"';
+						
+						}
+							
+					else if (s [0] == '\"')
+						{
+						
+						s++;
+						
+						quoted = false;
+						
+						valid = valid && ((s [0] == 0) || ((s [0] == ';' && s [1] == ' ')));
+				
+						}
+						
+					else
+						{
+						
+						*(t++) = *(s++);
+						
+						}
+							
+					}
+						
+				else if (s [0] == ';' &&
+						 s [1] == ' ')
+					{
+					
+					s += 2;
+					
+					t [0] = 0;
+						
+					dng_string ss;
+					
+					ss.Set (temp.Buffer_char ());
+					
+					newList.Append (ss);
+					
+					t = temp.Buffer_char ();
+					
+					first = true;
+						
+					}
+					
+				else
+					{
+					
+					*(t++) = *(s++);
+						
+					}
+					
+				}
+				
+			if (quoted)
+				{
+				
+				valid = false;
+				
+				}
+				
+			if (valid)
+				{
+				
+				if (t != temp.Buffer_char ())
+					{
+					
+					t [0] = 0;
+						
+					dng_string ss;
+					
+					ss.Set (temp.Buffer_char ());
+					
+					newList.Append (ss);
+					
+					}
+					
+				}
+				
+			else
+				{
+				
+				newList.Clear ();
+				
+				newList.Append (exif.fArtist);
+				
+				}
+				
 			SetStringList (XMP_NS_DC,
 						   "creator",
 						   newList,
@@ -2746,13 +3359,6 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		
 		{
 		
-		if (!exif.fSoftware.IsASCII ())
-			{
-			
-			exif.fSoftware.Clear ();
-			
-			}
-			
 		}
 		
 	else if (doingUpdateFromXMP)
@@ -2779,7 +3385,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 						 exif.fSoftware);
 									 
 		}
-
+		
 	// Copyright:  (XMP is is always preferred)
 	
 	if (fSDK->GetAltLangDefault (XMP_NS_DC,
@@ -2788,13 +3394,6 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		
 		{
 		
-		if (!exif.fCopyright.IsASCII ())
-			{
-			
-			exif.fCopyright.Clear ();
-			
-			}
-			
 		}
 	
 	else if (doingUpdateFromXMP)
@@ -2823,11 +3422,11 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		}
 					
 	// Camera serial number private tag:
-	
+
 	SyncString (XMP_NS_AUX,
 				"SerialNumber",
 				exif.fCameraSerialNumber,
-				options | requireASCII);
+				readOnly);
 			
 	// Lens Info:
 	
@@ -2858,7 +3457,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		SyncString (XMP_NS_AUX,
 					"LensInfo",
 				    s,
-				    options | requireASCII);
+				    readOnly);
 				    
 		if (s.NotEmpty ())
 			{
@@ -2894,81 +3493,28 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		
 	// Lens name:
 	
-		{
-		
-		// Since lens names are sometimes missing or wrong, allow user to edit the
-		// XMP and have the value stick.  So prefer the XMP value if in conflict.
-		
-		SyncString (XMP_NS_AUX,
-					"Lens",
-					exif.fLensName,
-					preferXMP);
-					
-		// Generate default lens name from lens info if required.
-		// Ignore names names that end in "f/0.0" due to third party bug.
-		
-		if ((exif.fLensName.IsEmpty () ||
-			 exif.fLensName.EndsWith ("f/0.0")) && exif.fLensInfo [0].IsValid ())
-			{
-			
-			char s [256];
-							
-			real64 minFL = exif.fLensInfo [0].As_real64 ();
-			real64 maxFL = exif.fLensInfo [1].As_real64 ();
-			
-			// The f-stop numbers are optional.
-			
-			if (exif.fLensInfo [2].IsValid ())
-				{
-				
-				real64 minFS = exif.fLensInfo [2].As_real64 ();
-				real64 maxFS = exif.fLensInfo [3].As_real64 ();
-				
-				if (minFL == maxFL)
-					sprintf (s, "%.1f mm f/%.1f", minFL, minFS);
-					
-				else if (minFS == maxFS)
-					sprintf (s, "%.1f-%.1f mm f/%.1f", minFL, maxFL, minFS);
-					
-				else
-					sprintf (s, "%.1f-%.1f mm f/%.1f-%.1f", minFL, maxFL, minFS, maxFS);
-				
-				}
-				
-			else
-				{
-				
-				if (minFL == maxFL)
-					sprintf (s, "%.1f mm", minFL);
-					
-				else
-					sprintf (s, "%.1f-%.1f mm", minFL, maxFL);
-				
-				}
-				
-			exif.fLensName.Set (s);
-				
-			SetString (XMP_NS_AUX,
-					   "Lens",
-					   exif.fLensName);
-			
-			}
-
-		}
+	SyncLensName (exif);
 
 	// Lens ID:
 	
 	SyncString (XMP_NS_AUX,
 				"LensID",
 				exif.fLensID,
-				options);
+				readOnly);
 	
+	// Lens Make:
+	
+	SyncString (XMP_NS_EXIF,
+				"LensMake",
+				exif.fLensMake,
+				readOnly + removable);
+		
 	// Lens Serial Number:
 	
 	SyncString (XMP_NS_AUX,
 				"LensSerialNumber",
 				exif.fLensSerialNumber,
-				options);
+				readOnly);
 		
 	// Image Number:
 	
@@ -2976,7 +3522,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "ImageNumber",
 				 exif.fImageNumber,
 				 exif.fImageNumber == 0xFFFFFFFF,
-				 options);
+				 readOnly);
 		
 	// User Comment:
 	
@@ -2998,26 +3544,99 @@ void dng_xmp::SyncExif (dng_exif &exif,
 
 		}
 		
+	if (removeFromXMP)
+		{
+		Remove (XMP_NS_EXIF, "UserComment");
+		}
+		
+	// Approximate focus distance:
+
+	SyncApproximateFocusDistance (exif,
+								  readOnly);
+
+	// LensDistortInfo:
+
+		{
+		
+		dng_string s;
+		
+		if (exif.HasLensDistortInfo ())
+			{
+			
+			char ss [256];
+			
+			sprintf (ss,
+					 "%d/%d %d/%d %d/%d %d/%d",
+					 (int) exif.fLensDistortInfo [0].n,
+					 (int) exif.fLensDistortInfo [0].d,
+					 (int) exif.fLensDistortInfo [1].n,
+					 (int) exif.fLensDistortInfo [1].d,
+					 (int) exif.fLensDistortInfo [2].n,
+					 (int) exif.fLensDistortInfo [2].d,
+					 (int) exif.fLensDistortInfo [3].n,
+					 (int) exif.fLensDistortInfo [3].d);
+					 
+			s.Set (ss);
+			
+			}
+			
+		SyncString (XMP_NS_AUX,
+					"LensDistortInfo",
+				    s,
+				    readOnly);
+				    
+		if (s.NotEmpty ())
+			{
+			
+			int n [4];
+			int d [4];
+			
+			if (sscanf (s.Get (),
+						"%d/%d %d/%d %d/%d %d/%d",
+						&n [0],
+						&d [0],
+						&n [1],
+						&d [1],
+						&n [2],
+						&d [2],
+						&n [3],
+						&d [3]) == 8)
+				{
+				
+				for (uint32 j = 0; j < 4; j++)
+					{
+					
+					exif.fLensDistortInfo [j] = dng_srational (n [j], d [j]);
+					
+					}
+				
+				}
+						
+			
+			}
+		
+		}
+	
 	// Flash Compensation:
 	
 	Sync_srational (XMP_NS_AUX,
 				    "FlashCompensation",
 				    exif.fFlashCompensation,
-				    options);
+				    readOnly);
 
-	// Owner Name:
+	// Owner Name: (allow XMP updates)
 	
 	SyncString (XMP_NS_AUX,
 				"OwnerName",
 				exif.fOwnerName,
-				options);
+				preferXMP);
 		
 	// Firmware:
 	
 	SyncString (XMP_NS_AUX,
 				"Firmware",
 				exif.fFirmware,
-				options);
+				readOnly);
 		
 	// Image Unique ID:
 	
@@ -3028,9 +3647,56 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		SyncString (XMP_NS_EXIF,
 				    "ImageUniqueID",
 				    s,
-				    options);
+				    readOnly + removable);
 				    
 		exif.fImageUniqueID = DecodeFingerprint (s);
+		
+		}
+		
+    // For the following GPS related fields, we offer an option to prefer XMP to
+    // the EXIF values. This is to allow the host app to modify the XMP for manual
+    // geo-tagging and overwrite the EXIF values during export. It also allows the user
+    // to correct the GPS values via changes in a sidecar XMP file, without modifying
+    // the original GPS data recorded in the raw file by the camera.
+        
+    bool preferGPSFromXMP = false;
+
+    uint32 gpsSyncOption = preferNonXMP;
+        
+	#if qDNGPreferGPSMetadataFromXMP
+    preferGPSFromXMP = true;
+	#endif
+
+    // Allow EXIF GPS to be updated via updates from XMP.
+
+	if (doingUpdateFromXMP || preferGPSFromXMP)
+		{
+		
+		// Require that at least one basic GPS field exist in the
+		// XMP before overrriding the EXIF GPS fields.
+		
+		if (Exists (XMP_NS_EXIF, "GPSVersionID"       ) ||
+			Exists (XMP_NS_EXIF, "GPSLatitude"        ) ||
+			Exists (XMP_NS_EXIF, "GPSLongitude"       ) ||
+			Exists (XMP_NS_EXIF, "GPSAltitude"        ) ||
+			Exists (XMP_NS_EXIF, "GPSTimeStamp"       ) ||
+			Exists (XMP_NS_EXIF, "GPSProcessingMethod"))
+			{
+			
+			// Clear out the GPS info from the EXIF so it will
+			// replaced by the GPS info from the XMP.
+			
+			dng_exif blankExif;
+			
+			exif.CopyGPSFrom (blankExif);
+			
+            if (preferGPSFromXMP) 
+                {
+                    
+                gpsSyncOption = preferXMP;
+                    
+                }
+			}
 		
 		}
 			
@@ -3043,7 +3709,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		if (SyncString (XMP_NS_EXIF,
 						"GPSVersionID",
 						s,
-						options))
+						gpsSyncOption + removable))
 			{
 					
 			exif.fGPSVersionID = DecodeGPSVersion (s);
@@ -3062,7 +3728,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		if (SyncString (XMP_NS_EXIF,
 						"GPSLatitude",
 						s,
-						options))
+						gpsSyncOption + removable))
 			{
 			
 			DecodeGPSCoordinate (s,
@@ -3083,7 +3749,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		if (SyncString (XMP_NS_EXIF,
 						"GPSLongitude",
 						s,
-						options))
+						gpsSyncOption + removable))
 			{
 			
 			DecodeGPSCoordinate (s,
@@ -3094,20 +3760,42 @@ void dng_xmp::SyncExif (dng_exif &exif,
 					
 		}
 					
+	// Handle simple case of incorrectly written GPS altitude where someone didn't understand the GPSAltitudeRef and assumed the GPSAltitude RATIONAL is signed.
+	// Only handle this case as we do not want to misinterpret e.g. a fixed point representation of very high GPS altitudes.
+	
+	uint32 &altitudeRef = exif.fGPSAltitudeRef;
+	dng_urational &altitude = exif.fGPSAltitude;
+
+	if (altitude.IsValid () &&
+		(altitudeRef == 0 || altitudeRef == 0xFFFFFFFF))  // If the file contains a "below sea level" altitudeRef, assume the writing software is working according to the spec.
+		{
+
+		if ((altitude.n & (1U << 31)) &&
+			altitude.d < 7) // As the denominator increases, large numerator values become possibly valid distances. Pick a limit on the conservative side (approx 33e6m) to prevent misinterpretation.
+							// Noting that the normal case for this mistake has a denominator of 1
+			{
+
+			altitude.n = ~altitude.n + 1;
+			altitudeRef = 1;
+
+			}
+
+		}
+
 	// GPS Altitude Reference:
 	
 	Sync_uint32 (XMP_NS_EXIF,
 				 "GPSAltitudeRef",
-				 exif.fGPSAltitudeRef,
-				 exif.fGPSAltitudeRef == 0xFFFFFFFF,
-				 options);
+				 altitudeRef,
+				 altitudeRef == 0xFFFFFFFF,
+				 gpsSyncOption + removable);
 	
 	// GPS Altitude:
 	
 	Sync_urational (XMP_NS_EXIF,
 					"GPSAltitude",
-					exif.fGPSAltitude,
-					options);
+					altitude,
+					gpsSyncOption + removable);
 	
 	// GPS Date/Time:
 	
@@ -3119,7 +3807,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		if (SyncString (XMP_NS_EXIF,
 						"GPSTimeStamp",
 						s,
-						options))
+						preferNonXMP + removable))
 			{
 			
 			DecodeGPSDateTime (s,
@@ -3135,77 +3823,77 @@ void dng_xmp::SyncExif (dng_exif &exif,
 	SyncString (XMP_NS_EXIF,
 				"GPSSatellites",
 				exif.fGPSSatellites,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS Status:
 
 	SyncString (XMP_NS_EXIF,
 				"GPSStatus",
 				exif.fGPSStatus,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS Measure Mode:
 	
 	SyncString (XMP_NS_EXIF,
 				"GPSMeasureMode",
 				exif.fGPSMeasureMode,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS DOP:
 	
 	Sync_urational (XMP_NS_EXIF,
 					"GPSDOP",
 					exif.fGPSDOP,
-					options);
+					preferNonXMP + removable);
 		
 	// GPS Speed Reference:
 	
 	SyncString (XMP_NS_EXIF,
 				"GPSSpeedRef",
 				exif.fGPSSpeedRef,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS Speed:
 		
 	Sync_urational (XMP_NS_EXIF,
 					"GPSSpeed",
 					exif.fGPSSpeed,
-					options);
+					preferNonXMP + removable);
 		
 	// GPS Track Reference:
 	
 	SyncString (XMP_NS_EXIF,
 				"GPSTrackRef",
 				exif.fGPSTrackRef,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS Track:
 		
 	Sync_urational (XMP_NS_EXIF,
 					"GPSTrack",
 					exif.fGPSTrack,
-					options);
+					preferNonXMP + removable);
 		
 	// GPS Image Direction Reference:
 	
 	SyncString (XMP_NS_EXIF,
 				"GPSImgDirectionRef",
 				exif.fGPSImgDirectionRef,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS Image Direction:
 		
 	Sync_urational (XMP_NS_EXIF,
 					"GPSImgDirection",
 					exif.fGPSImgDirection,
-					options);
+					preferNonXMP + removable);
 		
 	// GPS Map Datum:
 	
 	SyncString (XMP_NS_EXIF,
 				"GPSMapDatum",
 				exif.fGPSMapDatum,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS Destination Latitude:
 	
@@ -3217,7 +3905,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		if (SyncString (XMP_NS_EXIF,
 						"GPSDestLatitude",
 						s,
-						options))
+						preferNonXMP + removable))
 			{
 			
 			DecodeGPSCoordinate (s,
@@ -3238,7 +3926,7 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		if (SyncString (XMP_NS_EXIF,
 						"GPSDestLongitude",
 						s,
-						options))
+						preferNonXMP + removable))
 			{
 			
 			DecodeGPSCoordinate (s,
@@ -3254,42 +3942,42 @@ void dng_xmp::SyncExif (dng_exif &exif,
 	SyncString (XMP_NS_EXIF,
 				"GPSDestBearingRef",
 				exif.fGPSDestBearingRef,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS Destination Bearing:
 		
 	Sync_urational (XMP_NS_EXIF,
 					"GPSDestBearing",
 					exif.fGPSDestBearing,
-					options);
+					preferNonXMP + removable);
 		
 	// GPS Destination Distance Reference:
 	
 	SyncString (XMP_NS_EXIF,
 				"GPSDestDistanceRef",
 				exif.fGPSDestDistanceRef,
-				options | requireASCII);
+				preferNonXMP + removable);
 	
 	// GPS Destination Distance:
 		
 	Sync_urational (XMP_NS_EXIF,
 					"GPSDestDistance",
 					exif.fGPSDestDistance,
-					options);
+					preferNonXMP + removable);
 		
 	// GPS Processing Method:
 	
 	SyncString (XMP_NS_EXIF,
 				"GPSProcessingMethod",
 				exif.fGPSProcessingMethod,
-				options);
+				preferNonXMP + removable);
 	
 	// GPS Area Information:
 	
 	SyncString (XMP_NS_EXIF,
 				"GPSAreaInformation",
 				exif.fGPSAreaInformation,
-				options);
+				preferNonXMP + removable);
 	
 	// GPS Differential:
 	
@@ -3297,14 +3985,45 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 "GPSDifferential",
 				 exif.fGPSDifferential,
 				 exif.fGPSDifferential == 0xFFFFFFFF,
-				 options);
+				 preferNonXMP + removable);
 				 
+	// GPS Horizontal Positioning Error:
+	
+	Sync_urational (XMP_NS_EXIF,
+					"GPSHPositioningError",
+					exif.fGPSHPositioningError,
+					preferNonXMP + removable);
+					
+	// Sync date/times.
+		
+	UpdateExifDates (exif, removeFromXMP);
+		
 	// We are syncing EXIF and XMP, but we are not updating the
 	// NativeDigest tags.  It is better to just delete them than leave
 	// the stale values around.
 	
 	Remove (XMP_NS_EXIF, "NativeDigest");
 	Remove (XMP_NS_TIFF, "NativeDigest");
+    
+    // Fake EXIF fields.
+    
+	SyncAltLangDefault (XMP_NS_DC,
+						"title",
+						exif.fTitle,
+						preferXMP);
+    
+	}
+
+/*****************************************************************************/
+
+void dng_xmp::SyncApproximateFocusDistance (dng_exif &exif,
+											const uint32 readOnly)
+	{
+	
+	Sync_urational (XMP_NS_AUX,
+					"ApproximateFocusDistance",
+					exif.fApproxFocusDistance,
+					readOnly);	
 	
 	}
 							   
@@ -3336,82 +4055,166 @@ void dng_xmp::ValidateMetadata ()
 		
 /******************************************************************************/
 	
-void dng_xmp::UpdateExifDates (dng_exif &exif)
+bool dng_xmp::DateTimeIsDateOnly (const char *ns,
+							      const char *path)
 	{
 	
-		// For the following three date/time fields, we always prefer XMP to
-		// the EXIF values.  This is to allow the user to correct the date/times
-		// via changes in a sidecar XMP file, without modifying the original
-		// raw file.
-		
-		// DateTime:
-		
+	dng_string s;
+	
+	if (GetString (ns, path, s))
 		{
-			
-			dng_string s = exif.fDateTime.Encode_ISO_8601 ();
-			
-			SyncString (XMP_NS_TIFF,
-						"DateTime",
-						s,
-						preferXMP);
-			
-			if (s.NotEmpty ())
-			{
-				
-				exif.fDateTime.Decode_ISO_8601 (s.Get ());
-				
-			}
-			
-		}
 		
-		// DateTimeOriginal:
+		uint32 len = s.Length ();
 		
-		{
-			
-			dng_string s = exif.fDateTimeOriginal.Encode_ISO_8601 ();
-			
-			SyncString (XMP_NS_EXIF,
-						"DateTimeOriginal",
-						s,
-						preferXMP);
-			
-			if (s.NotEmpty ())
+		if (len)
 			{
-				
-				exif.fDateTimeOriginal.Decode_ISO_8601 (s.Get ());
-				
-				// If the XAP create date is missing or empty, set it to the
-				// DateTimeOriginal value.
-				
-				dng_string ss;
-				
-				if (!GetString (XMP_NS_XAP, "CreateDate", ss) || ss.IsEmpty ())
+		
+			for (uint32 j = 0; j < len; j++)
 				{
+				
+				if (s.Get () [j] == 'T')
+					{
 					
-					SetString (XMP_NS_XAP, "CreateDate", s);
+					return false;
+					
+					}
 					
 				}
 				
+			return true;
+			
+			}
+		
+		}
+	
+	return false;
+	
+	}
+
+/******************************************************************************/
+	
+void dng_xmp::UpdateExifDates (dng_exif &exif,
+							   bool removeFromXMP)
+	{
+	
+	// For the following three date/time fields, we always prefer XMP to
+	// the EXIF values.  This is to allow the user to correct the date/times
+	// via changes in a sidecar XMP file, without modifying the original
+	// raw file.
+	
+	// Kludge: The Nikon D4 is writing date only date/times into XMP, so
+	// prefer the EXIF values if the XMP only contains a date.
+	
+	// Modification Date/Time:
+	// exif.fDateTime
+	// kXMP_NS_XMP:"ModifyDate" & kXMP_NS_TIFF:"DateTime" are aliased
+		
+		{
+			
+		dng_string s = exif.fDateTime.Encode_ISO_8601 ();
+		
+		bool dateOnly = DateTimeIsDateOnly (XMP_NS_TIFF, "DateTime");
+		
+		SyncString (XMP_NS_TIFF,
+					"DateTime",
+					s,
+					dateOnly ? preferNonXMP : preferXMP);
+		
+		if (s.NotEmpty ())
+			{
+			
+			exif.fDateTime.Decode_ISO_8601 (s.Get ());
+			
+			// Round trip again in case we need to add a fake time zone.
+			
+			s = exif.fDateTime.Encode_ISO_8601 ();
+			
+			SetString (XMP_NS_TIFF,
+					   "DateTime",
+					   s);
+			
 			}
 			
 		}
 		
-		// Date Time Digitized:
-		
+	// Original Date/Time:
+	// exif.fDateTimeOriginal
+	// IPTC: DateCreated
+	// XMP_NS_EXIF:"DateTimeOriginal" & XMP_NS_PHOTOSHOP:"DateCreated"
+	// Adobe has decided to keep the two XMP fields separate.
+	
 		{
 			
-			dng_string s = exif.fDateTimeDigitized.Encode_ISO_8601 ();
+		dng_string s = exif.fDateTimeOriginal.Encode_ISO_8601 ();
+		
+		bool dateOnly = DateTimeIsDateOnly (XMP_NS_EXIF, "DateTimeOriginal");
+		
+		SyncString (XMP_NS_EXIF,
+					"DateTimeOriginal",
+					s,
+					dateOnly ? preferNonXMP : preferXMP);
+		
+		if (s.NotEmpty ())
+			{
 			
-			SyncString (XMP_NS_EXIF,
-						"DateTimeDigitized",
-						s,
-						preferXMP);
+			exif.fDateTimeOriginal.Decode_ISO_8601 (s.Get ());
 			
-			if (s.NotEmpty ())
+			// Round trip again in case we need to add a fake time zone.
+			
+			s = exif.fDateTimeOriginal.Encode_ISO_8601 ();
+			
+			SetString (XMP_NS_EXIF,
+					   "DateTimeOriginal",
+					   s);
+			
+			}
+			
+		// Sync the IPTC value to the EXIF value if only the EXIF
+		// value exists.
+		
+		if (s.NotEmpty () && !Exists (XMP_NS_PHOTOSHOP, "DateCreated"))
+			{
+			
+			SetString (XMP_NS_PHOTOSHOP, "DateCreated", s);
+			
+			}
+			
+		if (removeFromXMP)
+			{
+			
+			Remove (XMP_NS_EXIF, "DateTimeOriginal");
+			
+			}
+			
+		}
+		
+	// Date Time Digitized:
+	// XMP_NS_EXIF:"DateTimeDigitized" & kXMP_NS_XMP:"CreateDate" are aliased
+	
+		{
+			
+		dng_string s = exif.fDateTimeDigitized.Encode_ISO_8601 ();
+		
+		bool dateOnly = DateTimeIsDateOnly (XMP_NS_EXIF, "DateTimeDigitized");
+		
+		SyncString (XMP_NS_EXIF,
+					"DateTimeDigitized",
+					s,
+					dateOnly ? preferNonXMP : preferXMP);
+			
+		if (s.NotEmpty ())
 			{
 				
-				exif.fDateTimeDigitized.Decode_ISO_8601 (s.Get ());
-				
+			exif.fDateTimeDigitized.Decode_ISO_8601 (s.Get ());
+							
+			// Round trip again in case we need to add a fake time zone.
+			
+			s = exif.fDateTimeDigitized.Encode_ISO_8601 ();
+			
+			SetString (XMP_NS_EXIF,
+					   "DateTimeDigitized",
+					   s);
+			
 			}
 			
 		}
@@ -3427,6 +4230,19 @@ void dng_xmp::UpdateDateTime (const dng_date_time_info &dt)
 								   
 	SetString (XMP_NS_TIFF,
 			   "DateTime",
+			   s);
+					
+	}
+
+/******************************************************************************/
+
+void dng_xmp::UpdateMetadataDate (const dng_date_time_info &dt)
+	{
+	
+	dng_string s = dt.Encode_ISO_8601 ();
+								   
+	SetString (XMP_NS_XAP,
+			   "MetadataDate",
 			   s);
 					
 	}
@@ -3503,6 +4319,16 @@ void dng_xmp::SetOrientation (const dng_orientation &orientation)
 void dng_xmp::SyncOrientation (dng_negative &negative,
 					   		   bool xmpIsMaster)
 	{
+	
+	SyncOrientation (negative.Metadata (), xmpIsMaster);
+	
+	}
+	
+/*****************************************************************************/
+
+void dng_xmp::SyncOrientation (dng_metadata &metadata,
+					   		   bool xmpIsMaster)
+	{
 			
 	// See if XMP contains the orientation.
 	
@@ -3510,17 +4336,17 @@ void dng_xmp::SyncOrientation (dng_negative &negative,
 
 	// See if XMP is the master value.
 	
-	if (xmpHasOrientation && (xmpIsMaster || !negative.HasBaseOrientation ()))
+	if (xmpHasOrientation && (xmpIsMaster || !metadata.HasBaseOrientation ()))
 		{
 		
-		negative.SetBaseOrientation (GetOrientation ());
+		metadata.SetBaseOrientation (GetOrientation ());
 		
 		}
 		
 	else
 		{
 		
-		SetOrientation (negative.BaseOrientation ());
+		SetOrientation (metadata.BaseOrientation ());
 		
 		}
 
@@ -3533,6 +4359,9 @@ void dng_xmp::ClearImageInfo ()
 	
 	Remove (XMP_NS_TIFF, "ImageWidth" );
 	Remove (XMP_NS_TIFF, "ImageLength");
+	
+	Remove (XMP_NS_EXIF, "PixelXDimension");
+	Remove (XMP_NS_EXIF, "PixelYDimension");
 		
 	Remove (XMP_NS_TIFF, "BitsPerSample");
 	
@@ -3581,7 +4410,7 @@ void dng_xmp::SetSampleInfo (uint32 samplesPerPixel,
 	
 	char s [32];
 	
-	sprintf (s, "%u", bitsPerSample);
+	sprintf (s, "%u", (unsigned) bitsPerSample);
 	
 	dng_string ss;
 	
@@ -3669,5 +4498,44 @@ void dng_xmp::AppendArrayItem (const char *ns,
 						   isBag,
 						   propIsStruct);
 	}
+
+/*****************************************************************************/
+
+#if qDNGXMPDocOps
+
+/*****************************************************************************/
+
+void dng_xmp::DocOpsOpenXMP (const char *srcMIME)
+	{
+	
+	fSDK->DocOpsOpenXMP (srcMIME);
+	
+	}
+
+/*****************************************************************************/
+
+void dng_xmp::DocOpsPrepareForSave (const char *srcMIME,
+									const char *dstMIME,
+									bool newPath)
+	{
+	
+	fSDK->DocOpsPrepareForSave (srcMIME,
+								dstMIME,
+								newPath);
+	
+	}
+
+/*****************************************************************************/
+
+void dng_xmp::DocOpsUpdateMetadata (const char *srcMIME)
+	{
+	
+	fSDK->DocOpsUpdateMetadata (srcMIME);
+	
+	}
+
+/*****************************************************************************/
+
+#endif
 
 /*****************************************************************************/

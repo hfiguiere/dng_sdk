@@ -6,15 +6,19 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_tag_values.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_tag_values.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
 #ifndef __dng_tag_values__
 #define __dng_tag_values__
+
+/*****************************************************************************/
+
+#include "dng_flags.h"
 
 /*****************************************************************************/
 
@@ -30,6 +34,14 @@ enum
 	// Preview image for the primary settings.
 	
 	sfPreviewImage				= 1,
+	
+	// Transparency mask
+	
+	sfTransparencyMask			= 4,
+	
+	// Preview Transparency mask
+	
+	sfPreviewMask				= sfPreviewImage + sfTransparencyMask,
 	
 	// Preview image for non-primary settings.
 	
@@ -70,7 +82,20 @@ enum
 	pcInterleaved				= 1,
 	pcPlanar					= 2,
 	
-	pcRowInterleaved			= 100000		// Internal use only
+	// Ordering, using an RGB image as an example:
+	//
+	// RRRRRRRRRR
+	// GGGGGGGGGG
+	// BBBBBBBBBB
+	// RRRRRRRRRR
+	// GGGGGGGGGG
+	// BBBBBBBBBB
+	//
+	// The "AlignSIMD" variant additionally ensures that the offset of each
+	// plane's row is aligned to an integer multiple of SIMD vector width (16
+	// or 32) bytes from the beginning of the buffer.
+	pcRowInterleaved			= 100000,		// Internal use only
+	pcRowInterleavedAlignSIMD	= 100001		// Internal use only
 	
 	};
 
@@ -114,7 +139,11 @@ enum
 	ccJPEG						= 7,
 	ccDeflate					= 8,
 	ccPackBits					= 32773,
-	ccOldDeflate				= 32946
+	ccOldDeflate				= 32946,
+	
+	// Used in DNG files in places that allow lossless JPEG.
+	
+	ccLossyJPEG					= 34892
 	
 	};
 
@@ -126,9 +155,15 @@ enum
 	{
 	
 	cpNullPredictor				= 1,
-	cpHorizontalDifference		= 2
+	cpHorizontalDifference		= 2,
+	cpFloatingPoint				= 3,
 	
-	};		
+	cpHorizontalDifferenceX2	= 34892,
+	cpHorizontalDifferenceX4	= 34893,
+	cpFloatingPointX2			= 34894,
+	cpFloatingPointX4			= 34895
+	
+	};
 
 /******************************************************************************/
 
@@ -161,10 +196,11 @@ enum
 	lsFineWeather				=  9,
 	lsCloudyWeather				= 10,
 	lsShade						= 11,
-	lsDaylightFluorescent		= 12,		// D 5700 - 7100K
-	lsDayWhiteFluorescent		= 13,		// N 4600 - 5400K
-	lsCoolWhiteFluorescent		= 14,		// W 3900 - 4500K
-	lsWhiteFluorescent			= 15,		// WW 3200 - 3700K
+	lsDaylightFluorescent		= 12,		// D  5700 - 7100K
+	lsDayWhiteFluorescent		= 13,		// N  4600 - 5500K
+	lsCoolWhiteFluorescent		= 14,		// W  3800 - 4500K
+	lsWhiteFluorescent			= 15,		// WW 3250 - 3800K
+	lsWarmWhiteFluorescent		= 16,		// L  2600 - 3250K
 	lsStandardLightA			= 17,
 	lsStandardLightB			= 18,
 	lsStandardLightC			= 19,
@@ -234,6 +270,25 @@ enum ColorKeyCode
 	colorKeyMaxEnum				= 0xFF
 	
 	};
+
+/*****************************************************************************/
+
+// Values for the SensitivityType tag.
+
+enum
+	{
+		
+	stUnknown					= 0,
+
+	stStandardOutputSensitivity = 1,
+	stRecommendedExposureIndex	= 2,
+	stISOSpeed					= 3,
+	stSOSandREI					= 4,
+	stSOSandISOSpeed			= 5,
+	stREIandISOSpeed			= 6,
+	stSOSandREIandISOSpeed		= 7
+		
+	};
 	
 /*****************************************************************************/
 
@@ -286,6 +341,50 @@ enum
 
 /*****************************************************************************/
 
+// Values for the ProfileHueSatMapEncoding and ProfileLookTableEncoding tags.
+
+enum
+	{
+	
+	// 1. Convert linear ProPhoto RGB values to HSV.
+	// 2. Use the HSV coordinates to index into the color table.
+	// 3. Apply color table result to the original HSV values.
+	// 4. Convert modified HSV values back to linear ProPhoto RGB.
+	
+	encoding_Linear				= 0,
+	
+	// 1. Convert linear ProPhoto RGB values to HSV.
+	// 2. Encode V coordinate using sRGB encoding curve.
+	// 3. Use the encoded HSV coordinates to index into the color table.
+	// 4. Apply color table result to the encoded values from step 2.
+	// 5. Decode V coordinate using sRGB decoding curve (inverse of step 2).
+	// 6. Convert HSV values back to linear ProPhoto RGB (inverse of step 1).
+
+	encoding_sRGB				= 1
+	
+	};
+
+/*****************************************************************************/
+
+// Values for the DefaultBlackRender tag.
+
+enum
+	{
+
+	// By default, the renderer applies (possibly auto-calculated) black subtraction
+	// prior to the look table.
+	
+	defaultBlackRender_Auto		= 0,
+	
+	// By default, the renderer does not apply any black subtraction prior to the
+	// look table.
+	
+	defaultBlackRender_None		= 1
+	
+	};
+
+/*****************************************************************************/
+
 // Values for the PreviewColorSpace tag.
 
 enum PreviewColorSpaceEnum
@@ -300,6 +399,36 @@ enum PreviewColorSpaceEnum
 	previewColorSpace_LastValid		= previewColorSpace_ProPhotoRGB,
 
 	previewColorSpace_MaxEnum		= 0xFFFFFFFF
+	
+	};
+
+/*****************************************************************************/
+
+// Values for CacheVersion tag.
+
+enum
+	{
+	
+	// The low-16 bits are a rendering version number.
+	
+	cacheVersionMask				= 0x0FFFF,
+	
+	// Default cache version. 
+	
+	cacheVersionDefault				= 0x00100,
+	
+	// Is this an integer preview of a floating point image?
+	
+	cacheVersionDefloated			= 0x10000,
+	
+	// Is this an flattening preview of an image with tranparency?
+	
+	cacheVersionFlattened			= 0x20000,
+	
+	// Was this preview build using a the default baseline multi-channel
+	// CFA merge (i.e. only using the first channel)?
+	
+	cacheVersionFakeMerge			= 0x40000
 	
 	};
 
@@ -326,6 +455,7 @@ enum
 	
 	magicTIFF					= 42,			// TIFF (and DNG)
 	magicExtendedProfile		= 0x4352,		// 'CR'
+	magicRawCache				= 1022,			// Raw cache (fast load data)
 	
 	// Other raw formats - included here so the DNG SDK can parse them.
 	
@@ -348,8 +478,9 @@ enum
 	dngVersion_1_1_0_0			= 0x01010000,
 	dngVersion_1_2_0_0			= 0x01020000,
 	dngVersion_1_3_0_0			= 0x01030000,
+	dngVersion_1_4_0_0			= 0x01040000,
 	
-	dngVersion_Current			= dngVersion_1_3_0_0,
+	dngVersion_Current			= dngVersion_1_4_0_0,
 	
 	dngVersion_SaveDefault		= dngVersion_Current
 	

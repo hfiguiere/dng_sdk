@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_color_spec.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_color_spec.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Class for holding a specific color transform.
@@ -70,6 +70,8 @@ class dng_color_spec
 		dng_vector fCameraWhite;
 		dng_matrix fCameraToPCS;
 		
+		dng_matrix fPCStoCamera;
+		
 	public:
 
 		/// Read calibration info from DNG negative and construct a 
@@ -111,6 +113,12 @@ class dng_color_spec
 		/// transforms and white point. 
 
 		const dng_matrix & CameraToPCS () const;
+
+		/// Getter for Profile Connection Space to camera color transform.
+		/// \retval A transform that takes into account all camera calibration
+		/// transforms and white point. 
+
+		const dng_matrix & PCStoCamera () const;
 
 		/// Return the XY value to use for SetWhiteXY for a given camera color
 		/// space coordinate as the white point.

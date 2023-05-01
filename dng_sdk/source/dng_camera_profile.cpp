@@ -6,14 +6,16 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_camera_profile.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_camera_profile.cpp#5 $ */ 
+/* $DateTime: 2016/01/20 16:00:38 $ */
+/* $Change: 1060141 $ */
+/* $Author: erichan $ */
 
 #include "dng_camera_profile.h"
 
+#include "dng_1d_table.h"
 #include "dng_assertions.h"
+#include "dng_color_space.h"
 #include "dng_host.h"
 #include "dng_exceptions.h"
 #include "dng_image_writer.h"
@@ -48,11 +50,17 @@ dng_camera_profile::dng_camera_profile ()
 	,	fEmbedPolicy (pepAllowCopying)
 	,	fHueSatDeltas1 ()
 	,	fHueSatDeltas2 ()
+	,	fHueSatMapEncoding (encoding_Linear)
 	,	fLookTable ()
+	,	fLookTableEncoding (encoding_Linear)
+	,	fBaselineExposureOffset (0, 100)
+	,	fDefaultBlackRender (defaultBlackRender_Auto)
 	,	fToneCurve ()
 	,	fProfileCalibrationSignature ()
 	,	fUniqueCameraModelRestriction ()
 	,	fWasReadFromDNG (false)
+	,	fWasReadFromDisk (false)
+	,	fWasBuiltinMatrix (false)
 	,	fWasStubbed (false)
 	
 	{
@@ -121,18 +129,23 @@ real64 dng_camera_profile::IlluminantToTemperature (uint32 light)
 			
 		case lsDayWhiteFluorescent:
 			{
-			return (4600.0 + 5400.0) * 0.5;
+			return (4600.0 + 5500.0) * 0.5;
 			}
 			
 		case lsCoolWhiteFluorescent:
 		case lsFluorescent:
 			{
-			return (3900.0 + 4500.0) * 0.5;
+			return (3800.0 + 4500.0) * 0.5;
 			}
 			
 		case lsWhiteFluorescent:
 			{
-			return (3200.0 + 3700.0) * 0.5;
+			return (3250.0 + 3800.0) * 0.5;
+			}
+			
+		case lsWarmWhiteFluorescent:
+			{
+			return (2600.0 + 3250.0) * 0.5;
 			}
 			
 		default:
@@ -474,11 +487,49 @@ void dng_camera_profile::CalculateFingerprint () const
 			FingerprintHueSatMap (printer, fHueSatDeltas2);
 			
 			}
+
+		if (haveHueSat1 || haveHueSat2)
+			{
+
+			if (fHueSatMapEncoding != 0)
+				{
+
+				printer.Put_uint32 (fHueSatMapEncoding);
+
+				}
+			
+			}
 			
 		if (fLookTable.IsValid ())
 			{
 			
 			FingerprintHueSatMap (printer, fLookTable);
+
+			if (fLookTableEncoding != 0)
+				{
+
+				printer.Put_uint32 (fLookTableEncoding);
+
+				}
+			
+			}
+
+		if (fBaselineExposureOffset.IsValid ())
+			{
+			
+			if (fBaselineExposureOffset.As_real64 () != 0.0)
+				{
+
+				printer.Put_real64 (fBaselineExposureOffset.As_real64 ());
+
+				}
+			
+			}
+
+		if (fDefaultBlackRender != 0)
+			{
+			
+			printer.Put_int32 (fDefaultBlackRender);
 			
 			}
 			
@@ -499,6 +550,38 @@ void dng_camera_profile::CalculateFingerprint () const
 
 	fFingerprint = printer.Result ();
 
+	}
+
+/******************************************************************************/
+
+dng_fingerprint dng_camera_profile::UniqueID () const
+	{
+
+	dng_md5_printer_stream printer;
+
+	// MD5 hash is always calculated on little endian data.
+
+	printer.SetLittleEndian ();
+
+	// Start with the existing fingerprint.
+	
+	if (!fFingerprint.IsValid ())
+		CalculateFingerprint ();
+
+	printer.Put (fFingerprint.data,
+				 (uint32) sizeof (fFingerprint.data));
+
+	// Also include the UniqueCameraModelRestriction tag.
+
+	printer.Put (fUniqueCameraModelRestriction.Get	  (),
+				 fUniqueCameraModelRestriction.Length ());
+
+	// Add any other needed fields here.
+
+	// ...
+
+	return printer.Result ();
+	
 	}
 
 /******************************************************************************/
@@ -788,19 +871,23 @@ bool dng_camera_profile::IsValid (uint32 channels) const
 bool dng_camera_profile::EqualData (const dng_camera_profile &profile) const
 	{
 
-	return fCalibrationIlluminant1		== profile.fCalibrationIlluminant1		&&
-		   fCalibrationIlluminant2		== profile.fCalibrationIlluminant2		&&
-		   fColorMatrix1				== profile.fColorMatrix1				&&
-		   fColorMatrix2				== profile.fColorMatrix2				&&
-		   fForwardMatrix1				== profile.fForwardMatrix1			    &&
-		   fForwardMatrix2				== profile.fForwardMatrix2			    &&
-		   fReductionMatrix1			== profile.fReductionMatrix1			&&
-		   fReductionMatrix2			== profile.fReductionMatrix2			&&
-		   fHueSatDeltas1				== profile.fHueSatDeltas1				&&
-		   fHueSatDeltas2				== profile.fHueSatDeltas2				&&
-		   fLookTable					== profile.fLookTable					&&
-		   fToneCurve					== profile.fToneCurve					&&
-		   fProfileCalibrationSignature == profile.fProfileCalibrationSignature;
+	return fCalibrationIlluminant1				== profile.fCalibrationIlluminant1				&&
+		   fCalibrationIlluminant2				== profile.fCalibrationIlluminant2				&&
+		   fColorMatrix1						== profile.fColorMatrix1						&&
+		   fColorMatrix2						== profile.fColorMatrix2						&&
+		   fForwardMatrix1						== profile.fForwardMatrix1						&&
+		   fForwardMatrix2						== profile.fForwardMatrix2						&&
+		   fReductionMatrix1					== profile.fReductionMatrix1					&&
+		   fReductionMatrix2					== profile.fReductionMatrix2					&&
+		   fHueSatDeltas1						== profile.fHueSatDeltas1						&&
+		   fHueSatDeltas2						== profile.fHueSatDeltas2						&&
+		   fHueSatMapEncoding					== profile.fHueSatMapEncoding					&&
+		   fLookTable							== profile.fLookTable							&&
+		   fLookTableEncoding					== profile.fLookTableEncoding					&&
+		   fDefaultBlackRender					== profile.fDefaultBlackRender					&&
+		   fToneCurve							== profile.fToneCurve							&&
+		   fBaselineExposureOffset.As_real64 () == profile.fBaselineExposureOffset.As_real64 () &&
+		   fProfileCalibrationSignature			== profile.fProfileCalibrationSignature;
 
 	}
 		
@@ -843,6 +930,7 @@ void dng_camera_profile::ReadHueSatMap (dng_stream &stream,
 
 /*****************************************************************************/
 
+DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 void dng_camera_profile::Parse (dng_stream &stream,
 								dng_camera_profile_info &profileInfo)
 	{
@@ -975,6 +1063,11 @@ void dng_camera_profile::Parse (dng_stream &stream,
 
 		uint32 points = profileInfo.fToneCurveCount / 2;
 
+		if (points > kMaxToneCurvePoints)
+			{
+			ThrowProgramError ("Too many tone curve points");
+			}
+
 		fToneCurve.fCoord.resize (points);
 
 		for (size_t i = 0; i < points; i++)
@@ -990,6 +1083,14 @@ void dng_camera_profile::Parse (dng_stream &stream,
 			}
 			
 		}
+
+	SetHueSatMapEncoding (profileInfo.fHueSatMapEncoding);
+		
+	SetLookTableEncoding (profileInfo.fLookTableEncoding);
+
+	SetBaselineExposureOffset (profileInfo.fBaselineExposureOffset.As_real64 ());
+
+	SetDefaultBlackRender (profileInfo.fDefaultBlackRender);
 		
 	}
 		
@@ -1194,6 +1295,24 @@ void SplitCameraProfileName (const dng_string &name,
 	version = 0;
 	
 	uint32 len = baseName.Length ();
+
+    if (len == 7 && baseName.StartsWith ("ACR ", true))
+        {
+
+        if (name.Get () [len - 3] >= '0' &&
+            name.Get () [len - 3] <= '9' &&
+            name.Get () [len - 2] == '.' &&
+            name.Get () [len - 1] >= '0' &&
+            name.Get () [len - 1] <= '9')
+		
+        baseName.Truncate (3);
+
+        version = ((int32) (name.Get () [len - 3] - '0')) * 10 +
+                  ((int32) (name.Get () [len - 1] - '0'));
+
+        return;
+
+        }
 	
 	if (len > 5 && baseName.EndsWith (" beta"))
 		{
@@ -1254,6 +1373,63 @@ void SplitCameraProfileName (const dng_string &name,
 				
 			}
 			
+		}
+
+	}
+
+/*****************************************************************************/
+
+void BuildHueSatMapEncodingTable (dng_memory_allocator &allocator,
+								  uint32 encoding,
+								  AutoPtr<dng_1d_table> &encodeTable,
+								  AutoPtr<dng_1d_table> &decodeTable,
+								  bool subSample)
+	{
+
+	encodeTable.Reset ();
+	decodeTable.Reset ();
+	
+	switch (encoding)
+		{
+		
+		case encoding_Linear:
+			{
+
+			break;
+
+			}
+		
+		case encoding_sRGB:
+			{
+
+			encodeTable.Reset (new dng_1d_table);
+			decodeTable.Reset (new dng_1d_table);
+
+			const dng_1d_function & curve = dng_function_GammaEncode_sRGB::Get ();
+
+			encodeTable->Initialize (allocator,
+									 curve,
+									 subSample);
+
+			const dng_1d_inverse inverse (curve);
+
+			decodeTable->Initialize (allocator,
+									 inverse,
+									 subSample);
+
+			break;
+
+			}
+
+		default:
+			{
+
+			DNG_REPORT ("Unsupported hue sat map / look table encoding.");
+
+			break;
+
+			}
+		
 		}
 
 	}

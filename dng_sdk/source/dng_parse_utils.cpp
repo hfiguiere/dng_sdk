@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_parse_utils.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_parse_utils.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -111,7 +111,8 @@ const char * LookupParentCode (uint32 parentCode)
 		{	tcPanasonicRAW,				"Panasonic RAW"					},
 		{	tcFoveonX3F,				"Foveon X3F"					},
 		{	tcJPEG,						"JPEG"							},
-		{	tcAdobePSD,					"Adobe PSD"						}
+		{	tcAdobePSD,					"Adobe PSD"						},
+		{	tcPNG,                      "PNG"						    }
 		};
 
 	const char *name = LookupName (parentCode,
@@ -235,6 +236,12 @@ const char * LookupTagCode (uint32 parentCode,
 		{	tcInterlace,						"Interlace"						},
 		{	tcTimeZoneOffset,					"TimeZoneOffset"				},
 		{	tcSelfTimerMode,					"SelfTimerMode"					},
+		{	tcSensitivityType,					"SensitivityType"				},
+		{	tcStandardOutputSensitivity,		"StandardOutputSensitivity"		},
+		{	tcRecommendedExposureIndex,			"RecommendedExposureIndex"		},
+		{	tcISOSpeed,							"ISOSpeed"						},
+		{	tcISOSpeedLatitudeyyy,				"ISOSpeedLatitudeyyy"			},
+		{	tcISOSpeedLatitudezzz,				"ISOSpeedLatitudezzz"			},
 		{	tcExifVersion,						"ExifVersion"					},
 		{	tcDateTimeOriginal,					"DateTimeOriginal"				},
 		{	tcDateTimeDigitized,				"DateTimeDigitized"				},
@@ -299,6 +306,12 @@ const char * LookupTagCode (uint32 parentCode,
 		{	tcDeviceSettingDescription,			"DeviceSettingDescription"		},
 		{	tcSubjectDistanceRange,				"SubjectDistanceRange"			},
 		{	tcImageUniqueID,					"ImageUniqueID"					},
+		{	tcCameraOwnerNameExif,				"CameraOwnerNameExif"			},
+		{	tcCameraSerialNumberExif,			"CameraSerialNumberExif"		},
+		{	tcLensSpecificationExif,			"LensSpecificationExif"			},
+		{	tcLensMakeExif,						"LensMakeExif"					},
+		{	tcLensModelExif,					"LensModelExif"					},
+		{	tcLensSerialNumberExif,				"LensSerialNumberExif"			},
 		{	tcGamma,							"Gamma"							},
 		{	tcPrintImageMatchingInfo,			"PrintImageMatchingInfo"		},
 		{	tcDNGVersion,						"DNGVersion"					},
@@ -316,6 +329,7 @@ const char * LookupTagCode (uint32 parentCode,
 		{	tcDefaultScale,						"DefaultScale"					},
 		{	tcDefaultCropOrigin,				"DefaultCropOrigin"				},
 		{	tcDefaultCropSize,					"DefaultCropSize"				},
+		{	tcDefaultUserCrop,					"DefaultUserCrop"				},
 		{	tcColorMatrix1,						"ColorMatrix1"					},
 		{	tcColorMatrix2,						"ColorMatrix2"					},
 		{	tcCameraCalibration1,				"CameraCalibration1"			},
@@ -359,6 +373,7 @@ const char * LookupTagCode (uint32 parentCode,
 		{	tcProfileHueSatMapDims,				"ProfileHueSatMapDims"			},
 		{	tcProfileHueSatMapData1,			"ProfileHueSatMapData1"			},
 		{	tcProfileHueSatMapData2,			"ProfileHueSatMapData2"			},
+		{	tcProfileHueSatMapEncoding,			"ProfileHueSatMapEncoding"		},
 		{	tcProfileToneCurve,					"ProfileToneCurve"				},
 		{	tcProfileEmbedPolicy,				"ProfileEmbedPolicy"			},
 		{	tcProfileCopyright,					"ProfileCopyright"				},
@@ -376,10 +391,23 @@ const char * LookupTagCode (uint32 parentCode,
 		{	tcRowInterleaveFactor,				"RowInterleaveFactor"			},
 		{	tcProfileLookTableDims,				"ProfileLookTableDims"			},
 		{	tcProfileLookTableData,				"ProfileLookTableData"			},
+		{	tcProfileLookTableEncoding,			"ProfileLookTableEncoding"		},
+		{	tcBaselineExposureOffset,			"BaselineExposureOffset"		},
+		{	tcDefaultBlackRender,				"DefaultBlackRender"			},
 		{	tcOpcodeList1,						"OpcodeList1"					},
 		{	tcOpcodeList2,						"OpcodeList2"					},
 		{	tcOpcodeList3,						"OpcodeList3"					},
 		{	tcNoiseProfile,						"NoiseProfile"					},
+		{	tcOriginalDefaultFinalSize,			"OriginalDefaultFinalSize"		},
+		{	tcOriginalBestQualityFinalSize,		"OriginalBestQualityFinalSize"	},
+		{	tcOriginalDefaultCropSize,			"OriginalDefaultCropSize"		},
+		{	tcProfileHueSatMapEncoding,			"ProfileHueSatMapEncoding"		},
+		{	tcProfileLookTableEncoding,			"ProfileLookTableEncoding"		},
+		{	tcBaselineExposureOffset,			"BaselineExposureOffset"		},
+		{	tcDefaultBlackRender,				"DefaultBlackRender"			},
+		{	tcNewRawImageDigest,				"NewRawImageDigest"				},
+		{	tcRawToPreviewGain,					"RawToPreviewGain"				},
+		{	tcCacheBlob,						"CacheBlob"						},
 		{	tcKodakKDCPrivateIFD,				"KodakKDCPrivateIFD"			}
 		};
 
@@ -415,7 +443,8 @@ const char * LookupTagCode (uint32 parentCode,
 		{	tcGPSProcessingMethod,			"GPSProcessingMethod"	},
 		{	tcGPSAreaInformation,			"GPSAreaInformation"	},
 		{	tcGPSDateStamp,					"GPSDateStamp"			},
-		{	tcGPSDifferential,				"GPSDifferential"		}
+		{	tcGPSDifferential,				"GPSDifferential"		},
+		{	tcGPSHPositioningError,			"GPSHPositioningError"	},
 		};
 
 	const dng_name_table kInteroperabilityTagNames [] =
@@ -444,8 +473,8 @@ const char * LookupTagCode (uint32 parentCode,
 	if (parentCode == 0         										 ||
 		parentCode == tcExifIFD 										 ||
 		parentCode == tcLeafMOS 										 ||
-		parentCode >= tcFirstSubIFD     && parentCode <= tcLastSubIFD    ||
-		parentCode >= tcFirstChainedIFD && parentCode <= tcLastChainedIFD)
+		(parentCode >= tcFirstSubIFD     && parentCode <= tcLastSubIFD)  ||
+		(parentCode >= tcFirstChainedIFD && parentCode <= tcLastChainedIFD))
 		{
 		
 		name = LookupName (tagCode,
@@ -592,9 +621,11 @@ const char * LookupNewSubFileType (uint32 key)
 	
 	const dng_name_table kNewSubFileTypeNames [] =
 		{
-		{	sfMainImage		 , "Main Image"			},
-		{	sfPreviewImage	 , "Preview Image"		},
-		{	sfAltPreviewImage, "Alt Preview Image"	}
+		{	sfMainImage			, "Main Image"			},
+		{	sfPreviewImage		, "Preview Image"		},
+		{	sfTransparencyMask	, "Transparency Mask"	},
+		{	sfPreviewMask		, "Preview Mask"		},
+		{	sfAltPreviewImage	, "Alt Preview Image"	}
 		};
 
 	const char *name = LookupName (key,
@@ -628,13 +659,79 @@ const char * LookupCompression (uint32 key)
 		{	ccJPEG,				"JPEG"			},
 		{	ccDeflate,			"Deflate"		},
 		{	ccPackBits,			"PackBits"		},
-		{	ccOldDeflate,		"OldDeflate"	}
+		{	ccOldDeflate,		"OldDeflate"	},
+		{	ccLossyJPEG,		"Lossy JPEG"	}
 		};
 
 	const char *name = LookupName (key,
 								   kCompressionNames,
 								   sizeof (kCompressionNames    ) /
 								   sizeof (kCompressionNames [0]));
+								   
+	if (name)
+		{
+		return name;
+		}
+		
+	static char s [32];
+	
+	sprintf (s, "%u", (unsigned) key);
+	
+	return s;
+
+	}
+
+/*****************************************************************************/
+
+const char * LookupPredictor (uint32 key)
+	{
+	
+	const dng_name_table kPredictorNames [] =
+		{
+		{	cpNullPredictor,			"NullPredictor"				},
+		{	cpHorizontalDifference,		"HorizontalDifference"		},
+		{	cpFloatingPoint,			"FloatingPoint"				},
+		{	cpHorizontalDifferenceX2,	"HorizontalDifferenceX2"	},
+		{	cpHorizontalDifferenceX4,	"HorizontalDifferenceX4"	},
+		{	cpFloatingPointX2,			"FloatingPointX2"			},
+		{	cpFloatingPointX4,			"FloatingPointX4"			}
+		};
+
+	const char *name = LookupName (key,
+								   kPredictorNames,
+								   sizeof (kPredictorNames    ) /
+								   sizeof (kPredictorNames [0]));
+								   
+	if (name)
+		{
+		return name;
+		}
+		
+	static char s [32];
+	
+	sprintf (s, "%u", (unsigned) key);
+	
+	return s;
+
+	}
+
+/*****************************************************************************/
+
+const char * LookupSampleFormat (uint32 key)
+	{
+	
+	const dng_name_table kSampleFormatNames [] =
+		{
+		{	sfUnsignedInteger,	"UnsignedInteger"	},
+		{	sfSignedInteger,	"SignedInteger"		},
+		{	sfFloatingPoint,	"FloatingPoint"		},
+		{	sfUndefined,		"Undefined"			}
+		};
+
+	const char *name = LookupName (key,
+								   kSampleFormatNames,
+								   sizeof (kSampleFormatNames    ) /
+								   sizeof (kSampleFormatNames [0]));
 								   
 	if (name)
 		{
@@ -912,9 +1009,10 @@ const char * LookupLightSource (uint32 key)
 		{	lsCloudyWeather,		"Cloudy weather"							},
 		{	lsShade,				"Shade"										},
 		{	lsDaylightFluorescent,	"Daylight fluorescent (D 5700 - 7100K)"		},
-		{	lsDayWhiteFluorescent,	"Day white fluorescent (N 4600 - 5400K)"	},
-		{	lsCoolWhiteFluorescent,	"Cool white fluorescent (W 3900 - 4500K)"	},
-		{	lsWhiteFluorescent,		"White fluorescent (WW 3200 - 3700K)"		},
+		{	lsDayWhiteFluorescent,	"Day white fluorescent (N 4600 - 5500K)"	},
+		{	lsCoolWhiteFluorescent,	"Cool white fluorescent (W 3800 - 4500K)"	},
+		{	lsWhiteFluorescent,		"White fluorescent (WW 3250 - 3800K)"		},
+		{	lsWarmWhiteFluorescent, "Warm white fluorescent (L 2600 - 3250K)"	},
 		{	lsStandardLightA,		"Standard light A"							},
 		{	lsStandardLightB,		"Standard light B"							},
 		{	lsStandardLightC,		"Standard light C"							},
@@ -1560,6 +1658,41 @@ const char * LookupJPEGMarker (uint32 key)
 	static char s [32];
 		
 	sprintf (s, "0x%02X", (unsigned) key);
+		
+	return s;
+
+	}
+
+/*****************************************************************************/
+
+const char * LookupSensitivityType (uint32 key)
+	{
+	
+	const dng_name_table kSensitivityTypeNames [] =
+		{
+		{	stUnknown,					 "Unknown"																				},
+		{	stStandardOutputSensitivity, "Standard Output Sensitivity (SOS)"													},
+		{	stRecommendedExposureIndex,	 "Recommended Exposure Index (REI)"														},
+		{	stISOSpeed,					 "ISO Speed"																			},
+		{	stSOSandREI,				 "Standard Output Sensitivity (SOS) and Recommended Exposure Index (REI)"				},
+		{	stSOSandISOSpeed,			 "Standard Output Sensitivity (SOS) and ISO Speed"										},
+		{	stREIandISOSpeed,			 "Recommended Exposure Index (REI) and ISO Speed"										},
+		{	stSOSandREIandISOSpeed,		 "Standard Output Sensitivity (SOS) and Recommended Exposure Index (REI) and ISO Speed" },
+		};
+		
+	const char *name = LookupName (key,
+								   kSensitivityTypeNames,
+								   sizeof (kSensitivityTypeNames	) /
+								   sizeof (kSensitivityTypeNames [0]));
+								   
+	if (name)
+		{
+		return name;
+		}
+		
+	static char s [32];
+		
+	sprintf (s, "%u", (unsigned) key);
 		
 	return s;
 
@@ -2279,8 +2412,8 @@ bool CheckTagType (uint32 parentCode,
 			
 		#else
 		
-		parentCode;		// Unused
-		tagCode;		// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;		// Unused
 			
 		#endif
 			
@@ -2326,8 +2459,8 @@ bool CheckTagCount (uint32 parentCode,
 			
 		#else
 		
-		parentCode;		// Unused
-		tagCode;		// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;		// Unused
 		
 		#endif
 			
@@ -2367,8 +2500,8 @@ bool CheckColorImage (uint32 parentCode,
 			
 		#else
 		
-		parentCode;		// Unused
-		tagCode;		// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;		// Unused
 			
 		#endif
 			
@@ -2431,8 +2564,8 @@ bool CheckMainIFD (uint32 parentCode,
 			
 		#else
 		
-		parentCode;			// Unused
-		tagCode;			// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;			// Unused
 			
 		#endif
 			
@@ -2472,8 +2605,8 @@ bool CheckRawIFD (uint32 parentCode,
 			
 		#else
 		
-		parentCode;			// Unused
-		tagCode;			// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;			// Unused
 			
 		#endif
 			
@@ -2512,8 +2645,8 @@ bool CheckCFA (uint32 parentCode,
 			
 		#else
 		
-		parentCode;			// Unused
-		tagCode;			// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;			// Unused
 			
 		#endif
 			
@@ -2532,8 +2665,7 @@ void ParseStringTag (dng_stream &stream,
 					 uint32 tagCode,
 				     uint32 tagCount,
 				     dng_string &s,
-				     bool trimBlanks,
-				     bool isASCII)
+				     bool trimBlanks)
 	{
 	
 	if (tagCount == 0 ||
@@ -2597,45 +2729,17 @@ void ParseStringTag (dng_stream &stream,
 			
 		#else
 		
-		parentCode;			// Unused
-		tagCode;			// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;			// Unused
 			
 		#endif
 			
 		}
 		
-	if (isASCII)
-		{
-		s.Set_ASCII (buffer);
-		}
-	else
-		{
-		s.Set (buffer);
-		}
-	
-	#if qDNGValidate
-
-	if (parentCode < tcFirstMakerNoteIFD)
-		{
+	// Medata working group - Allow UTF-8
 		
-		if (isASCII && !s.IsASCII ())
-			{
-			
-			char message [256];
-			
-			sprintf (message,
-					 "%s %s has non-ASCII characters",
-					 LookupParentCode (parentCode),
-					 LookupTagCode (parentCode, tagCode));
-					 
-			ReportWarning (message);
-						 
-			}
-		
-		}
-		
-	#endif
-		
+	s.Set_UTF8_or_System (buffer);
+				
 	if (trimBlanks)
 		{
 		
@@ -2715,15 +2819,18 @@ void ParseDualStringTag (dng_stream &stream,
 			
 		#else
 		
-		parentCode;			// Unused
-		tagCode;			// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;			// Unused
 			
 		#endif
 			
 		}
-				
-	s1.Set_ASCII (buffer);
-	s2.Set_ASCII (NULL  );
+		
+	// Medata working group - Allow UTF-8
+		
+	s1.Set_UTF8_or_System (buffer);
+		
+	s2.Set_ASCII (NULL);
 				
 	for (uint32 j = 1; j < tagCount - 1; j++)
 		{
@@ -2732,36 +2839,15 @@ void ParseDualStringTag (dng_stream &stream,
 			buffer [j    ] == 0)
 			{
 			
-			s2.Set_ASCII (buffer + j + 1);
+			// Medata working group - Allow UTF-8
+		
+			s2.Set_UTF8_or_System (buffer + j + 1);
 
 			break;
 			
 			}
 		
 		}
-		
-	#if qDNGValidate
-		
-		{
-		
-		if (!s1.IsASCII () ||
-			!s2.IsASCII ())
-			{
-			
-			char message [256];
-			
-			sprintf (message,
-					 "%s %s has non-ASCII characters",
-					 LookupParentCode (parentCode),
-					 LookupTagCode (parentCode, tagCode));
-					 
-			ReportWarning (message);
-						 
-			}
-		
-		}
-		
-	#endif
 		
 	s1.TrimTrailingBlanks ();
 	s2.TrimTrailingBlanks ();
@@ -2798,8 +2884,8 @@ void ParseEncodedStringTag (dng_stream &stream,
 			
 		#else
 		
-		parentCode;			// Unused
-		tagCode;			// Unused
+		(void) parentCode;		// Unused
+		(void) tagCode;			// Unused
 			
 		#endif
 			
@@ -3031,8 +3117,13 @@ void ParseEncodedStringTag (dng_stream &stream,
 			
 			case dng_encoding_ascii:
 				{
-				s.Set_ASCII (buffer);
+				
+				// Medata working group - allow UTF-8 for ASCII tags.
+				
+				s.Set_UTF8_or_System (buffer);
+				
 				break;
+				
 				}
 				
 			case dng_encoding_jis_x208_1990:

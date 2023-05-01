@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_tile_iterator.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_tile_iterator.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -195,5 +195,94 @@ bool dng_tile_iterator::GetOneTile (dng_rect &tile)
 	return true;
 	
 	}
+
+/*****************************************************************************/
+
+dng_tile_reverse_iterator::dng_tile_reverse_iterator (const dng_image &image,
+													  const dng_rect &area)
+
+	:	fTiles ()
+
+	,	fIndex (0)
+
+	{
 	
+	dng_tile_forward_iterator iterator (image, area);
+
+	Initialize (iterator);
+
+	}
+
+/*****************************************************************************/
+
+dng_tile_reverse_iterator::dng_tile_reverse_iterator (const dng_point &tileSize,
+													  const dng_rect &area)
+
+	:	fTiles ()
+
+	,	fIndex (0)
+
+	{
+	
+	dng_tile_forward_iterator iterator (tileSize, area);
+
+	Initialize (iterator);
+	
+	}
+						   
+/*****************************************************************************/
+
+dng_tile_reverse_iterator::dng_tile_reverse_iterator (const dng_rect &tile,
+													  const dng_rect &area)
+
+	:	fTiles ()
+
+	,	fIndex (0)
+
+	{
+	
+	dng_tile_forward_iterator iterator (tile, area);
+
+	Initialize (iterator);
+	
+	}
+	
+/*****************************************************************************/
+
+bool dng_tile_reverse_iterator::GetOneTile (dng_rect &tile)
+	{
+	
+	if (fIndex == 0)
+		{
+		
+		return false;
+		
+		}
+
+	fIndex--;
+	
+	tile = fTiles [fIndex];
+
+	return true;
+
+	}
+
+/*****************************************************************************/
+
+void dng_tile_reverse_iterator::Initialize (dng_tile_forward_iterator &iterator)
+	{
+	
+	dng_rect tile;
+
+	while (iterator.GetOneTile (tile))
+		{
+		
+		fTiles.push_back (tile);
+		
+		}
+
+	fIndex = fTiles.size ();
+	
+	}
+
 /*****************************************************************************/

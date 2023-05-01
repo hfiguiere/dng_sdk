@@ -6,15 +6,16 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_memory.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_memory.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
 #include "dng_memory.h"
 
+#include "dng_bottlenecks.h"
 #include "dng_exceptions.h"
 
 /*****************************************************************************/
@@ -41,6 +42,31 @@ dng_memory_data::dng_memory_data (uint32 size)
 
 /*****************************************************************************/
 
+dng_memory_data::dng_memory_data (const dng_safe_uint32 &size)
+
+	:	fBuffer (NULL)
+	
+	{
+	
+	Allocate (size.Get ());
+	
+	}
+
+/*****************************************************************************/
+
+dng_memory_data::dng_memory_data (uint32 count, 
+								  std::size_t elementSize)
+
+	:	fBuffer (NULL)
+	
+	{
+	
+	Allocate (count, elementSize);
+	
+	}
+
+/*****************************************************************************/
+
 dng_memory_data::~dng_memory_data ()
 	{
 	
@@ -58,7 +84,7 @@ void dng_memory_data::Allocate (uint32 size)
 	if (size)
 		{
 		
-		fBuffer = malloc (size);
+		fBuffer = (char *) malloc (size);
 		
 		if (!fBuffer)
 			{
@@ -71,6 +97,48 @@ void dng_memory_data::Allocate (uint32 size)
 	
 	}
 				
+/*****************************************************************************/
+
+void dng_memory_data::Allocate (const dng_safe_uint32 &size)
+	{
+	
+	Allocate (size.Get ());
+	
+	}
+
+/*****************************************************************************/
+
+void dng_memory_data::Allocate (uint32 count, 
+								std::size_t elementSize)
+	{
+	
+	// Convert elementSize to a uint32.
+
+	const uint32 elementSizeAsUint32 = static_cast<uint32> (elementSize);
+
+	if (static_cast<std::size_t> (elementSizeAsUint32) != elementSize)
+		{
+		ThrowOverflow ("elementSize overflow");
+		}
+	
+	// Compute required number of bytes and allocate memory.
+
+	dng_safe_uint32 numBytes = dng_safe_uint32 (count) * elementSizeAsUint32;
+
+	Allocate (numBytes.Get ());
+	
+	}
+
+/*****************************************************************************/
+
+void dng_memory_data::Allocate (const dng_safe_uint32 &count, 
+								std::size_t elementSize)
+	{
+
+	Allocate (count.Get (), elementSize);
+
+	}
+
 /*****************************************************************************/
 
 void dng_memory_data::Clear ()
@@ -89,6 +157,21 @@ void dng_memory_data::Clear ()
 				
 /*****************************************************************************/
 
+dng_memory_block * dng_memory_block::Clone (dng_memory_allocator &allocator) const
+	{
+	
+	uint32 size = LogicalSize ();
+	
+	dng_memory_block * result = allocator.Allocate (size);
+	
+	DoCopyBytes (Buffer (), result->Buffer (), size);
+		
+	return result;
+	
+	}
+
+/*****************************************************************************/
+
 class dng_malloc_block : public dng_memory_block
 	{
 	
@@ -102,14 +185,6 @@ class dng_malloc_block : public dng_memory_block
 		
 		virtual ~dng_malloc_block ();
 		
-	private:
-	
-		// Hidden copy constructor and assignment operator.
-		
-		dng_malloc_block (const dng_malloc_block &block);
-		
-		dng_malloc_block & operator= (const dng_malloc_block &block);
-	
 	};
 	
 /*****************************************************************************/
@@ -121,8 +196,36 @@ dng_malloc_block::dng_malloc_block (uint32 logicalSize)
 	,	fMalloc (NULL)
 	
 	{
+
+	#if qLinux
+
+	// BULLSHIT: Need to change this alignment for AVX support?
+
+	int err = ::posix_memalign ((void **) &fMalloc, 
+								16,
+								(size_t) PhysicalSize ());
+
+	if (err)
+		{
+
+		ThrowMemoryFull ();
+
+		}
+
+	#elif qAndroid
+        
+	fMalloc = memalign (16, (size_t) PhysicalSize ());
+        
+	if (!fMalloc)
+		{
+            
+		ThrowMemoryFull ();
+            
+		}
 	
-	fMalloc = malloc (PhysicalSize ());
+	#else
+
+	fMalloc = (char *) malloc (PhysicalSize ());
 	
 	if (!fMalloc)
 		{
@@ -131,6 +234,8 @@ dng_malloc_block::dng_malloc_block (uint32 logicalSize)
 					 
 		}
 		
+	#endif
+
 	SetBuffer (fMalloc);
 	
 	}

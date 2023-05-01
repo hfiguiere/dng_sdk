@@ -6,13 +6,14 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_fingerprint.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_fingerprint.h#5 $ */ 
+/* $DateTime: 2016/01/20 16:00:38 $ */
+/* $Change: 1060141 $ */
+/* $Author: erichan $ */
 
 /** \file
- * Fingerprint (cryptographic hashing) support for generating strong hashes of image data.
+ * Fingerprint (cryptographic hashing) support for generating strong hashes of image
+ * data.
  */
 
 /*****************************************************************************/
@@ -37,7 +38,9 @@ class dng_fingerprint
 	
 	public:
 	
-		uint8 data [16];
+		static const size_t kDNGFingerprintSize = 16;
+
+		uint8 data [kDNGFingerprintSize];
 		
 	public:
 	
@@ -72,15 +75,72 @@ class dng_fingerprint
 			return !(*this == print);
 			}
 			
-		/// Produce a 32-bit hash value from fingerprint used for faster hashing of fingerprints.
+		/// Produce a 32-bit hash value from fingerprint used for faster hashing of
+		/// fingerprints.
 			
 		uint32 Collapse32 () const; 
+
+		/// Convert fingerprint to UTF-8 string.
+		///
+		/// \param resultStr The output array to which the UTF-8 encoding of the
+		/// fingerprint will be written.
+
+		void ToUtf8HexString (char resultStr [2 * kDNGFingerprintSize + 1]) const;
+
+		/// Convert UTF-8 string to fingerprint. Returns true on success, false on
+		/// failure.
+		///
+		/// \param inputStr The input array from which the UTF-8 encoding of the
+		/// fingerprint will be read.
+		///
+		/// \retval True indicates success.
+
+		bool FromUtf8HexString (const char inputStr [2 * kDNGFingerprintSize + 1]);
+
+	};
+
+/*****************************************************************************/
+
+/// \brief Utility to compare fingerprints (e.g., for sorting).
+
+struct dng_fingerprint_less_than
+	{
+
+	/// Less-than comparison.
+
+	bool operator() (const dng_fingerprint &a, 
+					 const dng_fingerprint &b) const
+		{
+
+		return memcmp (a.data, 
+					   b.data, 
+					   sizeof (a.data)) < 0;
+
+		}
 
 	};
 
 /******************************************************************************/
 
-// Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm
+/// \brief Utility to hash fingerprints (e.g., for hashtables).
+
+struct dng_fingerprint_hash
+	{
+
+	/// Hash function.
+
+	size_t operator () (const dng_fingerprint &digest) const
+		{
+
+		return (size_t) digest.Collapse32 ();
+
+		}
+
+	};
+
+/******************************************************************************/
+
+// Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm.
 
 // Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
 // rights reserved.
@@ -103,6 +163,9 @@ class dng_fingerprint
 // These notices must be retained in any copies of any part of this
 // documentation and/or software.
 
+/// \brief Class to hash binary data to a fingerprint using the MD5 Message-Digest
+/// Algorithm.
+
 class dng_md5_printer
 	{
 	
@@ -114,18 +177,29 @@ class dng_md5_printer
 			{
 			}
 		
+		/// Reset the fingerprint.
+
 		void Reset ();
 		
+		/// Append the data to the stream to be hashed.
+		/// \param data The data to be hashed.
+		/// \param inputLen The length of data, in bytes.
+
 		void Process (const void *data,
 					  uint32 inputLen);
 					  
+		/// Append the string to the stream to be hashed.
+		/// \param text The string to be hashed.
+
 		void Process (const char *text)
 			{
 			
-			Process (text, (uint32)strlen (text));
+			Process (text, (uint32) strlen (text));
 			
 			}
 		
+		/// Get the fingerprint (i.e., result of the hash).
+
 		const dng_fingerprint & Result ();
 		
 	private:
@@ -170,6 +244,7 @@ class dng_md5_printer
 			
 		// FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
 		
+		DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 		static inline void FF (uint32 &a,
 							   uint32 b,
 							   uint32 c,
@@ -183,6 +258,7 @@ class dng_md5_printer
 			a += b;
 			}
 
+		DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 		static inline void GG (uint32 &a,
 							   uint32 b,
 							   uint32 c,
@@ -196,6 +272,7 @@ class dng_md5_printer
 			a += b;
 			}
 
+		DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 		static inline void HH (uint32 &a,
 							   uint32 b,
 							   uint32 c,
@@ -209,6 +286,7 @@ class dng_md5_printer
 			a += b;
 			}
 
+		DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 		static inline void II (uint32 &a,
 							   uint32 b,
 							   uint32 c,
@@ -241,7 +319,7 @@ class dng_md5_printer
 
 /*****************************************************************************/
 
-// A dng_stream based interface to the MD5 printing logic.
+/// \brief A dng_stream based interface to the MD5 printing logic.
 
 class dng_md5_printer_stream : public dng_stream, dng_md5_printer
 	{
@@ -251,6 +329,8 @@ class dng_md5_printer_stream : public dng_stream, dng_md5_printer
 		uint64 fNextOffset;
 
 	public:
+
+		/// Create an empty MD5 printer stream.
 
 		dng_md5_printer_stream ()
 		

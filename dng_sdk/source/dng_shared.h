@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_shared.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_shared.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -21,6 +21,7 @@
 #include "dng_classes.h"
 #include "dng_fingerprint.h"
 #include "dng_matrix.h"
+#include "dng_memory.h"
 #include "dng_negative.h"
 #include "dng_rational.h"
 #include "dng_string.h"
@@ -28,8 +29,6 @@
 #include "dng_sdk_limits.h"
 #include "dng_types.h"
 #include "dng_xy_coord.h"
-
-#include <vector>
 
 /*****************************************************************************/
 
@@ -72,6 +71,8 @@ class dng_camera_profile_info
 		uint64 fHueSatDeltas2Offset;
 		uint32 fHueSatDeltas2Count;
 		
+		uint32 fHueSatMapEncoding;
+		
 		uint32 fLookTableHues;
 		uint32 fLookTableSats;
 		uint32 fLookTableVals;
@@ -79,11 +80,17 @@ class dng_camera_profile_info
 		uint64 fLookTableOffset;
 		uint32 fLookTableCount;
 
+		uint32 fLookTableEncoding;
+
+		dng_srational fBaselineExposureOffset;
+
+		uint32 fDefaultBlackRender;
+		
 		uint64 fToneCurveOffset;
 		uint32 fToneCurveCount;
 		
 		dng_string fUniqueCameraModel;
-
+		
 	public:
 	
 		dng_camera_profile_info ();
@@ -132,7 +139,7 @@ class dng_shared
 		
 		dng_camera_profile_info fCameraProfile;
 		
-		std::vector<dng_camera_profile_info> fExtraCameraProfiles;
+		dng_std_vector<dng_camera_profile_info> fExtraCameraProfiles;
 
 		dng_matrix fCameraCalibration1;
 		dng_matrix fCameraCalibration2;
@@ -152,10 +159,14 @@ class dng_shared
 		dng_urational fLinearResponseLimit;
 		dng_urational fShadowScale;
 		
+		bool fHasBaselineExposure;
+		bool fHasShadowScale;
+		
 		uint32 fDNGPrivateDataCount;
 		uint64 fDNGPrivateDataOffset;
 
 		dng_fingerprint fRawImageDigest;
+		dng_fingerprint fNewRawImageDigest;
 		
 		dng_fingerprint fRawDataUniqueID;
 		
@@ -182,6 +193,12 @@ class dng_shared
 
 		dng_noise_profile fNoiseProfile;
 
+		dng_point fOriginalDefaultFinalSize;
+		dng_point fOriginalBestQualityFinalSize;
+		
+		dng_urational fOriginalDefaultCropSizeH;
+		dng_urational fOriginalDefaultCropSizeV;
+		
 	public:
 	
 		dng_shared ();
@@ -206,20 +223,20 @@ class dng_shared
 	protected:
 		
 		virtual bool Parse_ifd0 (dng_stream &stream,
-							     dng_exif &exif,
-							 	 uint32 parentCode,
-							 	 uint32 tagCode,
-							 	 uint32 tagType,
-							 	 uint32 tagCount,
-							 	 uint64 tagOffset);
-							 		 
+								 dng_exif &exif,
+								 uint32 parentCode,
+								 uint32 tagCode,
+								 uint32 tagType,
+								 uint32 tagCount,
+								 uint64 tagOffset);
+									 
 		virtual bool Parse_ifd0_exif (dng_stream &stream,
-							          dng_exif &exif,
-						 		 	  uint32 parentCode,
-						 		 	  uint32 tagCode,
-						 		 	  uint32 tagType,
-						 		 	  uint32 tagCount,
-						 		 	  uint64 tagOffset);
+									  dng_exif &exif,
+									  uint32 parentCode,
+									  uint32 tagCode,
+									  uint32 tagType,
+									  uint32 tagCount,
+									  uint64 tagOffset);
 	
 	};
 	

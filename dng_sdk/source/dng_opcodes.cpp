@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_opcodes.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_opcodes.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -257,7 +257,8 @@ class dng_filter_opcode_task: public dng_filter_task
 								const dng_image &srcImage,
 						 		dng_image &dstImage)
 												
-			:	dng_filter_task (srcImage,
+			:	dng_filter_task ("dng_filter_opcode_task",
+								 srcImage,
 								 dstImage)
 								 
 			,	fOpcode   (opcode)
@@ -432,7 +433,7 @@ class dng_inplace_opcode_task: public dng_area_task
 								 dng_negative &negative,
 						 		 dng_image &image)
 												
-			:	dng_area_task ()
+			:	dng_area_task ("dng_inplace_opcode_task")
 								 
 			,	fOpcode    (opcode)
 			,	fNegative  (negative)
@@ -449,12 +450,10 @@ class dng_inplace_opcode_task: public dng_area_task
 							dng_abort_sniffer * /* sniffer */)
 			{
 			
-			uint32 pixelSize = TagTypeSize (fPixelType);
-								   
-			uint32 bufferSize = tileSize.v *
-								RoundUpForPixelSize (tileSize.h, pixelSize) *
-								pixelSize *
-								fImage.Planes ();
+			uint32 bufferSize = ComputeBufferSize (fPixelType, 
+												   tileSize,
+												   fImage.Planes (), 
+												   padSIMDBytes);
 								   
 			for (uint32 threadIndex = 0; threadIndex < threadCount; threadIndex++)
 				{
@@ -480,23 +479,12 @@ class dng_inplace_opcode_task: public dng_area_task
 			
 			// Setup buffer.
 			
-			dng_pixel_buffer buffer;
-			
-			buffer.fArea = tile;
-			
-			buffer.fPlane  = 0;
-			buffer.fPlanes = fImage.Planes ();
-			
-			buffer.fPixelType  = fPixelType;
-			buffer.fPixelSize  = TagTypeSize (fPixelType);
-			
-			buffer.fPlaneStep = RoundUpForPixelSize (tile.W (),
-													 buffer.fPixelSize);
-			
-			buffer.fRowStep = buffer.fPlaneStep *
-							  buffer.fPlanes;
-					
-			buffer.fData = fBuffer [threadIndex]->Buffer ();
+			dng_pixel_buffer buffer (tile, 
+									 0, 
+									 fImage.Planes (), 
+									 fPixelType,
+									 pcRowInterleavedAlignSIMD,
+									 fBuffer [threadIndex]->Buffer ());
 			
 			// Get source pixels.
 			

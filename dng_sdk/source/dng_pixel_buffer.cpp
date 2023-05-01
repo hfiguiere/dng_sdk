@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_pixel_buffer.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_pixel_buffer.cpp#4 $ */ 
+/* $DateTime: 2016/01/19 19:30:05 $ */
+/* $Change: 1059976 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -19,7 +19,26 @@
 #include "dng_exceptions.h"
 #include "dng_flags.h"
 #include "dng_tag_types.h"
+#include "dng_tag_values.h"
 #include "dng_utils.h"
+
+/*****************************************************************************/
+
+static bool SafeUint32ToInt32Mult (uint32 arg1, 
+								   uint32 arg2, 
+								   int32 *result) 
+	{
+
+	uint32 uint32_result;
+
+	return (SafeUint32Mult (arg1, 
+							arg2, 
+							&uint32_result) &&
+
+			ConvertUint32ToInt32 (uint32_result, 
+								  result));
+
+	}
 
 /*****************************************************************************/
 
@@ -345,6 +364,115 @@ dng_pixel_buffer::dng_pixel_buffer ()
 	
 	}
 							
+/*****************************************************************************/
+
+dng_pixel_buffer::dng_pixel_buffer (const dng_rect &area,
+									uint32 plane,
+									uint32 planes,
+									uint32 pixelType,
+									uint32 planarConfiguration,
+									void *data)
+
+	:	fArea		(area)
+	,	fPlane		(plane)
+	,	fPlanes		(planes)
+	,	fRowStep	(0)
+	,	fColStep	(0)
+	,	fPlaneStep	(0)
+	,	fPixelType	(pixelType)
+	,	fPixelSize	(TagTypeSize (pixelType))
+	,	fData		(data)
+	,	fDirty		(true)
+	
+	{
+	
+	const char *overflowMessage = "Arithmetic overflow in pixel buffer setup";
+
+	// Initialize fRowStep, fColStep and fPlaneStep according to the desired
+	// pixel layout.
+
+	switch (planarConfiguration)
+		{
+
+		case pcInterleaved:
+			{
+
+			fPlaneStep = 1;
+
+			if (!ConvertUint32ToInt32 (fPlanes, &fColStep) ||
+				!SafeUint32ToInt32Mult (fArea.W (), fPlanes, &fRowStep))
+				{
+				ThrowOverflow (overflowMessage);
+				}
+
+			break;
+
+			}
+
+		case pcPlanar:
+			{
+
+			fColStep = 1;
+
+			// Even though we've hardened dng_rect::W() to guarantee that it
+			// will never return a result that's out of range for an int32, we
+			// still protect the conversion for defense in depth.
+
+			if (!ConvertUint32ToInt32 (fArea.W (), &fRowStep) ||
+				!SafeUint32ToInt32Mult (fArea.H (), fArea.W (), &fPlaneStep))
+				{
+				ThrowOverflow (overflowMessage);
+				}
+
+			break;
+
+			}
+
+		case pcRowInterleaved:
+		case pcRowInterleavedAlignSIMD:
+			{
+
+			fColStep = 1;
+
+			uint32 planeStepUint32;
+
+			if (planarConfiguration == pcRowInterleaved)
+				{
+				planeStepUint32 = fArea.W ();
+				}
+
+			else
+				{
+
+				if (!RoundUpForPixelSize (fArea.W (), 
+										  fPixelSize,
+										  &planeStepUint32))
+					{
+					ThrowOverflow (overflowMessage);
+					}
+
+				}
+
+			if (!ConvertUint32ToInt32  (planeStepUint32, &fPlaneStep) ||
+				!SafeUint32ToInt32Mult (planeStepUint32, fPlanes, &fRowStep))
+				{
+				ThrowOverflow (overflowMessage);
+				}
+
+			break;
+
+			}
+
+		default:
+			{
+			ThrowProgramError ("Invalid value for 'planarConfiguration'");
+			break;
+			}
+
+		}
+	
+	}
+
 /*****************************************************************************/
 
 dng_pixel_buffer::dng_pixel_buffer (const dng_pixel_buffer &buffer)
@@ -1157,6 +1285,13 @@ dng_point dng_pixel_buffer::RepeatPhase (const dng_rect &srcArea,
 	
 	int32 phaseV;
 	int32 phaseH;
+
+	if (repeatV == 0 ||
+		repeatH == 0)
+		{
+		DNG_REPORT ("Bad srcArea in RepeatPhase");
+		return dng_point ();
+		}
 	
 	if (srcArea.t >= dstArea.t)
 		{
@@ -1642,7 +1777,7 @@ namespace
 		return result;
 
 		}
-	};
+	}
 
 real64 dng_pixel_buffer::MaximumDifference (const dng_pixel_buffer &rhs,
 											const dng_rect &area,
@@ -1815,4 +1950,5 @@ real64 dng_pixel_buffer::MaximumDifference (const dng_pixel_buffer &rhs,
 	return 0.0;
 
 	}
+
 /*****************************************************************************/

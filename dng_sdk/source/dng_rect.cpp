@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_rect.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_rect.cpp#3 $ */ 
+/* $DateTime: 2016/03/10 15:52:07 $ */
+/* $Change: 1066836 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -163,6 +163,27 @@ dng_rect_real64 operator| (const dng_rect_real64 &a,
 	
 	return c;
 	
+	}
+
+/*****************************************************************************/
+
+dng_rect_real64 Bounds (const dng_point_real64 &a,
+						const dng_point_real64 &b,
+						const dng_point_real64 &c,
+						const dng_point_real64 &d)
+	{
+                                    
+	real64 xMin = Min_real64 (a.h, Min_real64 (b.h, Min_real64 (c.h, d.h)));
+	real64 xMax = Max_real64 (a.h, Max_real64 (b.h, Max_real64 (c.h, d.h)));
+
+	real64 yMin = Min_real64 (a.v, Min_real64 (b.v, Min_real64 (c.v, d.v)));
+	real64 yMax = Max_real64 (a.v, Max_real64 (b.v, Max_real64 (c.v, d.v)));
+
+	return dng_rect_real64 (yMin,
+							xMin,
+							yMax,
+							xMax);
+                                    
 	}
 
 /*****************************************************************************/

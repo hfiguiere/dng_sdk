@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_abort_sniffer.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_abort_sniffer.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -126,6 +126,15 @@ void dng_priority_manager::Decrement (dng_priority priority)
 
 void dng_priority_manager::Wait (dng_priority priority)
 	{
+
+	// Turning off the priority system for now. It seems we currently have a
+	// basic design bug in how the task priority system is implemented. The
+	// logic below attempts to completely sleep background threads when
+	// processing a high priority thread. This is really bad when the
+	// background thread is holding a mutex that the high priority thread
+	// needs.
+
+	#if 0
 	
 	if (priority < dng_priority_maximum)
 		{
@@ -140,6 +149,12 @@ void dng_priority_manager::Wait (dng_priority priority)
 			}
 		
 		}
+
+	#else
+
+	(void) priority;
+
+	#endif
 	
 	}
 		
@@ -206,7 +221,7 @@ void dng_abort_sniffer::SniffForAbort (dng_abort_sniffer *sniffer)
 		{
 		
 		#if qDNGThreadSafe
-
+		
 		gPriorityManager.Wait (sniffer->Priority ());
 		
 		#endif

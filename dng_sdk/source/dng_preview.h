@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2007 Adobe Systems Incorporated
+// Copyright 2007-2011 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_preview.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_preview.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -21,12 +21,14 @@
 #include "dng_auto_ptr.h"
 #include "dng_classes.h"
 #include "dng_ifd.h"
+#include "dng_opcode_list.h"
 #include "dng_point.h"
 #include "dng_sdk_limits.h"
+#include "dng_uncopyable.h"
 
 /*****************************************************************************/
 
-class dng_preview
+class dng_preview: private dng_uncopyable
 	{
 	
 	public:
@@ -76,14 +78,6 @@ class dng_image_preview: public dng_preview
 								dng_basic_tag_set &basic,
 								dng_stream &stream) const;
 		
-	private:
-	
-		// Hidden copy constructor and assignment operator.
-		
-		dng_image_preview (const dng_image_preview &preview);
-		
-		dng_image_preview & operator= (const dng_image_preview &preview);
-					 
 	};
 
 /*****************************************************************************/
@@ -118,14 +112,68 @@ class dng_jpeg_preview: public dng_preview
 		
 		void SpoolAdobeThumbnail (dng_stream &stream) const;
 		
-	private:
+	};
+
+/*****************************************************************************/
+
+class dng_raw_preview: public dng_preview
+	{
 	
-		// Hidden copy constructor and assignment operator.
+	public:
+	
+		AutoPtr<dng_image> fImage;
 		
-		dng_jpeg_preview (const dng_jpeg_preview &preview);
+		AutoPtr<dng_memory_block> fOpcodeList2Data;
 		
-		dng_jpeg_preview & operator= (const dng_jpeg_preview &preview);
-					 
+		int32 fCompressionQuality;
+
+	private:
+		
+		mutable dng_ifd fIFD;
+		
+	public:
+	
+		dng_raw_preview ();
+		
+		virtual ~dng_raw_preview ();
+		
+		virtual dng_basic_tag_set * AddTagSet (dng_tiff_directory &directory) const;
+		
+		virtual void WriteData (dng_host &host,
+								dng_image_writer &writer,
+								dng_basic_tag_set &basic,
+								dng_stream &stream) const;
+		
+	};
+
+/*****************************************************************************/
+
+class dng_mask_preview: public dng_preview
+	{
+	
+	public:
+	
+		AutoPtr<dng_image> fImage;
+		
+		int32 fCompressionQuality;
+
+	private:
+		
+		mutable dng_ifd fIFD;
+		
+	public:
+	
+		dng_mask_preview ();
+		
+		virtual ~dng_mask_preview ();
+		
+		virtual dng_basic_tag_set * AddTagSet (dng_tiff_directory &directory) const;
+		
+		virtual void WriteData (dng_host &host,
+								dng_image_writer &writer,
+								dng_basic_tag_set &basic,
+								dng_stream &stream) const;
+		
 	};
 
 /*****************************************************************************/

@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /******************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_camera_profile.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_camera_profile.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Support for DNG camera color profile information.
@@ -33,6 +33,7 @@
 
 /******************************************************************************/
 
+#include "dng_auto_ptr.h"
 #include "dng_assertions.h"
 #include "dng_classes.h"
 #include "dng_fingerprint.h"
@@ -50,6 +51,8 @@ extern const char * kAdobeCalibrationSignature;
 
 /******************************************************************************/
 
+/// \brief An ID for a camera profile consisting of a name and optional fingerprint.
+
 class dng_camera_profile_id
 	{
 	
@@ -61,6 +64,8 @@ class dng_camera_profile_id
 		
 	public:
 	
+		/// Construct an invalid camera profile ID (empty name and fingerprint).
+
 		dng_camera_profile_id ()
 		
 			:	fName        ()
@@ -69,6 +74,9 @@ class dng_camera_profile_id
 			{
 			}
 			
+		/// Construct a camera profile ID with the specified name and no fingerprint.
+		/// \param name The name of the camera profile ID.
+
 		dng_camera_profile_id (const char *name)
 			
 			:	fName		 ()
@@ -78,6 +86,9 @@ class dng_camera_profile_id
 			fName.Set (name);
 			}
 
+		/// Construct a camera profile ID with the specified name and no fingerprint.
+		/// \param name The name of the camera profile ID.
+
 		dng_camera_profile_id (const dng_string &name)
 			
 			:	fName		 (name)
@@ -85,6 +96,10 @@ class dng_camera_profile_id
 			
 			{
 			}
+
+		/// Construct a camera profile ID with the specified name and fingerprint.
+		/// \param name The name of the camera profile ID.
+		/// \param fingerprint The fingerprint of the camera profile ID.
 
 		dng_camera_profile_id (const char *name,
 							   const dng_fingerprint &fingerprint)
@@ -98,6 +113,10 @@ class dng_camera_profile_id
 						"Cannot have profile fingerprint without name");
 			}
 
+		/// Construct a camera profile ID with the specified name and fingerprint.
+		/// \param name The name of the camera profile ID.
+		/// \param fingerprint The fingerprint of the camera profile ID.
+
 		dng_camera_profile_id (const dng_string &name,
 							   const dng_fingerprint &fingerprint)
 			
@@ -109,32 +128,49 @@ class dng_camera_profile_id
 						"Cannot have profile fingerprint without name");
 			}
 
+		/// Getter for the name of the camera profile ID.
+		/// \retval The name of the camera profile ID.
+
 		const dng_string & Name () const
 			{
 			return fName;
 			}
 			
+		/// Getter for the fingerprint of the camera profile ID.
+		/// \retval The fingerprint of the camera profile ID.
+
 		const dng_fingerprint & Fingerprint () const
 			{
 			return fFingerprint;
 			}
 			
+		/// Test for equality of two camera profile IDs.
+		/// \param The id of the camera profile ID to compare.
+
 		bool operator== (const dng_camera_profile_id &id) const
 			{
 			return fName        == id.fName &&
 				   fFingerprint == id.fFingerprint;
 			}
 
+		/// Test for inequality of two camera profile IDs.
+		/// \param The id of the camera profile ID to compare.
+
 		bool operator!= (const dng_camera_profile_id &id) const
 			{
 			return !(*this == id);
 			}
 			
+		/// Returns true iff the camera profile ID is valid.
+
 		bool IsValid () const
 			{
 			return fName.NotEmpty ();		// Fingerprint is optional.
 			}
 			
+		/// Resets the name and fingerprint, thereby making this camera profile ID
+		/// invalid.
+
 		void Clear ()
 			{
 			*this = dng_camera_profile_id ();
@@ -206,9 +242,27 @@ class dng_camera_profile
 		dng_hue_sat_map fHueSatDeltas1;
 		dng_hue_sat_map fHueSatDeltas2;
 		
+		// Value (V of HSV) encoding for hue/sat tables.
+
+		uint32 fHueSatMapEncoding;
+
 		// 3-D hue/sat table to apply a "look".
 		
 		dng_hue_sat_map fLookTable;
+
+		// Value (V of HSV) encoding for look table.
+
+		uint32 fLookTableEncoding;
+
+		// Baseline exposure offset. When using this profile, this offset value is
+		// added to the BaselineExposure value for the negative to determine the
+		// overall baseline exposure to apply.
+
+		dng_srational fBaselineExposureOffset;
+
+		// Default black rendering.
+
+		uint32 fDefaultBlackRender;
 		
 		// The "as shot" tone curve for this profile.  Check IsValid method 
 		// to tell if one exists in profile.
@@ -230,6 +284,18 @@ class dng_camera_profile
 		// DNG file)
 		
 		bool fWasReadFromDNG;
+		
+		// Was this profile read from disk (i.e., an external profile)? (If so, we
+		// may need to refresh when changes are made externally to the profile
+		// directory.)
+		
+		bool fWasReadFromDisk;
+		
+		// Was this profile a built-in "Matrix" profile? (If so, we may need to
+		// refresh -- i.e., remove it from the list of available profiles -- when
+		// changes are made externally to the profile directory.)
+		
+		bool fWasBuiltinMatrix;
 		
 		// Was this profile stubbed to save memory (and no longer valid
 		// for building color conversion tables)?
@@ -443,6 +509,11 @@ class dng_camera_profile
 
 			}
 
+		/// Getter for camera profile unique ID. Use this ID for uniquely
+		/// identifying profiles (e.g., for syncing purposes).
+
+		dng_fingerprint UniqueID () const;
+
 		/// Getter for camera profile id.
 		/// \retval ID of profile.
 
@@ -470,17 +541,26 @@ class dng_camera_profile
 			
 		// Accessors for embed policy.
 
+		/// Setter for camera profile embed policy.
+		/// \param policy Policy to use for this camera profile.
+
 		void SetEmbedPolicy (uint32 policy)
 			{
 			fEmbedPolicy = policy;
 			ClearFingerprint ();
 			}
 
+		/// Getter for camera profile embed policy.
+		/// \param Policy for profile.
+
 		uint32 EmbedPolicy () const
 			{
 			return fEmbedPolicy;
 			}
 			
+		/// Returns true iff the profile is legal to embed in a DNG, per the
+		/// profile's embed policy.
+
 		bool IsLegalToEmbed () const
 			{
 			return WasReadFromDNG () ||
@@ -491,45 +571,139 @@ class dng_camera_profile
 			
 		// Accessors for hue sat maps.
 
+		/// Returns true iff the profile has a valid HueSatMap color table.
+
 		bool HasHueSatDeltas () const
 			{
 			return fHueSatDeltas1.IsValid ();
 			}
+
+		/// Getter for first HueSatMap color table (for calibration illuminant 1).
 
 		const dng_hue_sat_map & HueSatDeltas1 () const
 			{
 			return fHueSatDeltas1;
 			}
 
+		/// Setter for first HueSatMap color table (for calibration illuminant 1).
+
 		void SetHueSatDeltas1 (const dng_hue_sat_map &deltas1);
+
+		/// Getter for second HueSatMap color table (for calibration illuminant 2).
 
 		const dng_hue_sat_map & HueSatDeltas2 () const
 			{
 			return fHueSatDeltas2;
 			}
 
+		/// Setter for second HueSatMap color table (for calibration illuminant 2).
+
 		void SetHueSatDeltas2 (const dng_hue_sat_map &deltas2);
+
+		// Accessors for hue sat map encoding.
+
+		/// Returns the hue sat map encoding (see ProfileHueSatMapEncoding tag).
+
+		uint32 HueSatMapEncoding () const
+			{
+			return fHueSatMapEncoding;
+			}
+
+		/// Sets the hue sat map encoding (see ProfileHueSatMapEncoding tag) to the
+		/// specified encoding.
+
+		void SetHueSatMapEncoding (uint32 encoding)
+			{
+			fHueSatMapEncoding = encoding;
+			ClearFingerprint ();
+			}
 		
 		// Accessors for look table.
+
+		/// Returns true if the profile has a LookTable.
 		
 		bool HasLookTable () const
 			{
 			return fLookTable.IsValid ();
 			}
 			
+		/// Getter for LookTable.
+
 		const dng_hue_sat_map & LookTable () const
 			{
 			return fLookTable;
 			}
 			
+		/// Setter for LookTable.
+
 		void SetLookTable (const dng_hue_sat_map &table);
 
+		// Accessors for look table encoding.
+
+		/// Returns the LookTable encoding (see ProfileLookTableEncoding tag).
+
+		uint32 LookTableEncoding () const
+			{
+			return fLookTableEncoding;
+			}
+
+		/// Sets the LookTable encoding (see ProfileLookTableEncoding tag) to the
+		/// specified encoding.
+
+		void SetLookTableEncoding (uint32 encoding)
+			{
+			fLookTableEncoding = encoding;
+			ClearFingerprint ();
+			}
+
+		// Accessors for baseline exposure offset.
+
+		/// Sets the baseline exposure offset of the profile (see
+		/// BaselineExposureOffset tag) to the specified value.
+
+		void SetBaselineExposureOffset (real64 exposureOffset)
+			{
+			fBaselineExposureOffset.Set_real64 (exposureOffset, 100);
+			ClearFingerprint ();
+			}
+					  
+		/// Returns the baseline exposure offset of the profile (see
+		/// BaselineExposureOffset tag).
+
+		const dng_srational & BaselineExposureOffset () const
+			{
+			return fBaselineExposureOffset;
+			}
+		
+		// Accessors for default black render.
+
+		/// Sets the default black render of the profile (see DefaultBlackRender tag)
+		/// to the specified option.
+
+		void SetDefaultBlackRender (uint32 defaultBlackRender)
+			{
+			fDefaultBlackRender = defaultBlackRender;
+			ClearFingerprint ();
+			}
+					  
+		/// Returns the default black render of the profile (see DefaultBlackRender
+		/// tag).
+
+		uint32 DefaultBlackRender () const
+			{
+			return fDefaultBlackRender;
+			}
+		
 		// Accessors for tone curve.
+
+		/// Returns the tone curve of the profile.
 
 		const dng_tone_curve & ToneCurve () const
 			{
 			return fToneCurve;
 			}
+
+		/// Sets the tone curve of the profile to the specified curve.
 
 		void SetToneCurve (const dng_tone_curve &curve)
 			{
@@ -539,10 +713,17 @@ class dng_camera_profile
 
 		// Accessors for profile calibration signature.
 
+		/// Sets the profile calibration signature (see ProfileCalibrationSignature
+		/// tag) to the specified string.
+
 		void SetProfileCalibrationSignature (const char *signature)
 			{
 			fProfileCalibrationSignature.Set (signature);
+			ClearFingerprint ();
 			}
+
+		/// Returns the profile calibration signature (see ProfileCalibrationSignature
+		/// tag) of the profile.
 
 		const dng_string & ProfileCalibrationSignature () const
 			{
@@ -570,14 +751,53 @@ class dng_camera_profile
 			
 		// Accessors for was read from DNG flag.
 		
+		/// Sets internal flag to indicate this profile was originally read from a
+		/// DNG file.
+
 		void SetWasReadFromDNG (bool state = true)
 			{
 			fWasReadFromDNG = state;
 			}
 			
+		/// Was this profile read from a DNG?
+
 		bool WasReadFromDNG () const
 			{
 			return fWasReadFromDNG;
+			}
+
+		// Accessors for was read from disk flag.
+		
+		/// Sets internal flag to indicate this profile was originally read from
+		/// disk.
+
+		void SetWasReadFromDisk (bool state = true)
+			{
+			fWasReadFromDisk = state;
+			}
+			
+		/// Was this profile read from disk?
+
+		bool WasReadFromDisk () const
+			{
+			return fWasReadFromDisk;
+			}
+
+		// Accessors for was built-in matrix flag.
+		
+		/// Sets internal flag to indicate this profile was originally a built-in
+		/// matrix profile.
+
+		void SetWasBuiltinMatrix (bool state = true)
+			{
+			fWasBuiltinMatrix = state;
+			}
+			
+		/// Was this profile a built-in matrix profile?
+
+		bool WasBuiltinMatrix () const
+			{
+			return fWasBuiltinMatrix;
 			}
 
 		/// Determines if this a valid profile for this number of color channels?
@@ -648,6 +868,14 @@ class dng_camera_profile
 void SplitCameraProfileName (const dng_string &name,
 							 dng_string &baseName,
 							 int32 &version);
+
+/*****************************************************************************/
+
+void BuildHueSatMapEncodingTable (dng_memory_allocator &allocator,
+								  uint32 encoding,
+								  AutoPtr<dng_1d_table> &encodeTable,
+								  AutoPtr<dng_1d_table> &decodeTable,
+								  bool subSample);
 							
 /******************************************************************************/
 

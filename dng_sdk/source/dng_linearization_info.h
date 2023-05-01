@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2011 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_linearization_info.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_linearization_info.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Support for linearization table and black level tags.
@@ -33,7 +33,8 @@
 
 /// \brief Class for managing data values related to DNG linearization.
 ///
-/// See LinearizationTable, BlackLevel, BlackLevelRepeatDim, BlackLevelDeltaH, BlackLevelDeltaV and WhiteLevel tags in the \ref spec_dng "DNG 1.1.0 specification".
+/// See LinearizationTable, BlackLevel, BlackLevelRepeatDim, BlackLevelDeltaH, 
+/// BlackLevelDeltaV and WhiteLevel tags in the \ref spec_dng "DNG 1.1.0 specification".
 
 class dng_linearization_info
 	{
@@ -47,7 +48,7 @@ class dng_linearization_info
 
 		/// Number of rectangles in fMaskedArea
 
-		uint32   fMaskedAreaCount;
+		uint32 fMaskedAreaCount;
 
 		/// List of non-overlapping rectangle coordinates of fully masked pixels.
 		/// Can be optionally used by DNG readers to measure the black encoding level.
@@ -111,7 +112,8 @@ class dng_linearization_info
 		virtual void PostParse (dng_host &host,
 								dng_negative &negative);
 						    
-		/// Compute the maximum black level for a given sample plane taking into account base black level, repeated black level patter, and row/column delta maps.
+		/// Compute the maximum black level for a given sample plane taking into account base
+		/// black level, repeated black level patter, and row/column delta maps.
 
 		real64 MaxBlackLevel (uint32 plane) const;
 		

@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_parse_utils.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_parse_utils.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -47,6 +47,10 @@ const char * LookupTagType (uint32 tagType);
 const char * LookupNewSubFileType (uint32 key);
 
 const char * LookupCompression (uint32 key);
+
+const char * LookupPredictor (uint32 key);
+
+const char * LookupSampleFormat (uint32 key);
 
 const char * LookupPhotometricInterpretation (uint32 key);
 
@@ -99,6 +103,8 @@ const char * LookupColorimetricReference (uint32 key);
 const char * LookupPreviewColorSpace (uint32 key);
 
 const char * LookupJPEGMarker (uint32 key);
+
+const char * LookupSensitivityType (uint32 key);
 
 /*****************************************************************************/
 
@@ -180,8 +186,7 @@ void ParseStringTag (dng_stream &stream,
 					 uint32 tagCode,
 				     uint32 tagCount,
 				     dng_string &s,
-				     bool trimBlanks = true,
-				     bool isASCII = true);
+				     bool trimBlanks = true);
 				    	  
 void ParseDualStringTag (dng_stream &stream,
 					 	 uint32 parentCode,

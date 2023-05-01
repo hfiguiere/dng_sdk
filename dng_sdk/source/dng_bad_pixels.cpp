@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_bad_pixels.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_bad_pixels.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -664,7 +664,7 @@ dng_opcode_FixBadPixelsList::dng_opcode_FixBadPixelsList (dng_stream &stream)
 					
 		if (pCount > gDumpLineLimit)
 			{
-			printf ("    ... %u bad pixels skipped\n", pCount - gDumpLineLimit);
+			printf ("    ... %u bad pixels skipped\n", (unsigned) (pCount - gDumpLineLimit));
 			}
 		
 		printf ("Bad Rects: %u\n", (unsigned) rCount);
@@ -681,7 +681,7 @@ dng_opcode_FixBadPixelsList::dng_opcode_FixBadPixelsList (dng_stream &stream)
 		
 		if (rCount > gDumpLineLimit)
 			{
-			printf ("    ... %u bad rects skipped\n", rCount - gDumpLineLimit);
+			printf ("    ... %u bad rects skipped\n", (unsigned) (rCount - gDumpLineLimit));
 			}
 		
 		}
@@ -1017,6 +1017,8 @@ void dng_opcode_FixBadPixelsList::FixIsolatedPixel (dng_pixel_buffer &buffer,
 		count += 2;
 		}
 
+	count = Max_uint32 (count, 1);			 // Suppress div-by-zero warning.
+
 	uint32 estimate = (total + (count >> 1)) / count;
 	
 	p2 [2] = (uint16) estimate;
@@ -1177,8 +1179,10 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 			int32 b03 = p0 [3 * cs];
 			int32 b05 = p0 [5 * cs];
 			
+			int32 g11 = p1 [1 * cs];
 			int32 g13 = p1 [3 * cs];
 			int32 g15 = p1 [5 * cs];
+			int32 g17 = p1 [7 * cs];
 			
 			int32 g22 = p2 [2 * cs];
 			int32 b23 = p2 [3 * cs];
@@ -1215,13 +1219,28 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 			int32 b65 = p6 [5 * cs];
 			int32 g66 = p6 [6 * cs];
 			
+			int32 g71 = p7 [1 * cs];
 			int32 g73 = p7 [3 * cs];
 			int32 g75 = p7 [5 * cs];
+			int32 g77 = p7 [7 * cs];
 			
 			int32 b83 = p8 [3 * cs];
 			int32 b85 = p8 [5 * cs];
 			
-			est0 = g13 + g75;
+			// In case there is some green split, make an estimate of
+			// of the local difference between the greens, and adjust
+			// the estimated green values for the difference
+			// between the two types of green pixels when estimating
+			// across green types.
+			
+			int32 split = ((g22 + g62 + g26 + g66) * 4 +
+						   (g42 + g46            ) * 8 -
+						   (g11 + g13 + g15 + g17)     -
+						   (g31 + g33 + g35 + g37) * 3 -
+						   (g51 + g53 + g55 + g57) * 3 -
+						   (g71 + g73 + g75 + g77) + 16) >> 5;
+			
+			est0 = g13 + g75 + split * 2;
 			
 			grad0 = Abs_int32 (g13 - g75) +
 					Abs_int32 (g15 - g46) +
@@ -1231,7 +1250,7 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 					Abs_int32 (b03 - b65) +
 					Abs_int32 (b23 - b85);
 					
-			est1 = g33 + g55;
+			est1 = g33 + g55 + split * 2;
 						   
 			grad1 = Abs_int32 (g33 - g55) +
 					Abs_int32 (g22 - g55) +
@@ -1241,7 +1260,7 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 					Abs_int32 (b23 - b45) +
 					Abs_int32 (b43 - b65);
 					
-			est2 = g31 + g57;
+			est2 = g31 + g57 + split * 2;
 						   
 			grad2 = Abs_int32 (g31 - g57) +
 					Abs_int32 (g33 - g46) +
@@ -1260,7 +1279,7 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 					Abs_int32 (b43 - b45) +
 					Abs_int32 (b63 - b65);
 					
-			est4 = g37 + g51;
+			est4 = g37 + g51 + split * 2;
 
 			grad4 = Abs_int32 (g37 - g51) +
 					Abs_int32 (g35 - g42) +
@@ -1270,7 +1289,7 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 					Abs_int32 (r38 - r52) +
 					Abs_int32 (r36 - r50);
 				
-			est5 = g35 + g53;
+			est5 = g35 + g53 + split * 2;
 						   
 			grad5 = Abs_int32 (g35 - g53) +
 					Abs_int32 (g26 - g53) +
@@ -1280,7 +1299,7 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 					Abs_int32 (b25 - b43) +
 					Abs_int32 (b45 - b63);
 					
-			est6 = g15 + g73;
+			est6 = g15 + g73 + split * 2;
 						   
 			grad6 = Abs_int32 (g15 - g73) +
 					Abs_int32 (g13 - g42) +
@@ -1292,9 +1311,12 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 				
 			lower = Min_uint32 (Min_uint32 (g33, g35),
 								Min_uint32 (g53, g55));
-								
+
 			upper = Max_uint32 (Max_uint32 (g33, g35),
 								Max_uint32 (g53, g55));
+								
+			lower = Pin_int32 (0, lower + split, 65535);
+			upper = Pin_int32 (0, upper + split, 65535);		
 								
 			}
 			
@@ -1484,6 +1506,8 @@ void dng_opcode_FixBadPixelsList::FixSingleColumn (dng_pixel_buffer &buffer,
 			total += est6;
 			count += 2;
 			}
+
+		count = Max_uint32 (count, 1);		 // Suppress div-by-zero warning.
 
 		uint32 estimate = (total + (count >> 1)) / count;
 		

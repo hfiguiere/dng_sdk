@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_abort_sniffer.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_abort_sniffer.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Classes supporting user cancellation and progress tracking.
@@ -24,10 +24,11 @@
 
 #include "dng_flags.h"
 #include "dng_types.h"
+#include "dng_uncopyable.h"
 
 /*****************************************************************************/
 
-// Thread priority level.
+/// \brief Thread priority level.
 
 enum dng_priority
 	{
@@ -39,11 +40,13 @@ enum dng_priority
 	dng_priority_count,
 	
 	dng_priority_minimum = dng_priority_low,
-	dng_priority_maximum = dng_priority_high,
+	dng_priority_maximum = dng_priority_high
 	
 	};
 
 /*****************************************************************************/
+
+/// \brief Convenience class for setting thread priority level to minimum.
 
 class dng_set_minimum_priority
 	{
@@ -113,6 +116,15 @@ class dng_abort_sniffer
 			Sniff ();
 			}
 	
+		// Specifies whether or not the sniffer may be called by multiple threads
+		// in parallel. Default result is false. Subclass must override to return
+		// true.
+		
+		virtual bool ThreadSafe () const
+			{
+			return false;
+			}
+
 	protected:
 	
 		/// Should be implemented by derived classes to check for an user
@@ -147,7 +159,7 @@ class dng_abort_sniffer
 ///
 /// Instances of this class are intended to be stack allocated.
 
-class dng_sniffer_task
+class dng_sniffer_task: private dng_uncopyable
 	{
 	
 	private:
@@ -216,14 +228,6 @@ class dng_sniffer_task
 			UpdateProgress (1.0);
 			}
 			
-	private:
-	
-		// Hidden copy constructor and assignment operator.
-	
-		dng_sniffer_task (const dng_sniffer_task &task);
-		
-		dng_sniffer_task & operator= (const dng_sniffer_task &task);
-		
 	};
 
 /*****************************************************************************/

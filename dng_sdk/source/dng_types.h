@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_types.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_types.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -26,13 +26,13 @@
 
 #ifdef _MSC_VER
 #include <stddef.h>
-#else
-#include <stdint.h>
 #endif
+
+#include <stdint.h>
 
 /*****************************************************************************/
 
-#ifdef qDNGUseStdInt
+#if qDNGUseStdInt || 1
 
 typedef int8_t  int8;
 typedef int16_t int16;
@@ -57,10 +57,14 @@ typedef signed long long int64;
 
 typedef unsigned char      uint8;
 typedef unsigned short	   uint16;
+/*Some Mac OS X 10.5 SDK headers already define uint32.*/
+#ifndef _UINT32
 #if __LP64__
 typedef unsigned int	   uint32;
 #else
 typedef unsigned long	   uint32;
+#endif
+#define _UINT32
 #endif
 typedef unsigned long long uint64;
 

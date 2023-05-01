@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_memory_stream.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_memory_stream.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Stream abstraction to/from in-memory data.
@@ -45,6 +45,8 @@ class dng_memory_stream: public dng_stream
 		dng_memory_block **fPageList;
 		
 		uint64 fMemoryStreamLength;
+        
+        uint64 fLengthLimit;
 		
 	public:
 
@@ -58,6 +60,17 @@ class dng_memory_stream: public dng_stream
 						   uint32 pageSize = 64 * 1024);
 						   
 		virtual ~dng_memory_stream ();
+        
+        /// Sets a maximum length limit.
+        
+        void SetLengthLimit (uint64 limit)
+            {
+            fLengthLimit = limit;
+            }
+
+		/// Copy a specified number of bytes to a target stream.
+		/// \param dstStream The target stream.
+		/// \param count The number of bytes to copy.
 		
 		virtual void CopyToStream (dng_stream &dstStream,
 								   uint64 count);
@@ -75,14 +88,6 @@ class dng_memory_stream: public dng_stream
 		virtual void DoWrite (const void *data,
 							  uint32 count,
 							  uint64 offset);
-		
-	private:
-	
-		// Hidden copy constructor and assignment operator.
-	
-		dng_memory_stream (const dng_memory_stream &stream);
-		
-		dng_memory_stream & operator= (const dng_memory_stream &stream);
 		
 	};
 

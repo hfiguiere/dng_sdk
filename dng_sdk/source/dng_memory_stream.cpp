@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_memory_stream.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_memory_stream.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -17,6 +17,7 @@
 
 #include "dng_bottlenecks.h"
 #include "dng_exceptions.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_utils.h"
 
 /*****************************************************************************/
@@ -37,6 +38,8 @@ dng_memory_stream::dng_memory_stream (dng_memory_allocator &allocator,
 	,	fPageList       (NULL)
 	
 	,	fMemoryStreamLength (0)
+
+    ,   fLengthLimit (0)
 	
 	{
 	
@@ -114,19 +117,46 @@ void dng_memory_stream::DoRead (void *data,
 
 void dng_memory_stream::DoSetLength (uint64 length)
 	{
+    
+    if (fLengthLimit && length > fLengthLimit)
+        {
+        
+        Throw_dng_error (dng_error_end_of_file,
+                         "dng_memory_stream::fLengthLimit",
+                         NULL,
+                         true);
+        
+        }
 	
 	while (length > fPageCount * (uint64) fPageSize)
 		{
 		
 		if (fPageCount == fPagesAllocated)
 			{
-			
-			uint32 newSize = Max_uint32 (fPagesAllocated + 32,
-										 fPagesAllocated * 2);
-			
-			dng_memory_block **list = (dng_memory_block **)
-									  malloc (newSize * sizeof (dng_memory_block *));
-			
+
+			uint32 newSizeTemp1 = 0;
+			uint32 newSizeTemp2 = 0;
+
+			if (!SafeUint32Add  (fPagesAllocated, 32u, &newSizeTemp1) ||
+				!SafeUint32Mult (fPagesAllocated,  2u, &newSizeTemp2))
+				{
+				ThrowOverflow ("Arithmetic overflow in DoSetLength");
+				}
+
+			uint32 newSize = Max_uint32 (newSizeTemp1, 
+										 newSizeTemp2);
+
+			uint32 numBytes;
+
+			if (!SafeUint32Mult (newSize, 
+								 sizeof (dng_memory_block *),
+								 &numBytes))
+				{
+				ThrowOverflow ("Arithmetic overflow in DoSetLength");
+				}
+
+			dng_memory_block **list = (dng_memory_block **) malloc (numBytes);
+
 			if (!list)
 				{
 				
@@ -137,9 +167,14 @@ void dng_memory_stream::DoSetLength (uint64 length)
 			if (fPageCount)
 				{
 				
+				// The multiplication here is safe against overflow.
+				// fPageCount can never reach a value that is large enough to
+				// cause overflow because the computation of numBytes above
+				// would fail before a list of that size could be allocated.
+
 				DoCopyBytes (fPageList,
 							 list,
-							 fPageCount * sizeof (dng_memory_block *));
+							 fPageCount * (uint32) sizeof (dng_memory_block *));
 				
 				}
 				

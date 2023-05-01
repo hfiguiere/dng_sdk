@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006-2009 Adobe Systems Incorporated
+// Copyright 2006-2012 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_host.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_host.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Class definition for dng_host, initial point of contact and control between
@@ -27,6 +27,7 @@
 #include "dng_classes.h"
 #include "dng_errors.h"
 #include "dng_types.h"
+#include "dng_uncopyable.h"
 
 /*****************************************************************************/
 
@@ -47,7 +48,7 @@
 /// establishing mutual exclusion for read/write access to a single dng_host 
 /// object if it is used in multiple threads.)
 
-class dng_host
+class dng_host: private dng_uncopyable
 	{
 	
 	private:
@@ -331,12 +332,23 @@ class dng_host
 		/// \param area Rectangle over which to perform image processing task.
 
 		virtual void PerformAreaTask (dng_area_task &task,
-									  const dng_rect &area);
+									  const dng_rect &area,
+                                      dng_area_task_progress *progress = NULL);
+									  
+		/// How many multiprocessing threads does PerformAreaTask use?
+		/// Default implementation always returns 1 since it is single threaded.
+		
+		virtual uint32 PerformAreaTaskThreads ();
 
 		/// Factory method for dng_exif class. Can be used to customize allocation or 
 		/// to ensure a derived class is used instead of dng_exif.
 
 		virtual dng_exif * Make_dng_exif ();
+
+		/// Factory method for dng_xmp class. Can be used to customize allocation or 
+		/// to ensure a derived class is used instead of dng_xmp.
+
+		virtual dng_xmp * Make_dng_xmp ();
 
 		/// Factory method for dng_shared class. Can be used to customize allocation 
 		/// or to ensure a derived class is used instead of dng_shared.
@@ -372,14 +384,12 @@ class dng_host
 		virtual void ApplyOpcodeList (dng_opcode_list &list,
 									  dng_negative &negative,
 									  AutoPtr<dng_image> &image);
+									  
+		/// Factory method to resample an image.  Can be used to override
+		/// image method used to resample images.
 		
-	private:
-	
-		// Hidden copy constructor and assignment operator.
-	
-		dng_host (const dng_host &host);
-		
-		dng_host & operator= (const dng_host &host);
+		virtual void ResampleImage (const dng_image &srcImage,
+									dng_image &dstImage);
 		
 	};
 	

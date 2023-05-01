@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_fingerprint.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_fingerprint.cpp#4 $ */ 
+/* $DateTime: 2016/01/20 16:00:38 $ */
+/* $Change: 1060141 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -99,6 +99,96 @@ uint32 dng_fingerprint::Collapse32 () const
 		
 	return x;
 	
+	}
+
+/******************************************************************************/
+
+static char NumToHexChar (unsigned int c)
+	{
+
+	if (c < 10)
+		{
+		return (char) ('0' + c);
+		}
+
+	else
+		{
+		return (char) ('A' + c - 10);
+		}
+
+	}
+
+/*****************************************************************************/
+
+void dng_fingerprint::ToUtf8HexString (char resultStr [2 * kDNGFingerprintSize + 1]) const
+	{
+	
+	for (size_t i = 0; i < kDNGFingerprintSize; i++)
+		{
+		
+		unsigned char c = data [i];
+
+		resultStr [i * 2] = NumToHexChar (c >> 4);
+		resultStr [i * 2 + 1] = NumToHexChar (c & 15);
+		
+		}
+	
+	resultStr [kDNGFingerprintSize * 2] = '\0';
+
+	}
+
+/******************************************************************************/
+
+static int HexCharToNum (char hexChar)
+	{
+	
+	if (hexChar >= '0' && hexChar <= '9')
+		{
+		return hexChar - '0';
+		}
+
+	else if (hexChar >= 'A' && hexChar <= 'F')
+		{
+		return hexChar - 'A' + 10;
+		}
+
+	else if (hexChar >= 'a' && hexChar <= 'f')
+		{
+		return hexChar - 'a' + 10;
+		}
+	
+	return -1;
+	
+	}
+
+/*****************************************************************************/
+
+bool dng_fingerprint::FromUtf8HexString (const char inputStr [2 * kDNGFingerprintSize + 1])
+	{
+	
+	for (size_t i = 0; i < kDNGFingerprintSize; i++)
+		{
+		
+		int highNibble = HexCharToNum (inputStr [i * 2]);
+
+		if (highNibble < 0)
+			{
+			return false;
+			}
+		
+		int lowNibble = HexCharToNum (inputStr [i * 2 + 1]);
+
+		if (lowNibble < 0)
+			{
+			return false;
+			}
+
+		data [i] = (uint8) ((highNibble << 4) + lowNibble);
+		
+		}
+	
+	return true;
+
 	}
 
 /******************************************************************************/
@@ -358,6 +448,7 @@ void dng_md5_printer::Decode (uint32 *output,
 
 // MD5 basic transformation. Transforms state based on block.
 
+DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 void dng_md5_printer::MD5Transform (uint32 state [4],
 								    const uint8 block [64])
 	{

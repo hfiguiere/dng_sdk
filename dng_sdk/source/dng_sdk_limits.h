@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_sdk_limits.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_sdk_limits.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /** \file
  * Collection of constants detailing maximum values used in processing in the DNG SDK.
@@ -63,9 +63,17 @@ const uint32 kMaxMaskedAreas = 4;
 
 const uint32 kMaxImageSide = 65000;
 
+/// The maximum number of tone curve points supported.
+
+const uint32 kMaxToneCurvePoints = 8192;
+
 /// Maximum number of MP threads for dng_area_task operations.
 
+#if qDNG64Bit
+const uint32 kMaxMPThreads = 32;
+#else
 const uint32 kMaxMPThreads = 8;
+#endif
 
 /*****************************************************************************/
 

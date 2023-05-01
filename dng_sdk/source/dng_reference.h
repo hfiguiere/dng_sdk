@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_reference.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_reference.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -348,7 +348,9 @@ void RefBaselineHueSatMap (const real32 *sPtrR,
 						   real32 *dPtrG,
 						   real32 *dPtrB,
 						   uint32 count,
-						   const dng_hue_sat_map &lut);
+						   const dng_hue_sat_map &lut,
+						   const dng_1d_table *encodeTable,
+						   const dng_1d_table *decodeTable);
 
 /*****************************************************************************/
 
@@ -491,6 +493,18 @@ void RefVignette16 (int16 *sPtr,
 
 /*****************************************************************************/
 
+void RefVignette32 (real32 *sPtr,
+					const uint16 *mPtr,
+					uint32 rows,
+					uint32 cols,
+					uint32 planes,
+					int32 sRowStep,
+					int32 sPlaneStep,
+					int32 mRowStep,
+					uint32 mBits);
+
+/*****************************************************************************/
+
 void RefMapArea16 (uint16 *dPtr,
 				   uint32 count0,
 				   uint32 count1,
@@ -499,6 +513,17 @@ void RefMapArea16 (uint16 *dPtr,
 				   int32 step1,
 				   int32 step2,
 				   const uint16 *map);
+
+/*****************************************************************************/
+
+void RefBaselineMapPoly32 (real32 *dPtr,
+						   const int32 rowStep,
+						   const uint32 rows,
+						   const uint32 cols,
+						   const uint32 rowPitch,
+						   const uint32 colPitch,
+						   const real32 *coefficients,
+						   const uint32 degree);
 
 /*****************************************************************************/
 

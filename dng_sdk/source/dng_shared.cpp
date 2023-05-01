@@ -2,14 +2,14 @@
 // Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
-// NOTICE:  Adobe permits you to use, modify, and distribute this file in
+// NOTICE:	Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_shared.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_shared.cpp#4 $ */ 
+/* $DateTime: 2016/01/20 16:00:38 $ */
+/* $Change: 1060141 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -18,12 +18,13 @@
 #include "dng_camera_profile.h"
 #include "dng_exceptions.h"
 #include "dng_globals.h"
+#include "dng_memory.h"
 #include "dng_parse_utils.h"
 #include "dng_tag_codes.h"
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
 #include "dng_utils.h"
-							 		 
+									 
 /*****************************************************************************/
 
 dng_camera_profile_info::dng_camera_profile_info ()
@@ -57,36 +58,45 @@ dng_camera_profile_info::dng_camera_profile_info ()
 	,	fProfileVals (0)
 
 	,	fHueSatDeltas1Offset (0)
-	,	fHueSatDeltas1Count  (0)
+	,	fHueSatDeltas1Count	 (0)
 
 	,	fHueSatDeltas2Offset (0)
-	,	fHueSatDeltas2Count  (0)
+	,	fHueSatDeltas2Count	 (0)
+
+	,	fHueSatMapEncoding (encoding_Linear)
 	
 	,	fLookTableHues (0)
 	,	fLookTableSats (0)
 	,	fLookTableVals (0)
 		
 	,	fLookTableOffset (0)
-	,	fLookTableCount  (0)
+	,	fLookTableCount	 (0)
 
-	,	fToneCurveOffset     (0)
-	,	fToneCurveCount      (0)
+	,	fLookTableEncoding (encoding_Linear)
+
+	,	fBaselineExposureOffset (0, 100)
+	
+	,	fDefaultBlackRender (defaultBlackRender_Auto)
+
+	,	fToneCurveOffset	 (0)
+	,	fToneCurveCount		 (0)
 	
 	,	fUniqueCameraModel ()
 
 	{
 	
 	}
-							 		 
+									 
 /*****************************************************************************/
 
 dng_camera_profile_info::~dng_camera_profile_info ()
 	{
 	
 	}
-							 		 
+									 
 /*****************************************************************************/
 
+DNG_ATTRIB_NO_SANITIZE("unsigned-integer-overflow")
 bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 										uint32 parentCode,
 										uint32 tagCode,
@@ -195,6 +205,24 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 			
 			CheckTagType (parentCode, tagCode, tagType, ttSRational);
 			
+			// Kludge - Hasselblad FFF files are very DNG-like, but sometimes
+			// only have a ColorMatrix2 tag and no ColorMatrix1 tag.
+			
+			bool hasselbladHack = (fColorPlanes == 0);
+			
+			if (hasselbladHack)
+				{
+				
+				fColorPlanes = Pin_uint32 (0, tagCount / 3, kMaxColorPlanes);
+				
+				#if qDNGValidate
+				
+				ReportWarning ("ColorMatrix2 without ColorMatrix1");
+				
+				#endif
+			
+				}
+			
 			if (!CheckColorImage (parentCode, tagCode, fColorPlanes))
 				return false;
 				
@@ -220,6 +248,15 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 				}
 				
 			#endif
+				
+			if (hasselbladHack)
+				{
+				
+				fColorMatrix1 = fColorMatrix2;
+				
+				fColorMatrix2 = dng_matrix ();
+				
+				}
 				
 			break;
 			
@@ -375,7 +412,6 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 							tagCode,
 							tagCount,
 							fProfileCalibrationSignature,
-							false,
 							false);
 			
 			#if qDNGValidate
@@ -407,7 +443,6 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 							tagCode,
 							tagCount,
 							fProfileName,
-							false,
 							false);
 			
 			#if qDNGValidate
@@ -439,7 +474,6 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 							tagCode,
 							tagCount,
 							fProfileCopyright,
-							false,
 							false);
 			
 			#if qDNGValidate
@@ -549,25 +583,36 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 
 			if (!CheckTagType (parentCode, tagCode, tagType, ttFloat))
 				return false;
+
+			if (fProfileSats == 0)
+				return false;
+
+			dng_safe_uint32 hueCount (fProfileHues);
+			dng_safe_uint32 valCount (fProfileVals);
 				
-			bool skipSat0 = (tagCount == fProfileHues *
-										(fProfileSats - 1) * 
-										 fProfileVals * 3);
+			bool skipSat0 = (tagCount == (hueCount * 
+										  (fProfileSats - 1) *
+										  (valCount * 3u)).Get ());
 			
 			if (!skipSat0)
 				{
+
+				dng_safe_uint32 expected = hueCount * valCount * fProfileSats * 3u;
 			
-				if (!CheckTagCount (parentCode, tagCode, tagCount, fProfileHues *
-																   fProfileSats * 
-																   fProfileVals * 3))
+				if (!CheckTagCount (parentCode, 
+									tagCode, 
+									tagCount, 
+									expected.Get ()))
+					{
 					return false;
+					}
 					
 				}
 				
 			fBigEndian = stream.BigEndian ();
 				
 			fHueSatDeltas1Offset = tagOffset;
-			fHueSatDeltas1Count  = tagCount;
+			fHueSatDeltas1Count	 = tagCount;
 			
 			#if qDNGValidate
 
@@ -596,24 +641,35 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 			if (!CheckTagType (parentCode, tagCode, tagType, ttFloat))
 				return false;
 			
-			bool skipSat0 = (tagCount == fProfileHues *
-										(fProfileSats - 1) * 
-										 fProfileVals * 3);
+			if (fProfileSats == 0)
+				return false;
+
+			dng_safe_uint32 hueCount (fProfileHues);
+			dng_safe_uint32 valCount (fProfileVals);
+				
+			bool skipSat0 = (tagCount == (hueCount * 
+										  (fProfileSats - 1) *
+										  (valCount * 3u)).Get ());
 			
 			if (!skipSat0)
 				{
 			
-				if (!CheckTagCount (parentCode, tagCode, tagCount, fProfileHues *
-																   fProfileSats * 
-																   fProfileVals * 3))
+				dng_safe_uint32 expected = hueCount * valCount * fProfileSats * 3u;
+			
+				if (!CheckTagCount (parentCode, 
+									tagCode, 
+									tagCount, 
+									expected.Get ()))
+					{
 					return false;
+					}
 					
 				}
 			
 			fBigEndian = stream.BigEndian ();
 				
 			fHueSatDeltas2Offset = tagOffset;
-			fHueSatDeltas2Count  = tagCount;
+			fHueSatDeltas2Count	 = tagCount;
 			
 			#if qDNGValidate
 
@@ -630,6 +686,48 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 					
 				}
 				
+			#endif
+
+			break;
+			
+			}
+
+		case tcProfileHueSatMapEncoding:
+			{
+
+			CheckTagType (parentCode, tagCode, tagType, ttLong);
+			
+			CheckTagCount (parentCode, tagCode, tagCount, 1);
+			
+			fHueSatMapEncoding = stream.TagValue_uint32 (tagType);
+
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+				
+				const char *encoding = NULL;
+
+				switch (fHueSatMapEncoding)
+					{
+
+					case encoding_Linear:
+						encoding = "Linear";
+						break;
+
+					case encoding_sRGB:
+						encoding = "sRGB";
+						break;
+
+					default:
+						encoding = "INVALID VALUE";
+	
+					}
+
+				printf ("ProfileHueSatMapEncoding: %s\n", encoding);
+								
+				}
+
 			#endif
 
 			break;
@@ -675,24 +773,35 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 			if (!CheckTagType (parentCode, tagCode, tagType, ttFloat))
 				return false;
 			
-			bool skipSat0 = (tagCount == fLookTableHues *
-										(fLookTableSats - 1) * 
-										 fLookTableVals * 3);
+			if (fLookTableSats == 0)
+				return false;
+
+			dng_safe_uint32 hueCount (fLookTableHues);
+			dng_safe_uint32 valCount (fLookTableVals);
+				
+			bool skipSat0 = (tagCount == (hueCount *
+										  (fLookTableSats - 1) * 
+										  valCount * 3u).Get ());
 			
 			if (!skipSat0)
 				{
 			
-				if (!CheckTagCount (parentCode, tagCode, tagCount, fLookTableHues *
-																   fLookTableSats * 
-																   fLookTableVals * 3))
+				dng_safe_uint32 expected = hueCount * valCount * fLookTableSats * 3u;
+			
+				if (!CheckTagCount (parentCode, 
+									tagCode, 
+									tagCount, 
+									expected.Get ()))
+					{
 					return false;
+					}
 					
 				}
 			
 			fBigEndian = stream.BigEndian ();
 				
 			fLookTableOffset = tagOffset;
-			fLookTableCount  = tagCount;
+			fLookTableCount	 = tagCount;
 			
 			#if qDNGValidate
 
@@ -709,6 +818,116 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 					
 				}
 				
+			#endif
+
+			break;
+			
+			}
+
+		case tcProfileLookTableEncoding:
+			{
+
+			CheckTagType (parentCode, tagCode, tagType, ttLong);
+			
+			CheckTagCount (parentCode, tagCode, tagCount, 1);
+			
+			fLookTableEncoding = stream.TagValue_uint32 (tagType);
+
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+				
+				const char *encoding = NULL;
+
+				switch (fLookTableEncoding)
+					{
+
+					case encoding_Linear:
+						encoding = "Linear";
+						break;
+
+					case encoding_sRGB:
+						encoding = "sRGB";
+						break;
+
+					default:
+						encoding = "INVALID VALUE";
+	
+					}
+
+				printf ("ProfileLookTableEncoding: %s\n", encoding);
+								
+				}
+
+			#endif
+
+			break;
+			
+			}
+
+		case tcBaselineExposureOffset:
+			{
+			
+			CheckTagType (parentCode, tagCode, tagType, ttSRational);
+			
+			CheckTagCount (parentCode, tagCode, tagCount, 1);
+			
+			fBaselineExposureOffset = stream.TagValue_srational (tagType);
+			
+			#if qDNGValidate
+			
+			if (gVerbose)
+				{
+				
+				printf ("BaselineExposureOffset: %+0.2f\n",
+						fBaselineExposureOffset.As_real64 ());
+						
+				}
+				
+			#endif
+				
+			break;
+			
+			}
+			
+		case tcDefaultBlackRender:
+			{
+
+			CheckTagType (parentCode, tagCode, tagType, ttLong);
+			
+			CheckTagCount (parentCode, tagCode, tagCount, 1);
+			
+			fDefaultBlackRender = stream.TagValue_uint32 (tagType);
+
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+				
+				const char *setting = NULL;
+
+				switch (fDefaultBlackRender)
+					{
+
+					case defaultBlackRender_Auto:
+						setting = "Auto";
+						break;
+
+					case defaultBlackRender_None:
+						setting = "None";
+						break;
+
+					default:
+						setting = "INVALID VALUE";
+	
+					}
+
+				printf ("DefaultBlackRender: %s\n", 
+						setting);
+								
+				}
+
 			#endif
 
 			break;
@@ -752,7 +971,7 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 			fBigEndian = stream.BigEndian ();
 				
 			fToneCurveOffset = tagOffset;
-			fToneCurveCount  = tagCount;
+			fToneCurveCount	 = tagCount;
 			
 			#if qDNGValidate
 
@@ -890,8 +1109,8 @@ bool dng_camera_profile_info::ParseExtended (dng_stream &stream)
 			
 			stream.SetReadPosition (startPosition + 8 + 2 + tag_index * 12);
 			
-			uint16 tagCode  = stream.Get_uint16 ();
-			uint32 tagType  = stream.Get_uint16 ();
+			uint16 tagCode	= stream.Get_uint16 ();
+			uint32 tagType	= stream.Get_uint16 ();
 			uint32 tagCount = stream.Get_uint32 ();
 			
 			uint64 tagOffset = stream.Position ();
@@ -956,26 +1175,26 @@ bool dng_camera_profile_info::ParseExtended (dng_stream &stream)
 
 dng_shared::dng_shared ()
 	
-	:	fExifIFD 			 (0)
-	,	fGPSInfo 			 (0)
+	:	fExifIFD			 (0)
+	,	fGPSInfo			 (0)
 	,	fInteroperabilityIFD (0)
-	,	fKodakDCRPrivateIFD  (0)
-	,	fKodakKDCPrivateIFD  (0)
+	,	fKodakDCRPrivateIFD	 (0)
+	,	fKodakKDCPrivateIFD	 (0)
 		
 	,	fXMPCount  (0)
 	,	fXMPOffset (0)
 		
-	,	fIPTC_NAA_Count  (0)
+	,	fIPTC_NAA_Count	 (0)
 	,	fIPTC_NAA_Offset (0)
 	
-	,	fMakerNoteCount  (0)
+	,	fMakerNoteCount	 (0)
 	,	fMakerNoteOffset (0)
 	,	fMakerNoteSafety (0)
 	
-	,	fDNGVersion         (0)
+	,	fDNGVersion			(0)
 	,	fDNGBackwardVersion (0)
 	
-	,	fUniqueCameraModel    ()
+	,	fUniqueCameraModel	  ()
 	,	fLocalizedCameraModel ()
 	
 	,	fCameraProfile ()
@@ -985,7 +1204,7 @@ dng_shared::dng_shared ()
 	,	fCameraCalibration1 ()
 	,	fCameraCalibration2 ()
 		
-	,	fCameraCalibrationSignature  ()
+	,	fCameraCalibrationSignature	 ()
 
 	,	fAnalogBalance ()
 		
@@ -993,17 +1212,21 @@ dng_shared::dng_shared ()
 		
 	,	fAsShotWhiteXY ()
 	
-	,	fBaselineExposure      (0, 1)
-	,	fBaselineNoise         (1, 1)
+	,	fBaselineExposure	   (0, 1)
+	,	fBaselineNoise		   (1, 1)
 	,	fNoiseReductionApplied (0, 0)
-	,	fBaselineSharpness     (1, 1)
+	,	fBaselineSharpness	   (1, 1)
 	,	fLinearResponseLimit   (1, 1)
-	,	fShadowScale           (1, 1)
+	,	fShadowScale		   (1, 1)
+	
+	,	fHasBaselineExposure (false)
+	,	fHasShadowScale		 (false)
 	
 	,	fDNGPrivateDataCount  (0)
 	,	fDNGPrivateDataOffset (0)
 	
-	,	fRawImageDigest ()
+	,	fRawImageDigest	   ()
+	,	fNewRawImageDigest ()
 	
 	,	fRawDataUniqueID ()
 	
@@ -1014,12 +1237,12 @@ dng_shared::dng_shared ()
 	
 	,	fOriginalRawFileDigest ()
 		
-	,	fAsShotICCProfileCount  (0)
+	,	fAsShotICCProfileCount	(0)
 	,	fAsShotICCProfileOffset (0)
 	
 	,	fAsShotPreProfileMatrix ()
 		
-	,	fCurrentICCProfileCount  (0)
+	,	fCurrentICCProfileCount	 (0)
 	,	fCurrentICCProfileOffset (0)
 	
 	,	fCurrentPreProfileMatrix ()
@@ -1029,7 +1252,13 @@ dng_shared::dng_shared ()
 	,	fAsShotProfileName ()
 
 	,	fNoiseProfile ()
-
+	
+	,	fOriginalDefaultFinalSize	  ()
+	,	fOriginalBestQualityFinalSize ()
+		
+	,	fOriginalDefaultCropSizeH ()
+	,	fOriginalDefaultCropSizeV ()
+		
 	{
 	
 	}
@@ -1078,11 +1307,11 @@ bool dng_shared::ParseTag (dng_stream &stream,
 		
 		if (Parse_ifd0_exif (stream,
 							 exif,
-						 	 parentCode,
-						 	 tagCode,
-						 	 tagType,
-						 	 tagCount,
-						 	 tagOffset))
+							 parentCode,
+							 tagCode,
+							 tagType,
+							 tagCount,
+							 tagOffset))
 			{
 			
 			return true;
@@ -1114,7 +1343,7 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 		case tcXMP:
 			{
 			
-			CheckTagType (parentCode, tagCode, tagType, ttByte);
+			CheckTagType (parentCode, tagCode, tagType, ttByte, ttUndefined);
 			
 			fXMPCount  = tagCount;
 			fXMPOffset = fXMPCount ? tagOffset : 0;
@@ -1146,9 +1375,9 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 		case tcIPTC_NAA:
 			{
 			
-			CheckTagType (parentCode, tagCode, tagType, ttLong, ttAscii);
+			CheckTagType (parentCode, tagCode, tagType, ttLong, ttAscii, ttUndefined);
 			
-			fIPTC_NAA_Count  = tagCount * TagTypeSize (tagType);
+			fIPTC_NAA_Count = (dng_safe_uint32 (tagCount) * TagTypeSize (tagType)).Get ();
 			fIPTC_NAA_Offset = fIPTC_NAA_Count ? tagOffset : 0;
 			
 			#if qDNGValidate
@@ -1436,7 +1665,6 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 							tagCode,
 							tagCount,
 							fLocalizedCameraModel,
-							false,
 							false);
 			
 			bool didTrim = fLocalizedCameraModel.TrimTrailingBlanks ();
@@ -1551,7 +1779,6 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 							tagCode,
 							tagCount,
 							fCameraCalibrationSignature,
-							false,
 							false);
 			
 			#if qDNGValidate
@@ -1577,6 +1804,25 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			{
 			
 			CheckTagType (parentCode, tagCode, tagType, ttRational);
+			
+			// Kludge - Hasselblad FFF files are very DNG-like, but sometimes
+			// they don't have any ColorMatrix tags.
+			
+			bool hasselbladHack = (fDNGVersion == 0 &&
+								   fCameraProfile.fColorPlanes == 0);
+			
+			if (hasselbladHack)
+				{
+				
+				fCameraProfile.fColorPlanes = Pin_uint32 (0, tagCount, kMaxColorPlanes);
+				
+				#if qDNGValidate
+				
+				ReportWarning ("AnalogBalance without ColorMatrix1");
+				
+				#endif
+			
+				}
 			
 			if (!CheckColorImage (parentCode, tagCode, fCameraProfile.fColorPlanes))
 				return false;
@@ -1611,6 +1857,25 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			{
 			
 			CheckTagType (parentCode, tagCode, tagType, ttRational);
+			
+			// Kludge - Hasselblad FFF files are very DNG-like, but sometimes
+			// they don't have any ColorMatrix tags.
+			
+			bool hasselbladHack = (fDNGVersion == 0 &&
+								   fCameraProfile.fColorPlanes == 0);
+			
+			if (hasselbladHack)
+				{
+				
+				fCameraProfile.fColorPlanes = Pin_uint32 (0, tagCount, kMaxColorPlanes);
+				
+				#if qDNGValidate
+				
+				ReportWarning ("AsShotNeutral without ColorMatrix1");
+				
+				#endif
+			
+				}
 			
 			if (!CheckColorImage (parentCode, tagCode, fCameraProfile.fColorPlanes))
 				return false;
@@ -1681,14 +1946,16 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			
 			fBaselineExposure = stream.TagValue_srational (tagType);
 			
+			fHasBaselineExposure = true;
+			
 			#if qDNGValidate
 			
 			if (gVerbose)
 				{
 				
 				printf ("BaselineExposure: %+0.2f\n",
-					    fBaselineExposure.As_real64 ());
-					    
+						fBaselineExposure.As_real64 ());
+						
 				}
 				
 			#endif
@@ -1769,7 +2036,7 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 
 			// Parse the noise function parameters.
 
-			std::vector<dng_noise_function> noiseFunctions;
+			dng_std_vector<dng_noise_function> noiseFunctions;
 
 			for (uint32 i = 0; i < numPlanes; i++)
 				{
@@ -1794,13 +2061,13 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 				
 				printf ("NoiseProfile:\n");
 				
-				printf ("  Planes: %u\n", numPlanes);
+				printf ("  Planes: %u\n", (unsigned) numPlanes);
 					
 				for (uint32 plane = 0; plane < numPlanes; plane++)
 					{
 
-					printf ("  Noise function for plane %u: scale = %.8lf, offset = %.8lf\n",
-							plane,
+					printf ("  Noise function for plane %u: scale = %.20lf, offset = %.20lf\n",
+							(unsigned) plane,
 							noiseFunctions [plane].Scale  (),
 							noiseFunctions [plane].Offset ());
 
@@ -1829,7 +2096,7 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 				{
 				
 				printf ("BaselineSharpness: %0.2f\n",
-					    fBaselineSharpness.As_real64 ());
+						fBaselineSharpness.As_real64 ());
 				
 				}
 				
@@ -1872,6 +2139,8 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			CheckTagCount (parentCode, tagCode, tagCount, 1);
 			
 			fShadowScale = stream.TagValue_urational (tagType);
+			
+			fHasShadowScale = true;
 			
 			#if qDNGValidate
 
@@ -1971,6 +2240,36 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			
 			}
 			
+		case tcNewRawImageDigest:
+			{
+			
+			if (!CheckTagType (parentCode, tagCode, tagType, ttByte))
+				return false;
+				
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 16))
+				return false;
+				
+			stream.Get (fNewRawImageDigest.data, 16);
+			
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+				
+				printf ("NewRawImageDigest: ");
+				
+				DumpFingerprint (fNewRawImageDigest);
+									
+				printf ("\n");
+				
+				}
+				
+			#endif
+				
+			break;
+			
+			}
+			
 		case tcRawDataUniqueID:
 			{
 			
@@ -2011,7 +2310,6 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 							tagCode,
 							tagCount,
 							fOriginalRawFileName,
-							false,
 							false);
 			
 			#if qDNGValidate
@@ -2095,7 +2393,7 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			
 			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
 			
-			fAsShotICCProfileCount  = tagCount;
+			fAsShotICCProfileCount	= tagCount;
 			fAsShotICCProfileOffset = tagOffset;
 			
 			#if qDNGValidate
@@ -2164,7 +2462,7 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			
 			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
 			
-			fCurrentICCProfileCount  = tagCount;
+			fCurrentICCProfileCount	 = tagCount;
 			fCurrentICCProfileOffset = tagOffset;
 			
 			#if qDNGValidate
@@ -2340,7 +2638,6 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 							tagCode,
 							tagCount,
 							fAsShotProfileName,
-							false,
 							false);
 			
 			#if qDNGValidate
@@ -2362,6 +2659,90 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			
 			}
 
+		case tcOriginalDefaultFinalSize:
+			{
+			
+			CheckTagType (parentCode, tagCode, tagType, ttShort, ttLong);
+			
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 2))
+				return false;
+				
+			fOriginalDefaultFinalSize.h = stream.TagValue_int32 (tagType);
+			fOriginalDefaultFinalSize.v = stream.TagValue_int32 (tagType);
+			
+			#if qDNGValidate
+				
+			if (gVerbose)
+				{
+				
+				printf ("OriginalDefaultFinalSize: H = %d V = %d\n",
+						(int) fOriginalDefaultFinalSize.h,
+						(int) fOriginalDefaultFinalSize.v);
+						
+				}
+				
+			#endif
+			
+			break;
+			
+			}
+				
+		case tcOriginalBestQualityFinalSize:
+			{
+			
+			CheckTagType (parentCode, tagCode, tagType, ttShort, ttLong);
+			
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 2))
+				return false;
+				
+			fOriginalBestQualityFinalSize.h = stream.TagValue_int32 (tagType);
+			fOriginalBestQualityFinalSize.v = stream.TagValue_int32 (tagType);
+			
+			#if qDNGValidate
+				
+			if (gVerbose)
+				{
+				
+				printf ("OriginalBestQualityFinalSize: H = %d V = %d\n",
+						(int) fOriginalBestQualityFinalSize.h,
+						(int) fOriginalBestQualityFinalSize.v);
+						
+				}
+				
+			#endif
+			
+			break;
+			
+			}
+				
+		case tcOriginalDefaultCropSize:
+			{
+			
+			CheckTagType (parentCode, tagCode, tagType, ttShort, ttLong, ttRational);
+			
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 2))
+				return false;
+				
+			fOriginalDefaultCropSizeH = stream.TagValue_urational (tagType);
+			fOriginalDefaultCropSizeV = stream.TagValue_urational (tagType);
+			
+			#if qDNGValidate
+				
+			if (gVerbose)
+				{
+				
+				printf ("OriginalDefaultCropSize: H = %0.2f V = %0.2f\n",
+						fOriginalDefaultCropSizeH.As_real64 (),
+						fOriginalDefaultCropSizeV.As_real64 ());
+						
+				}
+				
+			#endif
+			
+			break;
+			
+			}
+			
 		default:
 			{
 			
@@ -2388,11 +2769,11 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 
 bool dng_shared::Parse_ifd0_exif (dng_stream &stream,
 								  dng_exif & /* exif */,
-						  	   	  uint32 parentCode,
-						  	      uint32 tagCode,
-						  	      uint32 tagType,
-						  	      uint32 tagCount,
-						  	      uint64 tagOffset)
+								  uint32 parentCode,
+								  uint32 tagCode,
+								  uint32 tagType,
+								  uint32 tagCount,
+								  uint64 tagOffset)
 	{
 	
 	switch (tagCode)
@@ -2403,7 +2784,7 @@ bool dng_shared::Parse_ifd0_exif (dng_stream &stream,
 			
 			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
 			
-			fMakerNoteCount  = tagCount;
+			fMakerNoteCount	 = tagCount;
 			fMakerNoteOffset = tagOffset;
 			
 			#if qDNGValidate
@@ -2581,7 +2962,7 @@ void dng_shared::PostParse (dng_host & /* host */,
 				}
 				
 			// If the colorimetric reference is the ICC profile PCS, then the
-			// data must already be white balanced.  The "AsShotWhiteXY" is required
+			// data must already be white balanced.	 The "AsShotWhiteXY" is required
 			// to be the ICC Profile PCS white point.
 			
 			if (fColorimetricReference == crICCProfilePCS)
@@ -2662,13 +3043,13 @@ void dng_shared::PostParse (dng_host & /* host */,
 			// compatiblity.
 
 			if (fCameraProfile.fCalibrationIlluminant1 == lsStandardLightA &&
-				fCameraProfile.fCalibrationIlluminant2 == lsD65            &&
+				fCameraProfile.fCalibrationIlluminant2 == lsD65			   &&
 				fCameraCalibration1.Rows () == fCameraProfile.fColorPlanes &&
 				fCameraCalibration1.Cols () == fCameraProfile.fColorPlanes &&
 				fCameraCalibration2.Rows () == fCameraProfile.fColorPlanes &&
 				fCameraCalibration2.Cols () == fCameraProfile.fColorPlanes &&
-				fCameraCalibrationSignature.IsEmpty ()                     &&
-				fCameraProfile.fProfileCalibrationSignature.IsEmpty ()     )
+				fCameraCalibrationSignature.IsEmpty ()					   &&
+				fCameraProfile.fProfileCalibrationSignature.IsEmpty ()	   )
 				{
 
 				fCameraCalibrationSignature.Set (kAdobeCalibrationSignature);
@@ -2771,8 +3152,24 @@ bool dng_shared::IsValidDNG ()
 		
 		#if qDNGValidate
 		
-		ReportError ("Missing or invalid DNGVersion");
+		if (fDNGVersion != dngVersion_None)
+			{
+
+			ReportError ("Invalid DNGVersion");
+
+			}
 					 
+		#if qDNGValidateTarget
+		
+		else
+			{
+
+			ReportError ("Missing DNGVersion");
+
+			}
+			
+		#endif
+		
 		#endif
 					 
 		return false;
@@ -2787,10 +3184,10 @@ bool dng_shared::IsValidDNG ()
 		#if qDNGValidate
 		
 		ReportError ("DNGBackwardVersion (or DNGVersion) is too high");
-					 
+		
 		#endif
 		
-		return false;
+		ThrowUnsupportedDNG ();
 			
 		}
 		

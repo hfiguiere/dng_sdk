@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_1d_table.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_1d_table.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /** \file
  * Definition of a lookup table based 1D floating-point to floating-point function abstraction using linear interpolation.
@@ -26,35 +26,50 @@
 #include "dng_auto_ptr.h"
 #include "dng_classes.h"
 #include "dng_types.h"
+#include "dng_uncopyable.h"
 
 /*****************************************************************************/
 
 /// \brief A 1D floating-point lookup table using linear interpolation.
 
-class dng_1d_table
+class dng_1d_table: private dng_uncopyable
 	{
-	
-	public:
-	
-		/// Constants denoting size of table.
 
-		enum
-			{
-			kTableBits = 12,				//< Table is always a power of 2 in size. This is log2(kTableSize).
-			kTableSize = (1 << kTableBits)	//< Number of entries in table.
-			};
+	public:
+
+		/// Constant denoting minimum size of table.
+
+		static const uint32 kMinTableSize = 512;
+	
+	private:
+	
+		/// Constant denoting default size of table.
+
+		static const uint32 kDefaultTableSize = 4096;
 			
 	protected:
 	
 		AutoPtr<dng_memory_block> fBuffer;
 		
 		real32 *fTable;
+
+		const uint32 fTableCount;
 	
 	public:
+
+		/// Table constructor. count must be a power of two
+		/// and at least kMinTableSize.
 	
-		dng_1d_table ();
+		explicit dng_1d_table (uint32 count = kDefaultTableSize);
 			
 		virtual ~dng_1d_table ();
+
+		/// Number of table entries.
+
+		uint32 Count () const
+			{
+			return fTableCount;
+			}
 
 		/// Set up table, initialize entries using functiion.
 		/// This method can throw an exception, e.g. if there is not enough memory.
@@ -73,19 +88,23 @@ class dng_1d_table
 		real32 Interpolate (real32 x) const
 			{
 			
-			real32 y = x * (real32) kTableSize;
+			real32 y = x * (real32) fTableCount;
 			
 			int32 index = (int32) y;
+
+			if (index < 0 || index > (int32) fTableCount)
+				{
+				
+				ThrowProgramError ("dng_1d_table::Interpolate parameter out of range");
+				
+				}
 			
-			DNG_ASSERT (index >= 0 && index <= kTableSize,
-						"dng_1d_table::Interpolate parameter out of range");
-					
 			real32 z = (real32) index;
 						
 			real32 fract = y - z;
 			
-			return fTable [index    ] * (1.0f - fract) +
-				   fTable [index + 1] * (       fract);
+			return fTable [index	] * (1.0f - fract) +
+				   fTable [index + 1] * (		fract);
 			
 			}
 			
@@ -106,12 +125,6 @@ class dng_1d_table
 						uint32 lower,
 						uint32 upper,
 						real32 maxDelta);
-	
-		// Hidden copy constructor and assignment operator.
-	
-		dng_1d_table (const dng_1d_table &table);
-		
-		dng_1d_table & operator= (const dng_1d_table &table);
 	
 	};
 

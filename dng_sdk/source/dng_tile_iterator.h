@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_tile_iterator.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_tile_iterator.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -23,9 +23,26 @@
 #include "dng_rect.h"
 #include "dng_types.h"
 
+#include <vector>
+
 /*****************************************************************************/
 
-class dng_tile_iterator
+class dng_base_tile_iterator
+	{
+		
+	public:
+        
+		virtual ~dng_base_tile_iterator ()
+			{
+			}
+
+		virtual bool GetOneTile (dng_rect &tile) = 0;		
+		
+	};
+
+/*****************************************************************************/
+
+class dng_tile_iterator: public dng_base_tile_iterator
 	{
 	
 	private:
@@ -60,12 +77,54 @@ class dng_tile_iterator
 		dng_tile_iterator (const dng_rect &tile,
 						   const dng_rect &area);
 						   
-		bool GetOneTile (dng_rect &tile);
+		virtual ~dng_tile_iterator ()
+			{
+			}
+
+		virtual bool GetOneTile (dng_rect &tile);
 		
 	private:
 	
 		void Initialize (const dng_rect &tile,
 						 const dng_rect &area);
+	
+	};
+
+/*****************************************************************************/
+
+typedef dng_tile_iterator dng_tile_forward_iterator;
+
+/*****************************************************************************/
+
+class dng_tile_reverse_iterator: public dng_base_tile_iterator
+	{
+
+	public:
+
+		std::vector<dng_rect> fTiles;
+
+		size_t fIndex;
+
+	public:
+		
+		dng_tile_reverse_iterator (const dng_image &image,
+								   const dng_rect &area);
+						   
+		dng_tile_reverse_iterator (const dng_point &tileSize,
+								   const dng_rect &area);
+						   
+		dng_tile_reverse_iterator (const dng_rect &tile,
+								   const dng_rect &area);
+						   
+		virtual ~dng_tile_reverse_iterator ()
+			{
+			}
+
+		virtual bool GetOneTile (dng_rect &tile);
+		
+	private:
+	
+		void Initialize (dng_tile_iterator &iterator);
 	
 	};
 		

@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_exceptions.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_exceptions.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -21,6 +21,7 @@
 /*****************************************************************************/
 
 #ifndef qDNGReportErrors
+// assuming this isn't enable on Win, because it's using printf, but an app can redirect that to console
 #define qDNGReportErrors ((qDNGDebug && qMacOS) || qDNGValidate)
 #endif
 
@@ -31,18 +32,20 @@ void ReportWarning (const char *message,
 	{
 	
 	#if qDNGReportErrors
-
-	fprintf (stderr, "*** Warning: %s", message);
-
-	if (sub_message)
-		{
-	
-		fprintf (stderr, " (%s)", sub_message); 
-		
-		}
-		
-	fprintf (stderr, " ***\n");
-
+        
+    #ifdef cr_logw
+    
+    cr_logs("report", 2, NULL, 0, cr_logfunc(), "%s %s\n", message, sub_message ? sub_message : "");
+    
+    #else
+    
+    if (sub_message)
+        fprintf (stderr, "*** Warning: %s (%s) ***\n", message, sub_message);
+    else 
+        fprintf (stderr, "*** Warning: %s ***\n", message);
+    
+    #endif
+        
 	#else
 
 	(void) message;
@@ -57,26 +60,22 @@ void ReportWarning (const char *message,
 void ReportError (const char *message,
 				  const char *sub_message)
 	{
+
+    #if qDNGReportErrors
+
+    #ifdef cr_loge
+    
+    cr_logs("report", 3, NULL, 0, cr_logfunc(), "%s %s\n", message, sub_message ? sub_message : "");
+   
+    #else
 	
-	#if qDNGReportErrors
-
-	fprintf (stderr, "*** Error: %s", message);
-
-	if (sub_message)
-		{
-	
-		fprintf (stderr, " (%s)", sub_message); 
-		
-		}
-		
-	fprintf (stderr, " ***\n"); 
-
-	// When Xcode won't let us set a break point, comment out the line below to
-	// force the app to crash at this point (assuming the message is in protected
-	// memory).
-	
-	// * const_cast< char *> (message) = 'X';
-
+    if (sub_message)
+		fprintf (stderr, "*** Error: %s (%s) ***\n", message, sub_message);
+	else 
+		fprintf (stderr, "*** Error: %s ***\n", message);
+        
+    #endif
+        
 	#else
 
 	(void) message;
@@ -183,6 +182,18 @@ void Throw_dng_error (dng_error_code err,
 					break;
 					}
 					
+				case dng_error_unsupported_dng:
+					{
+					message = "DNG version is unsupported";
+					break;
+					}
+					
+				case dng_error_overflow:
+					{
+					message = "Arithmetic overflow/underflow";
+					break;
+					}
+					
 				default:
 					{
 					message = "Unknown error";
@@ -202,9 +213,9 @@ void Throw_dng_error (dng_error_code err,
 		
 	#else
 	
-	message;
-	sub_message;
-	silent;
+	(void) message;
+	(void) sub_message;
+	(void) silent;
 	
 	#endif
 	

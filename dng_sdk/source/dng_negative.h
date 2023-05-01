@@ -1,18 +1,19 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2012 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_negative.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_negative.h#4 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /** \file
- * 
+ * Functions and classes for working with a digital negative (image data and
+ * corresponding metadata).
  */
 
 /*****************************************************************************/
@@ -26,6 +27,7 @@
 #include "dng_auto_ptr.h"
 #include "dng_classes.h"
 #include "dng_fingerprint.h"
+#include "dng_image.h"
 #include "dng_linearization_info.h"
 #include "dng_matrix.h"
 #include "dng_mosaic_info.h"
@@ -41,6 +43,27 @@
 #include "dng_xy_coord.h"
 
 #include <vector>
+
+/*****************************************************************************/
+
+// To prevent using the internal metadata when we meant to use override
+// metadata, the following definitions allow us to only allow access to
+// the internal metadata on non-const negatives. This allows the old API
+// to keep working essentially unchanged provided one does not use const
+// negatives, but will prevent access to the embedded data on const
+// negatives.
+
+#if 1
+
+#define qMetadataOnConst 0
+#define METACONST
+
+#else
+
+#define qMetadataOnConst 1
+#define METACONST const
+
+#endif
 
 /*****************************************************************************/
 
@@ -62,6 +85,8 @@ class dng_noise_function: public dng_1d_function
 
 	public:
 
+		/// Create empty and invalid noise function.
+
 		dng_noise_function ()
 
 			:	fScale	(0.0)
@@ -70,6 +95,8 @@ class dng_noise_function: public dng_1d_function
 			{
 
 			}
+
+		/// Create noise function with the specified scale and offset.
 
 		dng_noise_function (real64 scale,
 							real64 offset)
@@ -81,30 +108,43 @@ class dng_noise_function: public dng_1d_function
 
 			}
 
+		/// Compute noise (standard deviation) at the specified average signal level
+		/// x.
+
 		virtual real64 Evaluate (real64 x) const
 			{
 			return sqrt (fScale * x + fOffset);
 			}
+
+		/// The scale (slope, gain) of the noise function.
 
 		real64 Scale () const 
 			{ 
 			return fScale; 
 			}
 
+		/// The offset (square of the noise floor) of the noise function.
+
 		real64 Offset () const 
 			{ 
 			return fOffset; 
 			}
+
+		/// Set the scale (slope, gain) of the noise function.
 
 		void SetScale (real64 scale)
 			{
 			fScale = scale;
 			}
 
+		/// Set the offset (square of the noise floor) of the noise function.
+
 		void SetOffset (real64 offset)
 			{
 			fOffset = offset;
 			}
+
+		/// Is the noise function valid?
 
 		bool IsValid () const
 			{
@@ -135,23 +175,338 @@ class dng_noise_profile
 		
 	protected:
 
-		std::vector<dng_noise_function> fNoiseFunctions;
+		dng_std_vector<dng_noise_function> fNoiseFunctions;
 
 	public:
 
+		/// Create empty (invalid) noise profile.
+
 		dng_noise_profile ();
 
-		explicit dng_noise_profile (const std::vector<dng_noise_function> &functions);
+		/// Create noise profile with the specified noise functions (1 per plane).
+
+		explicit dng_noise_profile (const dng_std_vector<dng_noise_function> &functions);
+
+		/// Is the noise profile valid?
 
 		bool IsValid () const;
 
+		/// Is the noise profile valid for the specified negative?
+
 		bool IsValidForNegative (const dng_negative &negative) const;
 
+		/// The noise function for the specified plane.
+
 		const dng_noise_function & NoiseFunction (uint32 plane) const;
+
+		/// The number of noise functions in this profile.
 
 		uint32 NumFunctions () const;
 		
 	};
+
+/*****************************************************************************/
+
+/// \brief Main class for holding metadata.
+
+class dng_metadata
+	{
+	
+	private:
+		
+		// Base orientation of both the thumbnail and raw data. This is
+		// generally based on the EXIF values.
+		
+		bool fHasBaseOrientation;
+	
+		dng_orientation fBaseOrientation;
+		
+		// Is the maker note safe to copy from file to file? Defaults to false
+		// because many maker notes are not safe.
+		
+		bool fIsMakerNoteSafe;
+		
+		// MakerNote binary data block.
+		
+		AutoPtr<dng_memory_block> fMakerNote;
+		
+		// EXIF data.
+		
+		AutoPtr<dng_exif> fExif;
+		
+		// A copy of the EXIF data before is was synchronized with other metadata sources.
+		
+		AutoPtr<dng_exif> fOriginalExif;
+		
+		// IPTC binary data block and offset in original file.
+		
+		AutoPtr<dng_memory_block> fIPTCBlock;
+		
+		uint64 fIPTCOffset;
+		
+		// XMP data.
+		
+		AutoPtr<dng_xmp> fXMP;
+		
+		// If there a valid embedded XMP block, has is its digest?  NULL if no valid
+		// embedded XMP.
+		
+		dng_fingerprint fEmbeddedXMPDigest;
+		
+		// Is the XMP data from a sidecar file?
+		
+		bool fXMPinSidecar;
+		
+		// If the XMP data is from a sidecar file, is the sidecar file newer
+		// than the raw file?
+		
+		bool fXMPisNewer;
+		
+		// Source file mimi-type, if known.
+		
+		dng_string fSourceMIME;
+		
+	public:
+
+		dng_metadata (dng_host &host);
+		
+		dng_metadata (const dng_metadata &rhs,
+					  dng_memory_allocator &allocator);
+		
+		virtual ~dng_metadata ();
+
+		/// Copy this metadata.
+		
+		virtual dng_metadata * Clone (dng_memory_allocator &allocator) const;
+		
+		/// Setter for BaseOrientation.
+			
+		void SetBaseOrientation (const dng_orientation &orientation);
+		
+		/// Has BaseOrientation been set?
+
+		bool HasBaseOrientation () const
+			{
+			return fHasBaseOrientation;
+			}
+		
+		/// Getter for BaseOrientation.
+			
+		const dng_orientation & BaseOrientation () const
+			{
+			return fBaseOrientation;
+			}
+			
+		/// Logically rotates the image by changing the orientation values.
+		/// This will also update the XMP data.
+		
+		void ApplyOrientation (const dng_orientation &orientation);
+
+		// API for IPTC metadata:
+			
+		void SetIPTC (AutoPtr<dng_memory_block> &block,
+					  uint64 offset);
+		
+		void SetIPTC (AutoPtr<dng_memory_block> &block);
+		
+		void ClearIPTC ();
+		
+		const void * IPTCData () const;
+		
+		uint32 IPTCLength () const;
+		
+		uint64 IPTCOffset () const;
+		
+		dng_fingerprint IPTCDigest (bool includePadding = true) const;
+		
+		void RebuildIPTC (dng_memory_allocator &allocator,
+						  bool padForTIFF);
+		
+		// API for MakerNote data:
+		
+		void SetMakerNoteSafety (bool safe)
+			{
+			fIsMakerNoteSafe = safe;
+			}
+		
+		bool IsMakerNoteSafe () const
+			{
+			return fIsMakerNoteSafe;
+			}
+		
+		void SetMakerNote (AutoPtr<dng_memory_block> &block)
+			{
+			fMakerNote.Reset (block.Release ());
+			}
+		
+		void ClearMakerNote ()
+			{
+			fIsMakerNoteSafe = false;
+			fMakerNote.Reset ();
+			}
+		
+		const void * MakerNoteData () const
+			{
+			return fMakerNote.Get () ? fMakerNote->Buffer ()
+									 : NULL;
+			}
+		
+		uint32 MakerNoteLength () const
+			{
+			return fMakerNote.Get () ? fMakerNote->LogicalSize ()
+									 : 0;
+			}
+		
+		// API for EXIF metadata:
+		
+		dng_exif * GetExif ()
+			{
+			return fExif.Get ();
+			}
+			
+		const dng_exif * GetExif () const
+			{
+			return fExif.Get ();
+			}
+			
+		template< class E >
+		E & Exif ();
+			
+		template< class E >
+		const E & Exif () const;
+					
+		void ResetExif (dng_exif * newExif);
+			
+		dng_memory_block * BuildExifBlock (dng_memory_allocator &allocator,
+										   const dng_resolution *resolution = NULL,
+										   bool includeIPTC = false,
+										   const dng_jpeg_preview *thumbnail = NULL) const;
+												   
+		// API for original EXIF metadata.
+		
+		dng_exif * GetOriginalExif ()
+			{
+			return fOriginalExif.Get ();
+			}
+			
+		const dng_exif * GetOriginalExif () const
+			{
+			return fOriginalExif.Get ();
+			}
+			
+		// API for XMP metadata:
+		
+		bool SetXMP (dng_host &host,
+					 const void *buffer,
+					 uint32 count,
+					 bool xmpInSidecar = false,
+					 bool xmpIsNewer = false);
+					 
+		void SetEmbeddedXMP (dng_host &host,
+							 const void *buffer,
+							 uint32 count);
+					 
+		dng_xmp * GetXMP ()
+			{
+			return fXMP.Get ();
+			}
+			
+		const dng_xmp * GetXMP () const
+			{
+			return fXMP.Get ();
+			}
+
+		template< class X >
+		X & XMP ();
+
+		template< class X >
+		const X & XMP () const;
+
+		bool XMPinSidecar () const
+			{
+			return fXMPinSidecar;
+			}
+			
+		const dng_fingerprint & EmbeddedXMPDigest () const
+			{
+			return fEmbeddedXMPDigest;
+			}
+						
+		bool HaveValidEmbeddedXMP () const
+			{
+			return fEmbeddedXMPDigest.IsValid ();
+			}
+		
+		void ResetXMP (dng_xmp * newXMP);
+	
+		void ResetXMPSidecarNewer (dng_xmp * newXMP, bool inSidecar, bool isNewer );
+			
+		// Synchronize metadata sources.
+		
+		void SynchronizeMetadata ();
+		
+		// Routines to update the date/time field in the EXIF and XMP
+		// metadata.
+		
+		void UpdateDateTime (const dng_date_time_info &dt);
+							 
+		void UpdateDateTimeToNow ();
+		
+		void UpdateMetadataDateTimeToNow ();
+		
+		// Routines to set and get the source file MIME type.
+		
+		void SetSourceMIME (const char *s)
+			{
+			fSourceMIME.Set (s);
+			}
+			
+		const dng_string & SourceMIME () const
+			{
+			return fSourceMIME;
+			}
+			
+	};
+
+/*****************************************************************************/
+
+template< class E >
+E & dng_metadata::Exif ()
+	{
+	dng_exif * exif = GetExif ();
+	if (!exif) ThrowProgramError ("EXIF object is NULL.");
+	return dynamic_cast< E & > (*exif);
+	}
+
+/*****************************************************************************/
+
+template< class E >
+const E & dng_metadata::Exif () const
+	{
+	const dng_exif * exif = GetExif ();
+	if (!exif) ThrowProgramError ("EXIF object is NULL.");
+	return dynamic_cast< const E & > (*exif);
+	}
+
+/*****************************************************************************/
+
+template< class X >
+X & dng_metadata::XMP ()
+	{
+	dng_xmp * xmp = GetXMP ();
+	if (!xmp) ThrowProgramError ("XMP object is NULL.");
+	return dynamic_cast< X & > (*xmp);
+	}
+
+/*****************************************************************************/
+
+template< class X >
+const X & dng_metadata::XMP () const
+	{
+	const dng_xmp * xmp = GetXMP ();
+	if (!xmp) ThrowProgramError ("XMP object is NULL.");
+	return dynamic_cast< const X & > (*xmp);
+	}
 
 /*****************************************************************************/
 
@@ -170,17 +525,18 @@ class dng_negative
 			rawImageStagePreOpcode3,
 			rawImageStagePostOpcode3,
 			rawImageStageNone
-			}; 
-	
+			};
+			
 	protected:
 	
-		// The object stores an associated allocator. It does not do
+		// The negative stores an associated allocator. It does not do
 		// anything to keep it alive or to release it when the object destructs.
 		// Hence, clients will need to make sure that the allocator's lifespan
-		// encompasses that of the dng_negative object.
+		// encompasses that of the dng_factory object which is generally
+		// directly bound to the dng_negative object.
 	
 		dng_memory_allocator &fAllocator;
-		
+			
 		// Non-localized ASCII model name.
 		
 		dng_string fModelName;
@@ -188,13 +544,6 @@ class dng_negative
 		// Localized UTF-8 model name.
 		
 		dng_string fLocalName;
-		
-		// Base orientation of both the thumbnail and raw data. This is
-		// generally based on the EXIF values.
-		
-		bool fHasBaseOrientation;
-	
-		dng_orientation fBaseOrientation;
 		
 		// The area of raw image that should be included in the final converted
 		// image. This stems from extra pixels around the edges of the sensor
@@ -208,6 +557,13 @@ class dng_negative
 		
 		dng_urational fDefaultCropOriginH;
 		dng_urational fDefaultCropOriginV;
+
+		// Default user crop, in relative coordinates.
+
+		dng_urational fDefaultUserCropT;
+		dng_urational fDefaultUserCropL;
+		dng_urational fDefaultUserCropB;
+		dng_urational fDefaultUserCropR;
 		
 		// Default scale factors. Generally, 1.0 for square pixel cameras. They
 		// can compensate for non-square pixels. The choice of exact values will
@@ -224,6 +580,15 @@ class dng_negative
 		// from 1.0.
 		
 		dng_urational fBestQualityScale;
+		
+		// Proxy image support.  Remember certain sizes for the original image
+		// this proxy was derived from.
+				
+		dng_point fOriginalDefaultFinalSize;
+		dng_point fOriginalBestQualityFinalSize;
+		
+		dng_urational fOriginalDefaultCropSizeH;
+		dng_urational fOriginalDefaultCropSizeV;
 		
 		// Scale factors used in demosaic algorithm (calculated).
 		// Maps raw image coordinates to full image coordinates -- i.e.,
@@ -286,6 +651,10 @@ class dng_negative
 		// Colormetric reference.
 		
 		uint32 fColorimetricReference;
+
+        // Is the stage 3 image floating point?
+
+        bool fFloatingPoint;
 		
 		// Number of color channels for this image (e.g. 1, 3, or 4).
 		
@@ -331,17 +700,20 @@ class dng_negative
 		
 		// List of camera profiles.
 		
-		std::vector<dng_camera_profile *> fCameraProfile;
+		dng_std_vector<dng_camera_profile *> fCameraProfile;
 		
 		// "As shot" camera profile name.
 		
 		dng_string fAsShotProfileName;
 		
-		// Raw image data digest. This is a MD5 fingerprint of the raw image data
-		// in the file, computed using a specific algorithm.  It can be used
-		// verify the raw data has not been corrupted.
+		// Raw image data digests. These are MD5 fingerprints of the raw image data
+		// in the file, computed using a specific algorithms.  They can be used
+		// verify the raw data has not been corrupted.  The new version is faster
+		// to compute on MP machines, and is used starting with DNG version 1.4. 
 		
 		mutable dng_fingerprint fRawImageDigest;
+		
+		mutable dng_fingerprint fNewRawImageDigest;
 
 		// Raw data unique ID.  This is an unique identifer for the actual
 		// raw image data in the file.  It can be used to index into caches
@@ -369,49 +741,9 @@ class dng_negative
 		
 		AutoPtr<dng_memory_block> fDNGPrivateData;
 		
-		// Is the maker note safe to copy from file to file? Defaults to false
-		// because many maker notes are not safe.
-		
-		bool fIsMakerNoteSafe;
-		
-		// MakerNote binary data block.
-		
-		AutoPtr<dng_memory_block> fMakerNote;
-		
-		// EXIF data.
-		
-		AutoPtr<dng_exif> fExif;
-		
-		// A copy of the EXIF data before is was synchronized with other metadata sources.
-		
-		AutoPtr<dng_exif> fOriginalExif;
-		
-		// IPTC binary data block and offset in original file.
-		
-		AutoPtr<dng_memory_block> fIPTCBlock;
-		
-		uint64 fIPTCOffset;
-		
-		// Did the legacy ITPC block use UTF8?
-		
-		bool fUsedUTF8forIPTC;
-		
-		// XMP data.
-		
-		AutoPtr<dng_xmp> fXMP;
-		
-		// Was there a valid embedded XMP block?
-		
-		bool fValidEmbeddedXMP;
-		
-		// Is the XMP data from a sidecar file?
-		
-		bool fXMPinSidecar;
-		
-		// If the XMP data is from a sidecar file, is the sidecar file newer
-		// than the raw file?
-		
-		bool fXMPisNewer;
+		// Metadata information (XMP, IPTC, EXIF, orientation)
+	
+		dng_metadata fMetadata;
 		
 		// Information required to linearize and range map the raw data.
 		
@@ -468,11 +800,40 @@ class dng_negative
 		
 		AutoPtr<dng_image> fRawImage;
 		
+		// The floating point bit depth of the raw file, if any.
+		
+		uint32 fRawFloatBitDepth;
+		
+		// The raw image JPEG data that we grabbed, if any.
+		
+		AutoPtr<dng_jpeg_image> fRawJPEGImage;
+		
+		// Keep a separate digest for the compressed JPEG data, if any.
+		
+		mutable dng_fingerprint fRawJPEGImageDigest;
+		
+		// Transparency mask image, if any.
+		
+		AutoPtr<dng_image> fTransparencyMask;
+		
+		// Grabbed transparency mask, if we are not saving the current mask.
+		
+		AutoPtr<dng_image> fRawTransparencyMask;
+		
+		// The bit depth for the raw transparancy mask, if known.
+		
+		uint32 fRawTransparencyMaskBitDepth;
+		
+		// We sometimes need to keep of copy of the stage3 image before
+		// flattening the transparency.
+		
+		AutoPtr<dng_image> fUnflattenedStage3Image;
+		
 	public:
 	
 		virtual ~dng_negative ();
 		
-		static dng_negative * Make (dng_memory_allocator &allocator);
+		static dng_negative * Make (dng_host &host);
 		
 		/// Provide access to the memory allocator used for this object.
 		
@@ -509,32 +870,79 @@ class dng_negative
 			return fLocalName;
 			}
 			
+		/// Getter for metadata
+			
+		dng_metadata &Metadata ()
+			{
+			return fMetadata;
+			}
+			
+		#if qMetadataOnConst
+			
+		const dng_metadata &Metadata () const
+			{
+			return fMetadata;
+			}
+			
+		#endif // qMetadataOnConst
+
+		/// Make a copy of the internal metadata generally as a basis for further
+		/// changes.
+
+		dng_metadata * CloneInternalMetadata () const;
+		
+	protected:
+
+		/// An accessor for the internal metadata that works even when we
+		/// have general access turned off. This is needed to provide
+		/// access to EXIF ISO information.
+
+		const dng_metadata &InternalMetadata () const
+			{
+			return fMetadata;
+			}
+			
+	public:
+				
 		/// Setter for BaseOrientation.
 			
-		void SetBaseOrientation (const dng_orientation &orientation);
+		void SetBaseOrientation (const dng_orientation &orientation)
+			{
+			Metadata ().SetBaseOrientation (orientation);
+			}
 		
 		/// Has BaseOrientation been set?
 
-		bool HasBaseOrientation () const
+		bool HasBaseOrientation () METACONST
 			{
-			return fHasBaseOrientation;
+			return Metadata ().HasBaseOrientation ();
 			}
 		
 		/// Getter for BaseOrientation.
 			
-		const dng_orientation & BaseOrientation () const
+		const dng_orientation & BaseOrientation () METACONST
 			{
-			return fBaseOrientation;
+			return Metadata ().BaseOrientation ();
 			}
 			
 		/// Hook to allow SDK host code to add additional rotations.
 			
-		virtual dng_orientation Orientation () const;
+		virtual dng_orientation ComputeOrientation (const dng_metadata &metadata) const;
+		
+		/// For non-const negatives, we simply default to using the metadata attached to the negative.
+		
+		dng_orientation Orientation ()
+			{
+			return ComputeOrientation (Metadata ());
+			}
 		
 		/// Logically rotates the image by changing the orientation values.
 		/// This will also update the XMP data.
 		
-		void ApplyOrientation (const dng_orientation &orientation);
+		void ApplyOrientation (const dng_orientation &orientation)
+			{
+			Metadata ().ApplyOrientation (orientation);
+			}
 		
 		/// Setter for DefaultCropSize.
 		
@@ -612,7 +1020,96 @@ class dng_negative
 			{
 			return fDefaultCropOriginV;
 			}
+
+		/// Is there a default user crop?
+
+		bool HasDefaultUserCrop () const
+			{
+			return (fDefaultUserCropT.As_real64 () != 0.0 ||
+					fDefaultUserCropL.As_real64 () != 0.0 ||
+					fDefaultUserCropB.As_real64 () != 1.0 ||
+					fDefaultUserCropR.As_real64 () != 1.0);
+			}
 							  
+		/// Getter for top coordinate of default user crop.
+
+		const dng_urational & DefaultUserCropT () const
+			{
+			return fDefaultUserCropT;
+			}
+							  
+		/// Getter for left coordinate of default user crop.
+
+		const dng_urational & DefaultUserCropL () const
+			{
+			return fDefaultUserCropL;
+			}
+							  
+		/// Getter for bottom coordinate of default user crop.
+
+		const dng_urational & DefaultUserCropB () const
+			{
+			return fDefaultUserCropB;
+			}
+							  
+		/// Getter for right coordinate of default user crop.
+
+		const dng_urational & DefaultUserCropR () const
+			{
+			return fDefaultUserCropR;
+			}
+
+		/// Reset default user crop to default crop area.
+
+		void ResetDefaultUserCrop ()
+			{
+			fDefaultUserCropT = dng_urational (0, 1);
+			fDefaultUserCropL = dng_urational (0, 1);
+			fDefaultUserCropB = dng_urational (1, 1);
+			fDefaultUserCropR = dng_urational (1, 1);
+			}
+
+		/// Setter for all 4 coordinates of default user crop.
+							  
+		void SetDefaultUserCrop (const dng_urational &t,
+								 const dng_urational &l,
+								 const dng_urational &b,
+								 const dng_urational &r)
+			{
+			fDefaultUserCropT = t;
+			fDefaultUserCropL = l;
+			fDefaultUserCropB = b;
+			fDefaultUserCropR = r;
+			}
+
+		/// Setter for top coordinate of default user crop.
+							  
+		void SetDefaultUserCropT (const dng_urational &value)
+			{
+			fDefaultUserCropT = value;
+			}
+
+		/// Setter for left coordinate of default user crop.
+							  
+		void SetDefaultUserCropL (const dng_urational &value)
+			{
+			fDefaultUserCropL = value;
+			}
+
+		/// Setter for bottom coordinate of default user crop.
+							  
+		void SetDefaultUserCropB (const dng_urational &value)
+			{
+			fDefaultUserCropB = value;
+			}
+
+		/// Setter for right coordinate of default user crop.
+							  
+		void SetDefaultUserCropR (const dng_urational &value)
+			{
+			fDefaultUserCropR = value;
+			}
+
 		/// Setter for DefaultScale.
 		
 		void SetDefaultScale (const dng_urational &scaleH,
@@ -649,6 +1146,13 @@ class dng_negative
 			{
 			return fBestQualityScale;
 			}
+        
+        /// Is the best quality scale different than the default scale?
+        
+        bool HasBestQualityScale () const
+            {
+            return fBestQualityScale.As_real64 () != 1.0;
+            }
 			
 		/// API for raw to full image scaling factors horizontal.
 		
@@ -662,6 +1166,15 @@ class dng_negative
 		real64 RawToFullScaleV () const
 			{
 			return fRawToFullScaleV;
+			}
+			
+		/// Setter for raw to full scales.
+		
+		void SetRawToFullScale (real64 scaleH,
+							    real64 scaleV)
+			{
+			fRawToFullScaleH = scaleH;
+			fRawToFullScaleV = scaleV;
 			}
 			
 		/// Get default scale factor.
@@ -751,12 +1264,76 @@ class dng_negative
 			{
 			return FinalHeight (DefaultScale () * BestQualityScale ().As_real64 ());
 			}
+			
+		/// Default size of original (non-proxy) image.  For non-proxy images, this
+		/// is equal to DefaultFinalWidth/DefaultFinalHight.  For proxy images, this
+		/// is equal to the DefaultFinalWidth/DefaultFinalHeight of the image this
+		/// proxy was derived from.
 		
-		/// The default crop area after applying the specified horizontal and 
-		/// vertical scale factors to the stage 3 image.
+		const dng_point & OriginalDefaultFinalSize () const
+			{
+			return fOriginalDefaultFinalSize;
+			}
+			
+		/// Setter for OriginalDefaultFinalSize.
+		
+		void SetOriginalDefaultFinalSize (const dng_point &size)
+			{
+			fOriginalDefaultFinalSize = size;
+			}
+		
+		/// Best quality size of original (non-proxy) image.  For non-proxy images, this
+		/// is equal to BestQualityFinalWidth/BestQualityFinalHeight.  For proxy images, this
+		/// is equal to the BestQualityFinalWidth/BestQualityFinalHeight of the image this
+		/// proxy was derived from.
+		
+		const dng_point & OriginalBestQualityFinalSize () const
+			{
+			return fOriginalBestQualityFinalSize;
+			}
+			
+		/// Setter for OriginalBestQualityFinalSize.
+		
+		void SetOriginalBestQualityFinalSize (const dng_point &size)
+			{
+			fOriginalBestQualityFinalSize = size;
+			}
+			
+		/// DefaultCropSize for original (non-proxy) image.  For non-proxy images,
+		/// this is equal to the DefaultCropSize.  for proxy images, this is
+		/// equal size of the DefaultCropSize of the image this proxy was derived from.
+		
+		const dng_urational & OriginalDefaultCropSizeH () const
+			{
+			return fOriginalDefaultCropSizeH;
+			}
+			
+		const dng_urational & OriginalDefaultCropSizeV () const
+			{
+			return fOriginalDefaultCropSizeV;
+			}
+			
+		/// Setter for OriginalDefaultCropSize.
+		
+		void SetOriginalDefaultCropSize (const dng_urational &sizeH,
+										 const dng_urational &sizeV)
+			{
+			fOriginalDefaultCropSizeH = sizeH;
+			fOriginalDefaultCropSizeV = sizeV;
+			}
+			
+		/// If the original size fields are undefined, set them to the
+		/// current sizes.
+		
+		void SetDefaultOriginalSizes ();
+
+		/// Set all the original size fields to a specific size.
+        
+		void SetOriginalSizes (const dng_point &size);
+
+		/// The default crop area in the stage 3 image coordinates.
 							
-		dng_rect DefaultCropArea (real64 scaleH = 1.0,
-						    	  real64 scaleV = 1.0) const;
+		dng_rect DefaultCropArea () const;
 						    	  
 		/// Setter for BaselineNoise.
 		
@@ -834,6 +1411,11 @@ class dng_negative
 			{
 			return BaselineExposureR ().As_real64 ();
 			}
+
+		/// Compute total baseline exposure (sum of negative's BaselineExposure and
+		/// profile's BaselineExposureOffset).
+
+		real64 TotalBaselineExposure (const dng_camera_profile_id &profileID) const;
 
 		/// Setter for BaselineSharpness.
 		
@@ -934,6 +1516,31 @@ class dng_negative
 			{
 			return fColorimetricReference;
 			}
+
+        // Floating point flag.
+
+        void SetFloatingPoint (bool isFloatingPoint)
+            {
+            fFloatingPoint = isFloatingPoint;
+            }
+
+        bool IsFloatingPoint () const
+            {
+            return fFloatingPoint;
+            }
+
+        // HDR/NDR.
+
+        bool IsHighDynamicRange () const
+            {
+            return IsFloatingPoint () &&
+                   ColorimetricReference () == crSceneReferred;
+            }
+
+        bool IsNormalDynamicRange () const
+            {
+            return !IsHighDynamicRange ();
+            }
 		
 		/// Setter for ColorChannels.
 			
@@ -1070,12 +1677,15 @@ class dng_negative
 		
 		void ClearProfiles ();
 			
+		void ClearProfiles (bool clearBuiltinMatrixProfiles,
+							bool clearReadFromDisk);
+			
 		uint32 ProfileCount () const;
 		
 		const dng_camera_profile & ProfileByIndex (uint32 index) const;
 		
-		const dng_camera_profile * ProfileByID (const dng_camera_profile_id &id,
-												bool useDefaultIfNoMatch = true) const;
+		virtual const dng_camera_profile * ProfileByID (const dng_camera_profile_id &id,
+														bool useDefaultIfNoMatch = true) const;
 		
 		bool HasProfileID (const dng_camera_profile_id &id) const
 			{
@@ -1084,7 +1694,15 @@ class dng_negative
 		
 		// Returns the camera profile to embed when saving to DNG: 
 		
-		virtual const dng_camera_profile * CameraProfileToEmbed () const;
+		virtual const dng_camera_profile * ComputeCameraProfileToEmbed
+													(const dng_metadata &metadata) const;
+													
+		// For non-const negatives, we can use the embedded metadata.
+		
+		const dng_camera_profile * CameraProfileToEmbed ()
+			{
+			return ComputeCameraProfileToEmbed (Metadata ());
+			}
 		
 		// API for AsShotProfileName.
 			
@@ -1102,16 +1720,29 @@ class dng_negative
 		
 		virtual dng_color_spec * MakeColorSpec (const dng_camera_profile_id &id) const;
 		
-		// API for RawImageDigest:
+		// Compute a MD5 hash on an image, using a fixed algorithm.
+		// The results must be stable across different hardware, OSes,
+		// and software versions.
+			
+		static dng_fingerprint FindImageDigest (dng_host &host,
+                                                const dng_image &image);
+			
+		// API for RawImageDigest and NewRawImageDigest:
 		
 		void SetRawImageDigest (const dng_fingerprint &digest)
 			{
 			fRawImageDigest = digest;
 			}
 			
-		void ClearRawImageDigest ()
+		void SetNewRawImageDigest (const dng_fingerprint &digest)
 			{
-			fRawImageDigest.Clear ();
+			fNewRawImageDigest = digest;
+			}
+			
+		void ClearRawImageDigest () const
+			{
+			fRawImageDigest   .Clear ();
+			fNewRawImageDigest.Clear ();
 			}
 			
 		const dng_fingerprint & RawImageDigest () const
@@ -1119,10 +1750,17 @@ class dng_negative
 			return fRawImageDigest;
 			}
 			
+		const dng_fingerprint & NewRawImageDigest () const
+			{
+			return fNewRawImageDigest;
+			}
+			
 		void FindRawImageDigest (dng_host &host) const;
 		
+		void FindNewRawImageDigest (dng_host &host) const;
+		
 		void ValidateRawImageDigest (dng_host &host);
-							   
+		
 		// API for RawDataUniqueID:
 
 		void SetRawDataUniqueID (const dng_fingerprint &id)
@@ -1130,14 +1768,11 @@ class dng_negative
 			fRawDataUniqueID = id;
 			}
 		
-		const dng_fingerprint & RawDataUniqueID () const
-			{
-			return fRawDataUniqueID;
-			}
+		dng_fingerprint RawDataUniqueID () const;
 		
 		void FindRawDataUniqueID (dng_host &host) const;
 		
-		void RecomputeRawDataUniqueID (dng_host &host);
+		virtual void RecomputeRawDataUniqueID (dng_host &host);
 
 		// API for original raw file name:
 		
@@ -1229,93 +1864,112 @@ class dng_negative
 		
 		void SetMakerNoteSafety (bool safe)
 			{
-			fIsMakerNoteSafe = safe;
+			Metadata ().SetMakerNoteSafety (safe);
 			}
 		
-		bool IsMakerNoteSafe () const
+		bool IsMakerNoteSafe () METACONST
 			{
-			return fIsMakerNoteSafe;
+			return Metadata ().IsMakerNoteSafe ();
 			}
 		
 		void SetMakerNote (AutoPtr<dng_memory_block> &block)
 			{
-			fMakerNote.Reset (block.Release ());
+			Metadata ().SetMakerNote (block);
 			}
 		
 		void ClearMakerNote ()
 			{
-			fMakerNote.Reset ();
+			Metadata ().ClearMakerNote ();
 			}
 		
-		const void * MakerNoteData () const
+		const void * MakerNoteData () METACONST
 			{
-			return fMakerNote.Get () ? fMakerNote->Buffer ()
-									 : NULL;
+			return Metadata ().MakerNoteData ();
 			}
 		
-		uint32 MakerNoteLength () const
+		uint32 MakerNoteLength () METACONST
 			{
-			return fMakerNote.Get () ? fMakerNote->LogicalSize ()
-									 : 0;
+			return Metadata ().MakerNoteLength ();
 			}
 		
 		// API for EXIF metadata:
 		
 		dng_exif * GetExif ()
 			{
-			return fExif.Get ();
+			return Metadata ().GetExif ();
 			}
+			
+		#if qMetadataOnConst
 			
 		const dng_exif * GetExif () const
 			{
-			return fExif.Get ();
+			return Metadata ().GetExif ();
 			}
 			
-		virtual dng_memory_block * BuildExifBlock (const dng_resolution *resolution = NULL,
-												   bool includeIPTC = false,
-												   bool minimalEXIF = false,
-												   const dng_jpeg_preview *thumbnail = NULL) const;
-												   
+		#endif // qMetadataOnConst
+			
+		void ResetExif (dng_exif * newExif)
+			{
+			Metadata ().ResetExif (newExif);
+			}
+			
 		// API for original EXIF metadata.
 		
 		dng_exif * GetOriginalExif ()
 			{
-			return fOriginalExif.Get ();
+			return Metadata ().GetOriginalExif ();
 			}
+			
+		#if qMetadataOnConst
 			
 		const dng_exif * GetOriginalExif () const
 			{
-			return fOriginalExif.Get ();
+			return Metadata ().GetOriginalExif ();
 			}
+			
+		#endif // qMetadataOnConst
 			
 		// API for IPTC metadata:
 			
 		void SetIPTC (AutoPtr<dng_memory_block> &block,
-					  uint64 offset);
-		
-		void SetIPTC (AutoPtr<dng_memory_block> &block);
-		
-		void ClearIPTC ();
-		
-		const void * IPTCData () const;
-		
-		uint32 IPTCLength () const;
-		
-		uint64 IPTCOffset () const;
-		
-		dng_fingerprint IPTCDigest (bool includePadding = true) const;
-		
-		void RebuildIPTC (bool padForTIFF,
-						  bool forceUTF8);
-		
-		bool UsedUTF8forIPTC () const
+					  uint64 offset)
 			{
-			return fUsedUTF8forIPTC;
+			Metadata ().SetIPTC (block, offset);
 			}
-			
-		void SetUsedUTF8forIPTC (bool used)
+		
+		void SetIPTC (AutoPtr<dng_memory_block> &block)
 			{
-			fUsedUTF8forIPTC = used;
+			Metadata ().SetIPTC (block);
+			}
+		
+		void ClearIPTC ()
+			{
+			Metadata ().ClearIPTC ();
+			}
+		
+		const void * IPTCData () METACONST
+			{
+			return Metadata ().IPTCData ();
+			}
+		
+		uint32 IPTCLength () METACONST
+			{
+			return Metadata ().IPTCLength ();
+			}
+		
+		uint64 IPTCOffset () METACONST
+			{
+			return Metadata ().IPTCOffset ();
+			}
+		
+		dng_fingerprint IPTCDigest (bool includePadding = true) METACONST
+			{
+			return Metadata ().IPTCDigest (includePadding);
+			}
+		
+		void RebuildIPTC (bool padForTIFF)
+			{
+			Metadata ().RebuildIPTC (Allocator (), padForTIFF);
 			}
 		
 		// API for XMP metadata:
@@ -1324,23 +1978,56 @@ class dng_negative
 					 const void *buffer,
 					 uint32 count,
 					 bool xmpInSidecar = false,
-					 bool xmpIsNewer = false);
+					 bool xmpIsNewer = false)
+			{
+			return Metadata ().SetXMP (host,
+									   buffer,
+									   count,
+									   xmpInSidecar,
+									   xmpIsNewer);
+			}
 					 
 		dng_xmp * GetXMP ()
 			{
-			return fXMP.Get ();
+			return Metadata ().GetXMP ();
 			}
+			
+		#if qMetadataOnConst
 			
 		const dng_xmp * GetXMP () const
 			{
-			return fXMP.Get ();
-			}
-
-		bool XMPinSidecar () const
-			{
-			return fXMPinSidecar;
+			return Metadata ().GetXMP ();
 			}
 			
+		#endif // qMetadataOnConst
+			
+		bool XMPinSidecar () METACONST
+			{
+			return Metadata ().XMPinSidecar ();
+			}
+			
+		void ResetXMP (dng_xmp * newXMP)
+			{
+			Metadata ().ResetXMP (newXMP);
+			}
+	
+		void ResetXMPSidecarNewer (dng_xmp * newXMP, bool inSidecar, bool isNewer )
+			{
+			Metadata ().ResetXMPSidecarNewer (newXMP, inSidecar, isNewer);
+			}
+		
+		bool HaveValidEmbeddedXMP () METACONST
+			{
+			return Metadata ().HaveValidEmbeddedXMP ();
+			}
+			
+		// API for source MIME type.
+		
+		void SetSourceMIME (const char *s)
+			{
+			Metadata ().SetSourceMIME (s);
+			}
+		
 		// API for linearization information:
 			
 		const dng_linearization_info * GetLinearizationInfo () const
@@ -1383,7 +2070,8 @@ class dng_negative
 		void SetQuadBlacks (real64 black0,
 						    real64 black1,
 						    real64 black2,
-						    real64 black3);
+						    real64 black3,
+							int32 plane = -1);
 						    
 		void SetRowBlacks (const real64 *blacks,
 						   uint32 count);
@@ -1457,6 +2145,8 @@ class dng_negative
 
 		void SetFujiMosaic (uint32 phase);
 
+		void SetFujiMosaic6x6 (uint32 phase);
+
 		void SetQuadMosaic (uint32 pattern);
 			
 		// BayerGreenSplit.
@@ -1511,14 +2201,23 @@ class dng_negative
 								
 		// Synchronize metadata sources.
 		
-		virtual void SynchronizeMetadata ();
+		void SynchronizeMetadata ()
+			{
+			Metadata ().SynchronizeMetadata ();
+			}
 		
 		// Routines to update the date/time field in the EXIF and XMP
 		// metadata.
 		
-		void UpdateDateTime (const dng_date_time_info &dt);
+		void UpdateDateTime (const dng_date_time_info &dt)
+			{
+			Metadata ().UpdateDateTime (dt);
+			}
 							 
-		void UpdateDateTimeToNow ();
+		void UpdateDateTimeToNow ()
+			{
+			Metadata ().UpdateDateTimeToNow ();
+			}
 		
 		// Developer's utility function to switch to four color Bayer
 		// interpolation.  This is useful for evaluating how much green
@@ -1553,7 +2252,46 @@ class dng_negative
 		// Returns the raw image data.
 		
 		const dng_image & RawImage () const;
+		
+		// API for raw floating point bit depth.
+		
+		uint32 RawFloatBitDepth () const
+			{
+			return fRawFloatBitDepth;
+			}
 			
+		void SetRawFloatBitDepth (uint32 bitDepth)
+			{
+			fRawFloatBitDepth = bitDepth;
+			}
+		
+		// API for raw jpeg image.
+		
+		const dng_jpeg_image * RawJPEGImage () const;
+
+		void SetRawJPEGImage (AutoPtr<dng_jpeg_image> &jpegImage);
+			
+		void ClearRawJPEGImage ();
+			
+		// API for RawJPEGImageDigest:
+		
+		void SetRawJPEGImageDigest (const dng_fingerprint &digest)
+			{
+			fRawJPEGImageDigest = digest;
+			}
+			
+		void ClearRawJPEGImageDigest () const
+			{
+			fRawJPEGImageDigest.Clear ();
+			}
+			
+		const dng_fingerprint & RawJPEGImageDigest () const
+			{
+			return fRawJPEGImageDigest;
+			}
+			
+		void FindRawJPEGImageDigest (dng_host &host) const;
+		
 		// Read the stage 1 image.
 			
 		virtual void ReadStage1Image (dng_host &host,
@@ -1571,11 +2309,10 @@ class dng_negative
 		// Assign the stage 3 image.
 		
 		void SetStage3Image (AutoPtr<dng_image> &image);
-									  
+		
 		// Build the stage 2 (linearized and range mapped) image.
 		
-		void BuildStage2Image (dng_host &host,
-							   uint32 pixelType = ttShort);
+		void BuildStage2Image (dng_host &host);
 									   
 		// Build the stage 3 (demosaiced) image.
 									   
@@ -1593,7 +2330,24 @@ class dng_negative
 			{
 			return fStage3Gain;
 			}
+			
+		// Adaptively encode a proxy image down to 8-bits/channel.
 
+		dng_image * EncodeRawProxy (dng_host &host,
+									const dng_image &srcImage,
+									dng_opcode_list &opcodeList) const;
+
+		// Convert to a proxy negative.
+
+		void ConvertToProxy (dng_host &host,
+							 dng_image_writer &writer,
+							 uint32 proxySize = 0,
+							 uint64 proxyCount = 0);
+		
+        // IsProxy API:
+        
+        bool IsProxy () const;
+    
 		// IsPreview API:
 			
 		void SetIsPreview (bool preview)
@@ -1618,15 +2372,32 @@ class dng_negative
 			return fIsDamaged;
 			}
 			
+		// Transparancy Mask API:
+		
+		void SetTransparencyMask (AutoPtr<dng_image> &image,
+								  uint32 bitDepth = 0);
+		
+		const dng_image * TransparencyMask () const;
+		
+		const dng_image * RawTransparencyMask () const;
+		
+		uint32 RawTransparencyMaskBitDepth () const;
+		
+		void ReadTransparencyMask (dng_host &host,
+								   dng_stream &stream,
+								   dng_info &info);
+								   
+		virtual bool NeedFlattenTransparency (dng_host &host);
+		
+		virtual void FlattenTransparency (dng_host &host);
+		
+		const dng_image * UnflattenedStage3Image () const;
+
 	protected:
 	
-		dng_negative (dng_memory_allocator &allocator);
+		dng_negative (dng_host &host);
 		
 		virtual void Initialize ();
-		
-		virtual dng_exif * MakeExif ();
-		
-		virtual dng_xmp * MakeXMP ();
 		
 		virtual dng_linearization_info * MakeLinearizationInfo ();
 		
@@ -1636,17 +2407,30 @@ class dng_negative
 		
 		void NeedMosaicInfo ();
 		
-		virtual void DoBuildStage2 (dng_host &host,
-									uint32 pixelType);
+		virtual void DoBuildStage2 (dng_host &host);
+		
+		virtual void DoPostOpcodeList2 (dng_host &host);
 									   
+		virtual bool NeedDefloatStage2 (dng_host &host);
+		
+		virtual void DefloatStage2 (dng_host &host);
+		
 		virtual void DoInterpolateStage3 (dng_host &host,
-									      int32 srcPlane);
+									      int32 srcPlane,
+                                          dng_matrix *scaleTransforms);
 									
-		virtual void DoMergeStage3 (dng_host &host);
+		virtual void DoMergeStage3 (dng_host &host,
+                                    dng_matrix *scaleTransforms);
 									   
 		virtual void DoBuildStage3 (dng_host &host,
-									int32 srcPlane);
+									int32 srcPlane,
+                                    dng_matrix *scaleTransforms);
 									   
+		virtual void AdjustProfileForStage3 ();
+									  
+		virtual void ResizeTransparencyToMatchStage3 (dng_host &host,
+													  bool convertTo8Bit = false);
+													  
 	};
 
 /*****************************************************************************/

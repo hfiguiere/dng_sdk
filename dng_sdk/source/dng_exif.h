@@ -6,13 +6,14 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_exif.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_exif.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
- * EXIF read access support. See the \ref spec_exif "EXIF specification" for full description of tags.
+ * EXIF read access support. See the \ref spec_exif "EXIF specification" for full
+ * description of tags.
  */
 
 /*****************************************************************************/
@@ -104,7 +105,16 @@ class dng_exif
 
 		uint32 fFocalLengthIn35mmFilm;
 		
-		uint32 fISOSpeedRatings [3];
+		uint32 fISOSpeedRatings [3];		 // EXIF 2.3: PhotographicSensitivity.
+
+		// Sensitivity tags added in EXIF 2.3.
+
+		uint32 fSensitivityType;
+		uint32 fStandardOutputSensitivity;
+		uint32 fRecommendedExposureIndex;
+		uint32 fISOSpeed;
+		uint32 fISOSpeedLatitudeyyy;
+		uint32 fISOSpeedLatitudezzz;
 		
 		uint32 fSubjectAreaCount;
 		uint32 fSubjectArea [4];
@@ -159,6 +169,7 @@ class dng_exif
 		dng_string    fGPSAreaInformation;
 		dng_string    fGPSDateStamp;
 		uint32 	      fGPSDifferential;
+		dng_urational fGPSHPositioningError;
 		
 		dng_string fInteroperabilityIndex;
 		
@@ -169,41 +180,127 @@ class dng_exif
 		uint32 fRelatedImageWidth;	
 		uint32 fRelatedImageLength;
 
-		dng_string fCameraSerialNumber;
+		dng_string fCameraSerialNumber;		 // EXIF 2.3: BodySerialNumber.
 		
-		dng_urational fLensInfo [4];
+		dng_urational fLensInfo [4];		 // EXIF 2.3: LensSpecification.
 		
 		dng_string fLensID;
-		dng_string fLensName;
+		dng_string fLensMake;
+		dng_string fLensName;				 // EXIF 2.3: LensModel.
 		dng_string fLensSerialNumber;
+		
+		// Was the lens name field read from a LensModel tag?
+		
+		bool fLensNameWasReadFromExif;
+
+		// Private field to hold the approximate focus distance of the lens, in
+		// meters. This value is often coarsely measured/reported and hence should be
+		// interpreted only as a rough estimate of the true distance from the plane
+		// of focus (in object space) to the focal plane. It is still useful for the
+		// purposes of applying lens corrections.
+
+		dng_urational fApproxFocusDistance;
 	
 		dng_srational fFlashCompensation;
 		
-		dng_string fOwnerName;
+		dng_string fOwnerName;				 // EXIF 2.3: CameraOwnerName.
 		dng_string fFirmware;
+        
+        // Not really part of EXIF, but some formats may use.
+        
+        dng_string fTitle;
+
+		// Image-specific radial distortion correction metadata that can be
+		// used later during (UI-driven) lens profile corrections. Same model
+		// as DNG opcode model.
+
+		dng_srational fLensDistortInfo [4];
 		
 	public:
 	
 		dng_exif ();
 		
 		virtual ~dng_exif ();
+
+		/// Make clone.
 		
 		virtual dng_exif * Clone () const;
+
+		/// Clear all EXIF fields.
 		
+		void SetEmpty ();
+
+		/// Copy all GPS-related fields.
+		/// \param exif Source object from which to copy GPS fields.
+		
+		void CopyGPSFrom (const dng_exif &exif);
+
+		/// Utility to fix up common errors and rounding issues with EXIF exposure
+		/// times.
+
 		static real64 SnapExposureTime (real64 et);
+
+		/// Set exposure time and shutter speed fields. Optionally fix up common
+		/// errors and rounding issues with EXIF exposure times.
+		/// \param et Exposure time in seconds.
+		/// \param snap Set to true to fix up common errors and rounding issues with
+		/// EXIF exposure times.
 		
 		void SetExposureTime (real64 et,
 							  bool snap = true);
+
+		/// Set shutter speed value (APEX units) and exposure time.
+		/// \param Shutter speed in APEX units.
 		
 		void SetShutterSpeedValue (real64 ss);
+
+		/// Utility to encode f-number as a rational.
+		/// \param fs The f-number to encode.
 		
 		static dng_urational EncodeFNumber (real64 fs);
+
+		/// Set the FNumber and ApertureValue fields.
+		/// \param fs The f-number to set.
 		
 		void SetFNumber (real64 fs);
 		
-		void SetApertureValue (real64 av);
+		/// Set the FNumber and ApertureValue fields.
+		/// \param av The aperture value (APEX units).
 		
+		void SetApertureValue (real64 av);
+
+		/// Utility to convert aperture value (APEX units) to f-number.
+		/// \param av The aperture value (APEX units) to convert.
+		
+		static real64 ApertureValueToFNumber (real64 av);
+
+		/// Utility to convert aperture value (APEX units) to f-number.
+		/// \param av The aperture value (APEX units) to convert.
+		
+		static real64 ApertureValueToFNumber (const dng_urational &av);
+
+		/// Utility to convert f-number to aperture value (APEX units).
+		/// \param fNumber The f-number to convert.
+		
+		static real64 FNumberToApertureValue (real64 fNumber);
+
+		/// Utility to convert f-number to aperture value (APEX units).
+		/// \param fNumber The f-number to convert.
+		
+		static real64 FNumberToApertureValue (const dng_urational &fNumber);
+
+		/// Set the DateTime field.
+		/// \param dt The DateTime value.
+							   
 		void UpdateDateTime (const dng_date_time_info &dt);
+
+		/// Returns true iff the EXIF version is at least 2.3.
+
+		bool AtLeastVersion0230 () const;
+
+		bool HasLensDistortInfo () const;
+		
+		void SetLensDistortInfo (const dng_vector &params);
 		
 		virtual bool ParseTag (dng_stream &stream,
 							   dng_shared &shared,
@@ -216,7 +313,7 @@ class dng_exif
 							   
 		virtual void PostParse (dng_host &host,
 								dng_shared &shared);
-							   
+								
 	protected:
 		
 		virtual bool Parse_ifd0 (dng_stream &stream,

@@ -6,10 +6,15 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_bad_pixels.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_bad_pixels.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
+
+/** \file
+ * Opcodes to fix defective pixels, including individual pixels and regions (such as
+ * defective rows and columns).
+ */
 
 /*****************************************************************************/
 
@@ -18,11 +23,15 @@
 
 /*****************************************************************************/
 
+#include "dng_memory.h"
 #include "dng_opcodes.h"
 
 #include <vector>
 
 /*****************************************************************************/
+
+/// \brief An opcode to fix individual bad pixels that are marked with a constant
+/// value (e.g., 0) in a Bayer image.
 
 class dng_opcode_FixBadPixelsConstant: public dng_filter_opcode
 	{
@@ -34,10 +43,15 @@ class dng_opcode_FixBadPixelsConstant: public dng_filter_opcode
 		uint32 fBayerPhase;
 	
 	public:
+
+		/// Construct an opcode to fix an individual bad pixels that are marked with
+		/// a constant value in a Bayer image.
+		/// \param constant The constant value that indicates a bad pixel.
+		/// \param bayerPhase The phase of the Bayer mosaic pattern (0, 1, 2, 3).
 	
 		dng_opcode_FixBadPixelsConstant (uint32 constant,
 										 uint32 bayerPhase);
-		
+
 		dng_opcode_FixBadPixelsConstant (dng_stream &stream);
 	
 		virtual void PutData (dng_stream &stream) const;
@@ -66,18 +80,20 @@ class dng_opcode_FixBadPixelsConstant: public dng_filter_opcode
 	
 		bool IsGreen (int32 row, int32 col) const
 			{
-			return ((row + col + fBayerPhase + (fBayerPhase >> 1)) & 1) == 0;
+			return (((uint32) row + (uint32) col + fBayerPhase + (fBayerPhase >> 1)) & 1) == 1;
 			}
 
 	};
 
 /*****************************************************************************/
 
+/// \brief A list of bad pixels and rectangles (usually single rows or columns).
+
 class dng_bad_pixel_list
 	{
 	
 	public:
-	
+
 		enum
 			{
 			kNoIndex = 0xFFFFFFFF
@@ -87,59 +103,116 @@ class dng_bad_pixel_list
 	
 		// List of bad single pixels.
 	
-		std::vector<dng_point> fBadPoints;
+		dng_std_vector<dng_point> fBadPoints;
 		
 		// List of bad rectangles (usually single rows or columns).
 		
-		std::vector<dng_rect> fBadRects;
+		dng_std_vector<dng_rect> fBadRects;
 		
 	public:
 
+		/// Create an empty bad pixel list.
+
 		dng_bad_pixel_list ();
 		
+		/// Returns the number of bad single pixels.
+
 		uint32 PointCount () const
 			{
 			return (uint32) fBadPoints.size ();
 			}
 			
+		/// Retrieves the bad single pixel coordinate via the specified list index.
+		///
+		/// \param index The list index from which to retrieve the bad single pixel
+		/// coordinate.
+
 		const dng_point & Point (uint32 index) const
 			{
 			return fBadPoints [index];
 			}
 		
+		/// Returns the number of bad rectangles.
+
 		uint32 RectCount () const
 			{
 			return (uint32) fBadRects.size ();
 			}
 		
+		/// Retrieves the bad rectangle via the specified list index.
+		///
+		/// \param index The list index from which to retrieve the bad rectangle
+		/// coordinates.
+
 		const dng_rect & Rect (uint32 index) const
 			{
 			return fBadRects [index];
 			}
 			
+		/// Returns true iff there are zero bad single pixels and zero bad
+		/// rectangles.
+
 		bool IsEmpty () const
 			{
 			return PointCount () == 0 &&
 				   RectCount  () == 0;
 			}
 			
+		/// Returns true iff there is at least one bad single pixel or at least one
+		/// bad rectangle.
+
 		bool NotEmpty () const
 			{
 			return !IsEmpty ();
 			}
 			
+		/// Add the specified coordinate to the list of bad single pixels.
+		///
+		/// \param pt The bad single pixel to add.
+
 		void AddPoint (const dng_point &pt);
 		
+		/// Add the specified rectangle to the list of bad rectangles.
+		///
+		/// \param pt The bad rectangle to add.
+
 		void AddRect (const dng_rect &r);
 		
+		/// Sort the bad single pixels and bad rectangles by coordinates (top to
+		/// bottom, then left to right).
+
 		void Sort ();
 		
+		/// Returns true iff the specified bad single pixel is isolated, i.e., there
+		/// is no other bad single pixel or bad rectangle that lies within radius
+		/// pixels of this bad single pixel.
+		///
+		/// \param index The index of the bad single pixel to test.
+		/// \param radius The pixel radius to test for isolation.
+
 		bool IsPointIsolated (uint32 index,
 							  uint32 radius) const;
 							  
+		/// Returns true iff the specified bad rectangle is isolated, i.e., there
+		/// is no other bad single pixel or bad rectangle that lies within radius
+		/// pixels of this bad rectangle.
+		///
+		/// \param index The index of the bad rectangle to test.
+		/// \param radius The pixel radius to test for isolation.
+
 		bool IsRectIsolated (uint32 index,
 							 uint32 radius) const;
 							  
+		/// Returns true iff the specified point is valid, i.e., lies within the
+		/// specified image bounds, is different from all other bad single pixels,
+		/// and is not contained in any bad rectangle. The second and third
+		/// conditions are only checked if provided with a starting search index.
+		///
+		/// \param pt The point to test for validity.
+		/// \param imageBounds The pt must lie within imageBounds to be valid.
+		/// \index The search index to use (or kNoIndex, to avoid a search) for
+		/// checking for validity.
+
 		bool IsPointValid (const dng_point &pt,
 						   const dng_rect &imageBounds,
 						   uint32 index = kNoIndex) const;
@@ -147,6 +220,9 @@ class dng_bad_pixel_list
 	};
 
 /*****************************************************************************/
+
+/// \brief An opcode to fix lists of bad pixels (indicated by position) in a Bayer
+/// image.
 
 class dng_opcode_FixBadPixelsList: public dng_filter_opcode
 	{
@@ -166,6 +242,11 @@ class dng_opcode_FixBadPixelsList: public dng_filter_opcode
 		uint32 fBayerPhase;
 	
 	public:
+	
+		/// Construct an opcode to fix lists of bad pixels (indicated by position) in
+		/// a Bayer image.
+		/// \param list The list of bad pixels to fix.
+		/// \param bayerPhase The phase of the Bayer mosaic pattern (0, 1, 2, 3).
 	
 		dng_opcode_FixBadPixelsList (AutoPtr<dng_bad_pixel_list> &list,
 									 uint32 bayerPhase);

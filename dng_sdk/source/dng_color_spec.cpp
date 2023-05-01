@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_color_spec.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_color_spec.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 #include "dng_color_spec.h"
 
@@ -89,6 +89,8 @@ dng_color_spec::dng_color_spec (const dng_negative &negative,
 	
 	,	fCameraWhite ()
 	,	fCameraToPCS ()
+	
+	,	fPCStoCamera ()
 	
 	{
 	
@@ -420,7 +422,16 @@ void dng_color_spec::SetWhiteXY (const dng_xy_coord &white)
 									   1.0);
 		
 		}
+		
+	// Find PCS to Camera transform. Scale matrix so PCS white can just be
+	// reached when the first camera channel saturates
 	
+	fPCStoCamera = colorMatrix * MapWhiteMatrix (PCStoXY (), fWhiteXY);
+		
+	real64 scale = MaxEntry (fPCStoCamera * PCStoXYZ ());
+	
+	fPCStoCamera = (1.0 / scale) * fPCStoCamera;
+
 	// If we have a forward matrix, then just use that.
 	
 	if (forwardMatrix.NotEmpty ())
@@ -441,19 +452,10 @@ void dng_color_spec::SetWhiteXY (const dng_xy_coord &white)
 	else
 		{
 
-		dng_matrix pcsToCamera = colorMatrix * MapWhiteMatrix (PCStoXY (), fWhiteXY);
-			
-		// Scale matrix so PCS white can just be reached when the first camera
-		// channel saturates.
-		
-		real64 scale = MaxEntry (pcsToCamera * PCStoXYZ ());
-		
-		pcsToCamera = (1.0 / scale) * pcsToCamera;
-		
-		// Invert this matrix.  Note that if there are more than three
+		// Invert this PCS to camera matrix.  Note that if there are more than three
 		// camera channels, this inversion is non-unique.
 		
-		fCameraToPCS = Invert (pcsToCamera, reductionMatrix);
+		fCameraToPCS = Invert (fPCStoCamera, reductionMatrix);
 		
 		}
 	
@@ -489,6 +491,17 @@ const dng_matrix & dng_color_spec::CameraToPCS () const
 	DNG_ASSERT (fCameraToPCS.NotEmpty (), "Using invalid CameraToPCS");
 	
 	return fCameraToPCS;
+	
+	}
+
+/*****************************************************************************/
+
+const dng_matrix & dng_color_spec::PCStoCamera () const
+	{
+	
+	DNG_ASSERT (fPCStoCamera.NotEmpty (), "Using invalid PCStoCamera");
+	
+	return fPCStoCamera;
 	
 	}
 

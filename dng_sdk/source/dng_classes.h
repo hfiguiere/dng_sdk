@@ -6,9 +6,9 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_classes.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_classes.h#4 $ */ 
+/* $DateTime: 2015/07/31 23:53:38 $ */
+/* $Change: 1033820 $ */
 /* $Author: tknoll $ */
 
 /*** \file
@@ -26,6 +26,8 @@ class dng_1d_function;
 class dng_1d_table;
 class dng_abort_sniffer;
 class dng_area_task;
+class dng_area_task_progress;
+class dng_base_tile_iterator;
 class dng_basic_tag_set;
 class dng_camera_profile;
 class dng_camera_profile_id;
@@ -44,8 +46,10 @@ class dng_image_preview;
 class dng_image_writer;
 class dng_info;
 class dng_iptc;
+class dng_jpeg_image;
 class dng_jpeg_preview;
 class dng_linearization_info;
+class dng_local_string;
 class dng_matrix;
 class dng_matrix_3by3;
 class dng_matrix_4by3;
@@ -54,6 +58,7 @@ class dng_memory_allocator;
 class dng_memory_block;
 class dng_memory_data;
 class dng_memory_stream;
+class dng_metadata;
 class dng_mosaic_info;
 class dng_mutex;
 class dng_noise_function;
@@ -68,10 +73,13 @@ class dng_point_real64;
 class dng_preview;
 class dng_preview_info;
 class dng_preview_list;
+class dng_raw_preview;
 class dng_read_image;
 class dng_rect;
 class dng_rect_real64;
+class dng_ref_counted_block;
 class dng_render;
+class dng_resample_function;
 class dng_resolution;
 class dng_shared;
 class dng_spline_solver;
@@ -89,6 +97,10 @@ class dng_vector_3;
 class dng_xmp;
 class dng_xmp_sdk;
 class dng_xy_coord;
+
+/*****************************************************************************/
+
+struct dng_xmp_namespace;
 
 /*****************************************************************************/
 

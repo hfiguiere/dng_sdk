@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_lossless_jpeg.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_lossless_jpeg.cpp#4 $ */ 
+/* $DateTime: 2016/01/20 16:00:38 $ */
+/* $Change: 1060141 $ */
+/* $Author: erichan $ */
  
 /*****************************************************************************/
 
@@ -249,7 +249,13 @@ static void FixHuffTbl (HuffmanTable *htbl)
             
      		int32 ul = (size < 8 ? ll | bitMask [24 + size]
      						     : ll);
-            	
+
+			if (ul >= static_cast<int32> (sizeof(htbl->numbits) / sizeof (htbl->numbits [0])) ||
+				ul >= static_cast<int32> (sizeof(htbl->value  ) / sizeof (htbl->value	[0])))
+				{
+				ThrowBadFormat ();
+				}
+				
             for (i = ll; i <= ul; i++)
             	{
                 htbl->numbits [i] = size;
@@ -366,7 +372,7 @@ typedef ComponentType *MCU;  		// MCU - array of samples
 
 /*****************************************************************************/
 
-class dng_lossless_decoder
+class dng_lossless_decoder: private dng_uncopyable
 	{
 	
 	private:
@@ -480,12 +486,6 @@ class dng_lossless_decoder
 
 		void DecodeImage ();
 		
-		// Hidden copy constructor and assignment operator.
-		
-		dng_lossless_decoder (const dng_lossless_decoder &decoder);
-		
-		dng_lossless_decoder & operator= (const dng_lossless_decoder &decoder);
-		
 	};
 
 /*****************************************************************************/
@@ -526,7 +526,7 @@ uint16 dng_lossless_decoder::Get2bytes ()
 	
     uint16 a = GetJpegChar ();
     
-    return (a << 8) + GetJpegChar ();
+    return (uint16) ((a << 8) + GetJpegChar ());
     
 	}
 
@@ -751,8 +751,11 @@ void dng_lossless_decoder::GetSof (int32 /*code*/)
     	
     // Allocate per component info.
     
-    compInfoBuffer.Allocate (info.numComponents *
-    					     sizeof (JpegComponentInfo));
+    // We can cast info.numComponents to a uint32 because the check above
+    // guarantees that it cannot be negative.
+
+    compInfoBuffer.Allocate (static_cast<uint32> (info.numComponents),
+                             sizeof (JpegComponentInfo));
     
     info.compInfo = (JpegComponentInfo *) compInfoBuffer.Buffer ();
     							 
@@ -1014,11 +1017,13 @@ JpegMarker dng_lossless_decoder::ProcessTables ()
 
 			default:		// must be DNL, DHP, EXP, APPn, JPGn, COM, or RESn
 			    SkipVariable ();
+			    break;
 			    
 			}
 			
     	}
 
+    	return M_ERROR;
 	}
 
 /*****************************************************************************/
@@ -1116,6 +1121,7 @@ int32 dng_lossless_decoder::ReadScanHeader ()
 
     	default:
 			ThrowBadFormat ();
+			break;
 			
     	}
     	
@@ -1197,7 +1203,8 @@ void dng_lossless_decoder::DecoderStructInit ()
 	
     // Prepare array describing MCU composition.
 
-	if (info.compsInScan > 4)
+	if (info.compsInScan < 0 || 
+		info.compsInScan > 4)
 		{
     	ThrowBadFormat ();
 		}
@@ -1210,16 +1217,19 @@ void dng_lossless_decoder::DecoderStructInit ()
 	// Initialize mucROW1 and mcuROW2 which buffer two rows of
     // pixels for predictor calculation.
     
-	int32 mcuSize = info.compsInScan * sizeof (ComponentType);
+	// This multiplication cannot overflow because info.compsInScan is
+	// guaranteed to be between 0 and 4 inclusive (see checks above).
+
+	int32 mcuSize = info.compsInScan * (uint32) sizeof (ComponentType);
 	
-	mcuBuffer1.Allocate (info.imageWidth * sizeof (MCU));
-	mcuBuffer2.Allocate (info.imageWidth * sizeof (MCU));
+	mcuBuffer1.Allocate (info.imageWidth, sizeof (MCU));
+	mcuBuffer2.Allocate (info.imageWidth, sizeof (MCU));
 	
 	mcuROW1 = (MCU *) mcuBuffer1.Buffer ();
 	mcuROW2 = (MCU *) mcuBuffer2.Buffer ();
 	
-	mcuBuffer3.Allocate (info.imageWidth * mcuSize);
-	mcuBuffer4.Allocate (info.imageWidth * mcuSize);
+	mcuBuffer3.Allocate (info.imageWidth, mcuSize);
+	mcuBuffer4.Allocate (info.imageWidth, mcuSize);
  	
  	mcuROW1 [0] = (ComponentType *) mcuBuffer3.Buffer ();
  	mcuROW2 [0] = (ComponentType *) mcuBuffer4.Buffer ();
@@ -1470,7 +1480,7 @@ inline void dng_lossless_decoder::FillBitBuffer (int32 nbits)
 			int32 c1 = GetJpegChar ();
 			int32 c2 = GetJpegChar ();
 			int32 c3 = GetJpegChar ();
-
+			
 			getBuffer = (getBuffer << 8) | c3;
 			getBuffer = (getBuffer << 8) | c2;
 			getBuffer = (getBuffer << 8) | c1;
@@ -1557,6 +1567,11 @@ inline void dng_lossless_decoder::flush_bits (int32 nbits)
 
 inline int32 dng_lossless_decoder::get_bits (int32 nbits)
 	{
+	
+	if (nbits > 16)
+		{
+		ThrowBadFormat ();
+		}
 	
 	if (bitsLeft < nbits)
 		FillBitBuffer (nbits);
@@ -1661,6 +1676,7 @@ inline int32 dng_lossless_decoder::HuffDecode (HuffmanTable *htbl)
  *--------------------------------------------------------------
  */
 
+DNG_ATTRIB_NO_SANITIZE("undefined")
 inline void dng_lossless_decoder::HuffExtend (int32 &x, int32 s)
 	{
 	
@@ -1685,7 +1701,7 @@ void dng_lossless_decoder::PmPutRow (MCU *buf,
 	
 	uint32 pixels = numCol * numComp;
 	
-	fSpooler->Spool (sPtr, pixels * sizeof (uint16));
+	fSpooler->Spool (sPtr, pixels * (uint32) sizeof (uint16));
 		
 	}
 
@@ -1844,6 +1860,8 @@ void dng_lossless_decoder::DecodeImage ()
     // Precompute the decoding table for each table.
     
     HuffmanTable *ht [4];
+
+	memset (ht, 0, sizeof (ht));
     
 	for (int32 curComp = 0; curComp < compsInScan; curComp++)
     	{
@@ -2280,14 +2298,28 @@ void dng_lossless_decoder::DecodeImage ()
 				if (s0)
 					{
 					int32 d = get_bits (s0);
-					HuffExtend (d, s0);
+					if (s0 == 16)
+						{
+						d = -32768;
+						}
+					else
+						{
+						HuffExtend (d, s0);
+						}
 					p0 += d;
 					}
 
 				if (s1)
 					{
 					int32 d = get_bits (s1);
-					HuffExtend (d, s1);
+					if (s1 == 16)
+						{
+						d = -32768;
+						}
+					else
+						{
+						HuffExtend (d, s1);
+						}
 					p1 += d;
 					}
 
@@ -2557,7 +2589,7 @@ void DecodeLosslessJPEG (dng_stream &stream,
 	uint32 decodedSize = imageWidth    *
 						 imageHeight   *
 						 imageChannels *
-						 sizeof (uint16);
+						 (uint32) sizeof (uint16);
 					   
 	if (decodedSize < minDecodedSize ||
 		decodedSize > maxDecodedSize)
@@ -2747,7 +2779,7 @@ inline void dng_lossless_encoder::EmitBits (int code, int size)
     while (putBits >= 8)
     	{
     	
-		uint8 c = putBuffer >> 16;
+		uint8 c = (uint8) (putBuffer >> 16);
 
 		// Output whole bytes we've accumulated with byte stuffing
 
@@ -2944,7 +2976,7 @@ void dng_lossless_encoder::FreqCountSet ()
 		
 		// Initialize predictors for this row.
 		
-		int32 predictor [4];
+		int32 predictor [4] = { 0, 0, 0, 0 };
 		
 		for (int32 channel = 0; channel < (int32)fSrcChannels; channel++)
 			{
@@ -3050,7 +3082,7 @@ void dng_lossless_encoder::HuffEncode ()
 		
 		// Initialize predictors for this row.
 		
-		int32 predictor [4];
+		int32 predictor [4] = { 0, 0, 0, 0 };
 		
 		for (int32 channel = 0; channel < (int32)fSrcChannels; channel++)
 			{
@@ -3235,7 +3267,7 @@ void dng_lossless_encoder::GenHuffCoding (HuffmanTable *htbl, uint32 *freq)
     
 		// chain c2 onto c1's tree branch 
 
-		others [c1] = c2;
+		others [c1] = (short) c2;
     
 		// Increment the codesize of everything in c2's tree branch.
 
@@ -3263,9 +3295,7 @@ void dng_lossless_encoder::GenHuffCoding (HuffmanTable *htbl, uint32 *freq)
 			if (codesize [i] > MAX_CLEN)
 				{
        
-       			DNG_REPORT ("Huffman code size table overflow");
-       			
-       			ThrowProgramError ();
+       			ThrowOverflow ("Huffman code size table overflow");
        			
        			}
 
@@ -3442,7 +3472,7 @@ void dng_lossless_encoder::EmitMarker (JpegMarker mark)
 	{
 	
     EmitByte (0xFF);
-    EmitByte (mark);
+    EmitByte ((uint8) mark);
     
 	}
 
@@ -3507,7 +3537,7 @@ void dng_lossless_encoder::EmitDht (int index)
 
 	Emit2bytes (length + 2 + 1 + 16);
 	
-	EmitByte (index);
+	EmitByte ((uint8) index);
 
 	for (i = 1; i <= 16; i++)
 	    EmitByte (htbl->bits [i]);

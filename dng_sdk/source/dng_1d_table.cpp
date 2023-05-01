@@ -6,27 +6,35 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_1d_table.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_1d_table.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
 #include "dng_1d_table.h"
 
 #include "dng_1d_function.h"
+#include "dng_assertions.h"
 #include "dng_memory.h"
 #include "dng_utils.h"
 
 /*****************************************************************************/
 
-dng_1d_table::dng_1d_table ()
+dng_1d_table::dng_1d_table (uint32 count)
 
-	:	fBuffer ()
-	,	fTable  (NULL)
+	:	fBuffer		()
+	,	fTable		(NULL)
+	,	fTableCount (count)
 	
 	{
+
+	DNG_REQUIRE (count >= kMinTableSize,
+				 "count must be at least kMinTableSize");
+
+	DNG_REQUIRE ((count & (count - 1)) == 0,
+				 "count must be power of 2");
 	
 	}
 
@@ -47,7 +55,7 @@ void dng_1d_table::SubDivide (const dng_1d_function &function,
 	
 	uint32 range = upper - lower;
 		
-	bool subDivide = (range > (kTableSize >> 8));
+	bool subDivide = (range > (fTableCount >> 8));
 	
 	if (!subDivide)
 		{
@@ -69,7 +77,7 @@ void dng_1d_table::SubDivide (const dng_1d_function &function,
 		
 		uint32 middle = (lower + upper) >> 1;
 		
-		fTable [middle] = (real32) function.Evaluate (middle * (1.0 / (real64) kTableSize));
+		fTable [middle] = (real32) function.Evaluate (middle * (1.0 / (real64) fTableCount));
 		
 		if (range > 2)
 			{
@@ -110,23 +118,23 @@ void dng_1d_table::Initialize (dng_memory_allocator &allocator,
 							   bool subSample)
 	{
 	
-	fBuffer.Reset (allocator.Allocate ((kTableSize + 2) * sizeof (real32)));
+	fBuffer.Reset (allocator.Allocate ((fTableCount + 2) * sizeof (real32)));
 	
 	fTable = fBuffer->Buffer_real32 ();
 	
 	if (subSample)
 		{
 		
-		fTable [0         ] = (real32) function.Evaluate (0.0);
-		fTable [kTableSize] = (real32) function.Evaluate (1.0);
+		fTable [0		   ] = (real32) function.Evaluate (0.0);
+		fTable [fTableCount] = (real32) function.Evaluate (1.0);
 		
-		real32 maxDelta = Max_real32 (Abs_real32 (fTable [kTableSize] -
-												  fTable [0         ]), 1.0f) *
+		real32 maxDelta = Max_real32 (Abs_real32 (fTable [fTableCount] -
+												  fTable [0			 ]), 1.0f) *
 						  (1.0f / 256.0f);
 							   
 		SubDivide (function,
 				   0,
-				   kTableSize,
+				   fTableCount,
 				   maxDelta);
 		
 		}
@@ -134,10 +142,10 @@ void dng_1d_table::Initialize (dng_memory_allocator &allocator,
 	else
 		{
 			
-		for (uint32 j = 0; j <= kTableSize; j++)
+		for (uint32 j = 0; j <= fTableCount; j++)
 			{
 			
-			real64 x = j * (1.0 / (real64) kTableSize);
+			real64 x = j * (1.0 / (real64) fTableCount);
 			
 			real64 y = function.Evaluate (x);
 			
@@ -147,7 +155,7 @@ void dng_1d_table::Initialize (dng_memory_allocator &allocator,
 			
 		}
 		
-	fTable [kTableSize + 1] = fTable [kTableSize];
+	fTable [fTableCount + 1] = fTable [fTableCount];
 	
 	}
 
@@ -156,7 +164,7 @@ void dng_1d_table::Initialize (dng_memory_allocator &allocator,
 void dng_1d_table::Expand16 (uint16 *table16) const
 	{
 	
-	real64 step = (real64) kTableSize / 65535.0;
+	real64 step = (real64) fTableCount / 65535.0;
 	
 	real64 y0 = fTable [0];
 	real64 y1 = fTable [1];

@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_iptc.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_iptc.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Support for IPTC metadata within DNG files.
@@ -38,8 +38,6 @@ class dng_iptc
 	
 	public:
 	
-		bool fForceUTF8;
-	
 		dng_string fTitle;
 
 		int32 fUrgency;
@@ -54,7 +52,10 @@ class dng_iptc
 		
 		dng_date_time_info fDateTimeCreated;
 		
-		dng_string fAuthor;
+		dng_date_time_info fDigitalCreationDateTime;
+		
+		dng_string_list fAuthors;
+		
 		dng_string fAuthorsPosition;
 		
 		dng_string fCity;
@@ -90,6 +91,8 @@ class dng_iptc
 			kSpecialInstructionsSet				= 40,
 			kDateCreatedSet						= 55,
 			kTimeCreatedSet						= 60,
+			kDigitalCreationDateSet				= 62,
+			kDigitalCreationTimeSet				= 63,
 			kBylineSet							= 80,
 			kBylineTitleSet						= 85,
 			kCitySet							= 90,
@@ -160,12 +163,6 @@ class dng_iptc
 						  uint32 maxChars,
 						  CharSet charSet);
 						  
-		static bool SafeForSystemEncoding (const dng_string &s);
-		
-		static bool SafeForSystemEncoding (const dng_string_list &list);
-		
-		bool SafeForSystemEncoding () const;
-
 	};
 
 /*****************************************************************************/

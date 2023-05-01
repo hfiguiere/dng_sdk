@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2011 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_xmp.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_xmp.h#6 $ */ 
+/* $DateTime: 2016/03/19 01:14:39 $ */
+/* $Change: 1068180 $ */
+/* $Author: ccastleb $ */
 
 /*****************************************************************************/
 
@@ -36,8 +36,8 @@ class dng_xmp
 			ignoreXMP		= 1,		// Force XMP values to match non-XMP
 			preferXMP 		= 2,		// Prefer XMP values if conflict
 			preferNonXMP	= 4,		// Prefer non-XMP values if conflict
-			requireASCII	= 8			// Non-XMP values must be ASCII
-			};
+			removeXMP		= 8			// Remove XMP value after syncing
+			};	
 	
 		dng_memory_allocator &fAllocator;
 	
@@ -50,6 +50,13 @@ class dng_xmp
 		dng_xmp (const dng_xmp &xmp);
 		
 		virtual ~dng_xmp ();
+		
+		virtual dng_xmp * Clone () const;
+
+        dng_memory_allocator & Allocator () const
+            {
+            return fAllocator;
+            }
 	
 		void Parse (dng_host &host,
 					const void *buffer,
@@ -58,7 +65,21 @@ class dng_xmp
 		dng_memory_block * Serialize (bool asPacket = false,
 									  uint32 targetBytes = 0,
 									  uint32 padBytes = 4096,
-									  bool forJPEG = false) const;
+									  bool forJPEG = false,
+									  bool compact = true) const;
+									  
+		// Kludge: Due to a bug in Premere Elements 9, we need to pass non-compact XMP
+		// to the host, until we drop support for this Premere version.  This bug
+		// is fixed in Premere Elements 10 and later.
+											  
+		dng_memory_block * SerializeNonCompact () const
+			{
+			return Serialize (false,
+							  0,
+							  4096,
+							  false,
+							  false);
+			}
 											  
 		void PackageForJPEG (AutoPtr<dng_memory_block> &stdBlock,
 							 AutoPtr<dng_memory_block> &extBlock,
@@ -67,6 +88,13 @@ class dng_xmp
 		void MergeFromJPEG (const dng_xmp &xmp);
 									  
 		bool HasMeta () const;
+
+        void RequireMeta ()
+            {
+            fSDK->RequireMeta ();
+            }
+
+		void * GetPrivateMeta ();
 									  
 		bool Exists (const char *ns,
 					 const char *path) const;
@@ -82,6 +110,11 @@ class dng_xmp
 				     const char *path);
 
 		void RemoveProperties (const char *ns);
+		
+		void RemoveEmptyStringOrArray (const char *ns,
+									   const char *path);
+		
+		void RemoveEmptyStringsAndArrays (const char *ns = 0);
 		
 		void Set (const char *ns,
 				  const char *path,
@@ -131,9 +164,17 @@ class dng_xmp
 								const char *path,
 								const dng_string &s);
 
+        void SetLocalString (const char *ns,
+                             const char *path,
+                             const dng_local_string &s);
+								
 		bool GetAltLangDefault (const char *ns,
 								const char *path,
 								dng_string &s) const;
+								
+		bool GetLocalString (const char *ns,
+							 const char *path,
+							 dng_local_string &s) const;
 								
 		bool GetBoolean (const char *ns,
 						 const char *path,
@@ -193,22 +234,30 @@ class dng_xmp
 					 	 
 		void SetFingerprint (const char *ns,
 							 const char *path,
-							 const dng_fingerprint &print);
+							 const dng_fingerprint &print,
+							 bool allowInvalid = false);
+							 
+		void SetVersion2to4 (const char *ns,
+							 const char *path,
+							 uint32 version);
 							   
 		dng_fingerprint GetIPTCDigest () const;
 		
 		void SetIPTCDigest (dng_fingerprint &digest);
 		
-		void IngestIPTC (dng_negative &negative,
+		void ClearIPTCDigest ();
+		
+		void IngestIPTC (dng_metadata &metadata,
 					     bool xmpIsNewer = false);
 			
-		void RebuildIPTC (dng_negative &negative,
-						  bool padForTIFF,
-						  bool forceUTF8);
+		void RebuildIPTC (dng_metadata &metadata,
+						  dng_memory_allocator &allocator,
+						  bool padForTIFF);
 		
 		virtual void SyncExif (dng_exif &exif,
 							   const dng_exif *originalExif = NULL,
-							   bool doingUpdateFromXMP = false);
+							   bool doingUpdateFromXMP = false,
+							   bool removeFromXMP = false);
 							   
 		void ValidateStringList (const char *ns,
 							     const char *path);
@@ -217,7 +266,10 @@ class dng_xmp
 		
 		void UpdateDateTime (const dng_date_time_info &dt);
 		
-		void UpdateExifDates (dng_exif &exif);
+		void UpdateMetadataDate (const dng_date_time_info &dt);
+
+		void UpdateExifDates (dng_exif &exif,
+							  bool removeFromXMP = false);
 		
 		bool HasOrientation () const;
 						   
@@ -228,6 +280,10 @@ class dng_xmp
 		void SetOrientation (const dng_orientation &orientation);
 		
 		void SyncOrientation (dng_negative &negative,
+					   		  bool xmpIsMaster);
+			// FIX_ME_API: Backwards compatibility
+					   		  
+		void SyncOrientation (dng_metadata &metadata,
 					   		  bool xmpIsMaster);
 					   		  
 		void ClearImageInfo ();
@@ -261,10 +317,23 @@ class dng_xmp
 							  bool isBag = true,
 							  bool propIsStruct = false);
 
-		static dng_string EncodeFingerprint (const dng_fingerprint &f);
+		static dng_string EncodeFingerprint (const dng_fingerprint &f,
+											 bool allowInvalid = false);
 		
 		static dng_fingerprint DecodeFingerprint (const dng_string &s);
 							 
+		#if qDNGXMPDocOps
+		
+		void DocOpsOpenXMP (const char *srcMIME);
+		
+		void DocOpsPrepareForSave (const char *srcMIME,
+								   const char *dstMIME,
+								   bool newPath = true);
+								   
+		void DocOpsUpdateMetadata (const char *srcMIME);
+		
+		#endif
+
 	protected:
 	
 		static void TrimDecimal (char *s);
@@ -333,6 +402,16 @@ class dng_xmp
 						uint32 &flashMask,
 						uint32 options);
 						
+		bool DateTimeIsDateOnly (const char *ns,
+							     const char *path);
+
+		virtual void SyncApproximateFocusDistance (dng_exif &exif,
+												   const uint32 readOnly);
+		
+		virtual void SyncLensName (dng_exif &exif);
+		
+		virtual void GenerateDefaultLensName (dng_exif &exif);
+
 	private:
 	
 		// Hidden assignment operator.

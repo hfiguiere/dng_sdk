@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_iptc.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_iptc.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -25,9 +25,7 @@
 
 dng_iptc::dng_iptc ()
 
-	:	fForceUTF8 (false)
-	
-	,	fTitle ()
+	:	fTitle ()
 
 	,	fUrgency (-1)
 
@@ -41,7 +39,9 @@ dng_iptc::dng_iptc ()
 		
 	,	fDateTimeCreated ()
 	
-	,	fAuthor          ()
+	,	fDigitalCreationDateTime ()
+	
+	,	fAuthors         ()
 	,	fAuthorsPosition ()
 		
 	,	fCity        ()
@@ -115,7 +115,12 @@ bool dng_iptc::IsEmpty () const
 		return false;
 		}
 		
-	if (fAuthor         .NotEmpty () ||
+	if (fDigitalCreationDateTime.IsValid ())
+		{
+		return false;
+		}
+		
+	if (fAuthors.Count () != 0 ||
 		fAuthorsPosition.NotEmpty ())
 		{
 		return false;
@@ -227,10 +232,19 @@ void dng_iptc::Parse (const void *blockData,
 					
 	stream.SetBigEndian ();
 	
+	// Make a first pass though the data, trying to figure out the
+	// character set.
+	
 	CharSet charSet = kCharSetUnknown;
 	
-	uint64 nextOffset = stream.Position ();
+	bool isValidUTF8 = true;
 	
+	bool hasEncodingMarker = false;
+	
+	uint64 firstOffset = stream.Position ();
+	
+	uint64 nextOffset = firstOffset;
+		
 	while (nextOffset + 5 < stream.Length ())
 		{
 		
@@ -255,6 +269,8 @@ void dng_iptc::Parse (const void *blockData,
 				case 90:
 					{
 					
+					hasEncodingMarker = true;
+					
 					if (dataSize == 3)
 						{
 						
@@ -268,9 +284,7 @@ void dng_iptc::Parse (const void *blockData,
 							{
 							
 							charSet = kCharSetUTF8;
-							
-							fForceUTF8 = true;
-							
+														
 							}
 						
 						}
@@ -285,8 +299,54 @@ void dng_iptc::Parse (const void *blockData,
 				}
 			
 			}
-			
+	
 		else if (record == 2)
+			{
+		
+			dng_memory_data buffer (dataSize + 1);
+			
+			char *s = buffer.Buffer_char ();
+			
+			stream.Get (s, dataSize);
+			
+			s [dataSize] = 0;
+			
+			isValidUTF8 = isValidUTF8 && dng_string::IsUTF8 (s);
+				
+			}
+			
+		}
+		
+	// If we don't have an encoding marker, and the data is valid
+	// UTF-8, then assume that it is UTF-8 (rather than system encoding).
+		
+	if (!hasEncodingMarker && isValidUTF8)
+		{
+		
+		charSet = kCharSetUTF8;
+		
+		}
+	
+	// Make a second pass though the data, actually reading the data.
+	
+	nextOffset = firstOffset;
+	
+	while (nextOffset + 5 < stream.Length ())
+		{
+		
+		stream.SetReadPosition (nextOffset);
+	
+		uint8 firstByte = stream.Get_uint8 ();
+		
+		if (firstByte != 0x1C) break;
+			
+		uint8  record   = stream.Get_uint8  ();
+		uint8  dataSet  = stream.Get_uint8  ();
+		uint32 dataSize = stream.Get_uint16 ();
+		
+		nextOffset = stream.Position () + dataSize;
+					
+		if (record == 2)
 			{
 		
 			stream.SetReadPosition (stream.Position () - 2);
@@ -392,14 +452,14 @@ void dng_iptc::Parse (const void *blockData,
 					
 					uint32 length = stream.Get_uint16 ();
 					
-					if (length == 11)
+					if (length >= 4 && length <= 11)
 						{
 						
 						char time [12];
 						
-						stream.Get (time, 11);
+						stream.Get (time, length);
 						
-						time [11] = 0;
+						time [length] = 0;
 						
 						fDateTimeCreated.Decode_IPTC_Time (time);
 						
@@ -409,10 +469,64 @@ void dng_iptc::Parse (const void *blockData,
 					
 					}
 		
+				case kDigitalCreationDateSet:
+					{
+					
+					uint32 length = stream.Get_uint16 ();
+					
+					if (length == 8)
+						{
+						
+						char date [9];
+						
+						stream.Get (date, 8);
+						
+						date [8] = 0;
+						
+						fDigitalCreationDateTime.Decode_IPTC_Date (date);
+												
+						}
+						
+					break;
+					
+					}
+		
+				case kDigitalCreationTimeSet:
+					{
+					
+					uint32 length = stream.Get_uint16 ();
+					
+					if (length >= 4 && length <= 11)
+						{
+						
+						char time [12];
+						
+						stream.Get (time, length);
+						
+						time [length] = 0;
+						
+						fDigitalCreationDateTime.Decode_IPTC_Time (time);
+						
+						}
+						
+					break;
+					
+					}
+
 				case kBylineSet:
 					{
-					ParseString (stream, fAuthor, charSet);
+										
+					dng_string author;
+					
+					ParseString (stream, author, charSet);
+					
+					if (author.NotEmpty ())
+						{
+						fAuthors.Append (author);
+						}
+						
 					break;
+					
 					}
 					
 				case kBylineTitleSet:
@@ -602,141 +716,6 @@ void dng_iptc::SpoolString (dng_stream &stream,
 		}
 	
 	}
-
-/*****************************************************************************/
-
-bool dng_iptc::SafeForSystemEncoding (const dng_string &s)
-	{
-	
-	return s.ValidSystemEncoding ();
-	
-	}
-
-/*****************************************************************************/
-
-bool dng_iptc::SafeForSystemEncoding (const dng_string_list &list)
-	{
-	
-	for (uint32 j = 0; j < list.Count (); j++)
-		{
-		
-		if (!SafeForSystemEncoding (list [j]))
-			{
-			
-			return false;
-			
-			}
-		
-		}
-		
-	return true;
-	
-	}
-
-/*****************************************************************************/
-
-bool dng_iptc::SafeForSystemEncoding () const
-	{
-	
-	if (!SafeForSystemEncoding (fTitle))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fCategory))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fSupplementalCategories))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fKeywords))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fInstructions))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fAuthor))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fAuthorsPosition))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fCity))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fState))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fCountry))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fCountryCode))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fLocation))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fTransmissionReference))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fHeadline))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fCredit))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fSource))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fCopyrightNotice))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fDescription))
-		{
-		return false;
-		}
-	
-	if (!SafeForSystemEncoding (fDescriptionWriter))
-		{
-		return false;
-		}
-	
-	return true;
-	
-	}
-
 /*****************************************************************************/
 
 dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator,
@@ -751,22 +730,10 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator,
 	
 	stream.SetBigEndian ();
 	
-	// Figure out character set to use.  Due to bugs in Photoshop CS2 and
-	// before, we only write UTF-8 in cases where it is required to preserve
-	// all the characters.  Is is not ideal since it makes the files not
-	// portable across systems with different encodings.  Perhaps we can
-	// switch to using UTF-8 in all cases in the CS4 timeframe.
+	// Medata working group - now we just always write UTF-8.
 	
-	CharSet charSet = SafeForSystemEncoding () ? kCharSetUnknown
-											   : kCharSetUTF8;
-															  
-	// Override to force UTF8
-	
-	if (fForceUTF8)
-		{
-		charSet = kCharSetUTF8;
-		}
-	
+	CharSet charSet = kCharSetUTF8;
+
 	// UTF-8 encoding marker.
 		
 	if (charSet == kCharSetUTF8)
@@ -784,7 +751,7 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator,
 	stream.Put_uint16 (0x1C02);
 	stream.Put_uint8  (kRecordVersionSet);
 	stream.Put_uint16 (2);
-	stream.Put_uint16 (2);
+	stream.Put_uint16 (4);
 	
 	SpoolString (stream,
 				 fTitle,
@@ -795,7 +762,7 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator,
 	if (fUrgency >= 0)
 		{
 		
-		sprintf (s, "%1u", fUrgency);
+		sprintf (s, "%1u", (unsigned) fUrgency);
 		
 		stream.Put_uint16 (0x1C02);
 		stream.Put_uint8  (kUrgencySet);
@@ -864,24 +831,62 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator,
 		if (timeString.NotEmpty ())
 			{
 			
-			DNG_ASSERT (timeString.Length () == 11, "Wrong length IPTC time");
-		
 			stream.Put_uint16 (0x1C02);
 			stream.Put_uint8  (kTimeCreatedSet);
 			
-			stream.Put_uint16 (11);
+			stream.Put_uint16 ((uint16)timeString.Length ());
 			
-			stream.Put (timeString.Get (), 11);
+			stream.Put (timeString.Get (), timeString.Length ());
 		
 			}
 		
 		}
 
-	SpoolString (stream,
-				 fAuthor,
-				 kBylineSet,
-				 32,
-				 charSet);
+	if (fDigitalCreationDateTime.IsValid ())
+		{
+		
+		dng_string dateString = fDigitalCreationDateTime.Encode_IPTC_Date ();
+		
+		if (dateString.NotEmpty ())
+			{
+			
+			DNG_ASSERT (dateString.Length () == 8, "Wrong length IPTC date");
+		
+			stream.Put_uint16 (0x1C02);
+			stream.Put_uint8  (kDigitalCreationDateSet);
+			
+			stream.Put_uint16 (8);
+			
+			stream.Put (dateString.Get (), 8);
+						
+			}
+			
+		dng_string timeString = fDigitalCreationDateTime.Encode_IPTC_Time ();
+		
+		if (timeString.NotEmpty ())
+			{
+			
+			stream.Put_uint16 (0x1C02);
+			stream.Put_uint8  (kDigitalCreationTimeSet);
+			
+			stream.Put_uint16 ((uint16)timeString.Length ());
+			
+			stream.Put (timeString.Get (), timeString.Length ());
+		
+			}
+		
+		}
+		
+	for (j = 0; j < fAuthors.Count (); j++)
+		{
+
+		SpoolString (stream,
+					 fAuthors [j],
+					 kBylineSet,
+					 32,
+					 charSet);
+					 
+		}
 				 
 	SpoolString (stream,
 				 fAuthorsPosition,
@@ -907,16 +912,11 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator,
 				 32,
 				 charSet);
 				 
-	if (fCountryCode.Length () == 3)
-		{
-		
-		SpoolString (stream,
-					 fCountryCode,
-					 kCountryCodeSet,
-					 3,
-					 charSet);
-				 
-		}
+	SpoolString (stream,
+				 fCountryCode,
+				 kCountryCodeSet,
+				 3,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fCountry,

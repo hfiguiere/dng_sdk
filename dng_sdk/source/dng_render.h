@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_render.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_render.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Classes for conversion of RAW data to final image.
@@ -26,11 +26,13 @@
 #include "dng_auto_ptr.h"
 #include "dng_classes.h"
 #include "dng_spline.h"
+#include "dng_uncopyable.h"
 #include "dng_xy_coord.h"
 
 /******************************************************************************/
 
-/// \brief Curve for pre-exposure-compensation adjustment based on noise floor, shadows, and highlight level.
+/// \brief Curve for pre-exposure-compensation adjustment based on noise floor,
+/// shadows, and highlight level.
 
 class dng_function_exposure_ramp: public dng_1d_function
 	{
@@ -57,7 +59,8 @@ class dng_function_exposure_ramp: public dng_1d_function
 			
 /******************************************************************************/
 
-/// \brief Exposure compensation curve for a given compensation amount in stops using quadric for roll-off.
+/// \brief Exposure compensation curve for a given compensation amount in stops using
+/// quadric for roll-off.
 
 class dng_function_exposure_tone: public dng_1d_function
 	{
@@ -126,7 +129,7 @@ class dng_function_gamma_encode: public dng_1d_function
 
 /// \brief Class used to render digital negative to displayable image.
 
-class dng_render
+class dng_render: private dng_uncopyable
 	{
 	
 	protected:
@@ -293,14 +296,6 @@ class dng_render
 
 		virtual dng_image * Render ();
 									
-	private:
-	
-		// Hidden copy constructor and assignment operator.
-		
-		dng_render (const dng_render &render);
-		
-		dng_render & operator= (const dng_render &render);
-	
 	};
 
 /*****************************************************************************/

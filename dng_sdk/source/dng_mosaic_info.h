@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_mosaic_info.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_mosaic_info.h#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /** \file
  * Support for descriptive information about color filter array patterns.
@@ -180,7 +180,8 @@ class dng_mosaic_info
 								  const dng_image &srcImage,
 								  dng_image &dstImage,
 								  const dng_point &downScale,
-								  uint32 srcPlane = 0) const;
+								  uint32 srcPlane = 0,
+                                  dng_matrix *scaleTransforms = NULL) const;
 								  
 	protected:
 	

@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_file_stream.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_file_stream.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -30,9 +30,9 @@ dng_file_stream::dng_file_stream (const char *filename,
 	,	fFile (NULL)
 	
 	{
-	
+
 	fFile = fopen (filename, output ? "wb" : "rb");
-	
+
 	if (!fFile)
 		{
 		
@@ -52,6 +52,60 @@ dng_file_stream::dng_file_stream (const char *filename,
 		}
 	
 	}
+
+/*****************************************************************************/
+
+#if qWinOS
+
+/*****************************************************************************/
+
+dng_file_stream::dng_file_stream (const wchar_t *filename,
+								  bool output,
+								  uint32 bufferSize)
+
+	:	dng_stream ((dng_abort_sniffer *) NULL,
+					bufferSize,
+					0)
+	
+	,	fFile (NULL)
+	
+	{
+
+	fFile = _wfopen (filename, output ? L"wb" : L"rb");
+
+	if (!fFile)
+		{
+		
+		#if qDNGValidate
+
+		char filenameCString[256];
+
+		size_t returnCount;
+
+		wcstombs_s (&returnCount, 
+					filenameCString, 
+					256, 
+					filename, 
+					_TRUNCATE);
+
+		ReportError ("Unable to open file",
+					 filenameCString);
+					 
+		ThrowSilentError ();
+		
+		#else
+		
+		ThrowOpenFile ();
+		
+		#endif	// qDNGValidate
+
+		}
+	
+	}
+
+/*****************************************************************************/
+
+#endif	// qWinOS
 		
 /*****************************************************************************/
 
@@ -78,7 +132,7 @@ uint64 dng_file_stream::DoGetLength ()
 
 		}
 	
-	return ftell (fFile);
+	return (uint64) ftell (fFile);
 	
 	}
 		
@@ -89,7 +143,7 @@ void dng_file_stream::DoRead (void *data,
 							  uint64 offset)
 	{
 	
-	if (fseek (fFile, (uint32) offset, SEEK_SET) != 0)
+	if (fseek (fFile, (long) offset, SEEK_SET) != 0)
 		{
 		
 		ThrowReadFile ();

@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006-2009 Adobe Systems Incorporated
+// Copyright 2006-2012 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_host.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_host.cpp#2 $ */ 
+/* $DateTime: 2015/06/09 23:32:35 $ */
+/* $Change: 1026104 $ */
+/* $Author: aksherry $ */
 
 /*****************************************************************************/
 
@@ -26,8 +26,10 @@
 #include "dng_memory.h"
 #include "dng_misc_opcodes.h"
 #include "dng_negative.h"
+#include "dng_resample.h"
 #include "dng_shared.h"
 #include "dng_simple_image.h"
+#include "dng_xmp.h"
 
 /*****************************************************************************/
 
@@ -227,16 +229,27 @@ bool dng_host::IsTransientError (dng_error_code code)
 /*****************************************************************************/
 
 void dng_host::PerformAreaTask (dng_area_task &task,
-								const dng_rect &area)
+								const dng_rect &area,
+                                dng_area_task_progress *progress)
 	{
 	
 	dng_area_task::Perform (task,
 							area,
 							&Allocator (),
-							Sniffer ());
+							Sniffer (),
+                            progress);
 	
 	}
 		
+/*****************************************************************************/
+
+uint32 dng_host::PerformAreaTaskThreads ()
+	{
+	
+	return 1;
+	
+	}
+
 /*****************************************************************************/
 
 dng_exif * dng_host::Make_dng_exif ()
@@ -249,6 +262,24 @@ dng_exif * dng_host::Make_dng_exif ()
 		
 		ThrowMemoryFull ();
 
+		}
+	
+	return result;
+	
+	}
+
+/*****************************************************************************/
+
+dng_xmp * dng_host::Make_dng_xmp ()
+	{
+	
+	dng_xmp *result = new dng_xmp (Allocator ());
+	
+	if (!result)
+		{
+		
+		ThrowMemoryFull ();
+		
 		}
 	
 	return result;
@@ -296,7 +327,7 @@ dng_ifd * dng_host::Make_dng_ifd ()
 dng_negative * dng_host::Make_dng_negative ()
 	{
 	
-	return dng_negative::Make (Allocator ());
+	return dng_negative::Make (*this);
 	
 	}
 
@@ -492,4 +523,19 @@ void dng_host::ApplyOpcodeList (dng_opcode_list &list,
 	
 	}
 		
+/*****************************************************************************/
+
+void dng_host::ResampleImage (const dng_image &srcImage,
+							  dng_image &dstImage)
+	{
+	
+	::ResampleImage (*this,
+					 srcImage,
+					 dstImage,
+					 srcImage.Bounds (),
+					 dstImage.Bounds (),
+					 dng_resample_bicubic::Get ());
+	
+	}
+
 /*****************************************************************************/

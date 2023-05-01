@@ -1,23 +1,27 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2012 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_negative.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_negative.cpp#5 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
 #include "dng_negative.h"
 
+#include "dng_1d_table.h"
 #include "dng_abort_sniffer.h"
+#include "dng_area_task.h"
+#include "dng_assertions.h"
 #include "dng_bottlenecks.h"
 #include "dng_camera_profile.h"
+#include "dng_color_space.h"
 #include "dng_color_spec.h"
 #include "dng_exceptions.h"
 #include "dng_globals.h"
@@ -25,14 +29,21 @@
 #include "dng_image.h"
 #include "dng_image_writer.h"
 #include "dng_info.h"
+#include "dng_jpeg_image.h"
 #include "dng_linearization_info.h"
+#include "dng_memory.h"
 #include "dng_memory_stream.h"
+#include "dng_misc_opcodes.h"
 #include "dng_mosaic_info.h"
 #include "dng_preview.h"
+#include "dng_resample.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_simple_image.h"
 #include "dng_tag_codes.h"
 #include "dng_tag_values.h"
 #include "dng_tile_iterator.h"
+#include "dng_uncopyable.h"
+#include "dng_utils.h"
 #include "dng_xmp.h"
 
 /*****************************************************************************/
@@ -47,7 +58,7 @@ dng_noise_profile::dng_noise_profile ()
 
 /*****************************************************************************/
 
-dng_noise_profile::dng_noise_profile (const std::vector<dng_noise_function> &functions)
+dng_noise_profile::dng_noise_profile (const dng_std_vector<dng_noise_function> &functions)
 
 	:	fNoiseFunctions (functions)
 
@@ -119,73 +130,643 @@ uint32 dng_noise_profile::NumFunctions () const
 
 /*****************************************************************************/
 
-dng_negative::dng_negative (dng_memory_allocator &allocator)
+dng_metadata::dng_metadata (dng_host &host)
 
-	:	fAllocator (allocator)
-	
-	,	fModelName		    		()
-	,	fLocalName		    		()
-	,	fHasBaseOrientation 		(false)
+	:	fHasBaseOrientation 		(false)
 	,	fBaseOrientation    		()
-	,	fDefaultCropSizeH   		()
-	,	fDefaultCropSizeV			()
-	,	fDefaultCropOriginH 		(0, 1)
-	,	fDefaultCropOriginV 		(0, 1)
-	,	fDefaultScaleH      		(1, 1)
-	,	fDefaultScaleV				(1, 1)
-	,	fBestQualityScale			(1, 1)
-	,	fRawToFullScaleH			(1.0)
-	,	fRawToFullScaleV			(1.0)
-	,	fBaselineNoise	    		(100, 100)
-	,	fNoiseReductionApplied		(0, 0)
-	,	fNoiseProfile				()
-	,	fBaselineExposure			(  0, 100)
-	,	fBaselineSharpness			(100, 100)
-	,	fChromaBlurRadius			()
-	,	fAntiAliasStrength			(100, 100)
-	,	fLinearResponseLimit		(100, 100)
-	,	fShadowScale				(1, 1)
-	,	fColorimetricReference  	(crSceneReferred)
-	,	fColorChannels				(0)
-	,	fAnalogBalance				()
-	,	fCameraNeutral				()
-	,	fCameraWhiteXY				()
-	,	fCameraCalibration1			()
-	,	fCameraCalibration2			()
-	,	fCameraCalibrationSignature ()
-	,	fCameraProfile				()
-	,	fAsShotProfileName			()
-	,	fRawImageDigest				()
-	,	fRawDataUniqueID    		()
-	,	fOriginalRawFileName		()
-	,	fHasOriginalRawFileData 	(false)
-	,	fOriginalRawFileData    	()
-	,	fOriginalRawFileDigest		()
-	,	fDNGPrivateData				()
 	,	fIsMakerNoteSafe			(false)
 	,	fMakerNote					()
-	,	fExif			    		()
+	,	fExif			    		(host.Make_dng_exif ())
 	,	fOriginalExif				()
 	,	fIPTCBlock          		()
 	,	fIPTCOffset					(kDNGStreamInvalidOffset)
-	,	fUsedUTF8forIPTC			(false)
-	,	fXMP			    		()
-	,	fValidEmbeddedXMP       	(false)
+	,	fXMP			    		(host.Make_dng_xmp ())
+	,	fEmbeddedXMPDigest       	()
 	,	fXMPinSidecar	    		(false)
 	,	fXMPisNewer		    		(false)
-	,	fLinearizationInfo  		()
-	,	fMosaicInfo         		()
-	,	fOpcodeList1				(1)
-	,	fOpcodeList2				(2)
-	,	fOpcodeList3				(3)
-	,	fStage1Image        		()
-	,	fStage2Image        		()
-	,	fStage3Image        		()
-	,	fStage3Gain					(1.0)
-	,	fIsPreview					(false)
-	,	fIsDamaged					(false)
-	,	fRawImageStage				(rawImageStageNone)
-	,	fRawImage					()
+	,	fSourceMIME					()
+
+	{
+	}
+
+/*****************************************************************************/
+
+dng_metadata::~dng_metadata ()
+	{
+	}
+	
+/******************************************************************************/
+
+template< class T >
+T * CloneAutoPtr (const AutoPtr< T > &ptr)
+	{
+	
+	return ptr.Get () ? ptr->Clone () : NULL;
+	
+	}
+
+/******************************************************************************/
+
+template< class T, typename U >
+T * CloneAutoPtr (const AutoPtr< T > &ptr, U &u)
+	{
+	
+	return ptr.Get () ? ptr->Clone (u) : NULL;
+	
+	}
+
+/******************************************************************************/
+
+dng_metadata::dng_metadata (const dng_metadata &rhs,
+							dng_memory_allocator &allocator)
+
+	:	fHasBaseOrientation 		(rhs.fHasBaseOrientation)
+	,	fBaseOrientation    		(rhs.fBaseOrientation)
+	,	fIsMakerNoteSafe			(rhs.fIsMakerNoteSafe)
+	,	fMakerNote					(CloneAutoPtr (rhs.fMakerNote, allocator))
+	,	fExif			    		(CloneAutoPtr (rhs.fExif))
+	,	fOriginalExif				(CloneAutoPtr (rhs.fOriginalExif))
+	,	fIPTCBlock          		(CloneAutoPtr (rhs.fIPTCBlock, allocator))
+	,	fIPTCOffset					(rhs.fIPTCOffset)
+	,	fXMP			    		(CloneAutoPtr (rhs.fXMP))
+	,	fEmbeddedXMPDigest       	(rhs.fEmbeddedXMPDigest)
+	,	fXMPinSidecar	    		(rhs.fXMPinSidecar)
+	,	fXMPisNewer		    		(rhs.fXMPisNewer)
+	,	fSourceMIME					(rhs.fSourceMIME)
+
+	{
+
+	}
+
+/******************************************************************************/
+
+dng_metadata * dng_metadata::Clone (dng_memory_allocator &allocator) const
+	{
+	
+	return new dng_metadata (*this, allocator);
+	
+	}
+
+/******************************************************************************/
+
+void dng_metadata::SetBaseOrientation (const dng_orientation &orientation)
+	{
+	
+	fHasBaseOrientation = true;
+	
+	fBaseOrientation = orientation;
+	
+	}
+		
+/******************************************************************************/
+
+void dng_metadata::ApplyOrientation (const dng_orientation &orientation)
+	{
+	
+	fBaseOrientation += orientation;
+	
+	fXMP->SetOrientation (fBaseOrientation);
+
+	}
+				  
+/*****************************************************************************/
+
+void dng_metadata::ResetExif (dng_exif * newExif)
+	{
+
+	fExif.Reset (newExif);
+
+	}
+
+/******************************************************************************/
+
+dng_memory_block * dng_metadata::BuildExifBlock (dng_memory_allocator &allocator,
+												 const dng_resolution *resolution,
+												 bool includeIPTC,
+												 const dng_jpeg_preview *thumbnail) const
+	{
+	
+	dng_memory_stream stream (allocator);
+	
+		{
+	
+		// Create the main IFD
+											 
+		dng_tiff_directory mainIFD;
+		
+		// Optionally include the resolution tags.
+		
+		dng_resolution res;
+		
+		if (resolution)
+			{
+			res = *resolution;
+			}
+	
+		tag_urational tagXResolution (tcXResolution, res.fXResolution);
+		tag_urational tagYResolution (tcYResolution, res.fYResolution);
+		
+		tag_uint16 tagResolutionUnit (tcResolutionUnit, res.fResolutionUnit);
+		
+		if (resolution)
+			{
+			mainIFD.Add (&tagXResolution   );
+			mainIFD.Add (&tagYResolution   );
+			mainIFD.Add (&tagResolutionUnit);
+			}
+
+		// Optionally include IPTC block.
+		
+		tag_iptc tagIPTC (IPTCData   (),
+						  IPTCLength ());
+			
+		if (includeIPTC && tagIPTC.Count ())
+			{
+			mainIFD.Add (&tagIPTC);
+			}
+							
+		// Exif tags.
+		
+		exif_tag_set exifSet (mainIFD,
+							  *GetExif (),
+							  IsMakerNoteSafe (),
+							  MakerNoteData   (),
+							  MakerNoteLength (),
+							  false);
+							  
+		// Figure out the Exif IFD offset.
+		
+		uint32 exifOffset = 8 + mainIFD.Size ();
+		
+		exifSet.Locate (exifOffset);
+		
+		// Thumbnail IFD (if any).
+		
+		dng_tiff_directory thumbIFD;
+		
+		tag_uint16 thumbCompression (tcCompression, ccOldJPEG);
+		
+		tag_urational thumbXResolution (tcXResolution, dng_urational (72, 1));
+		tag_urational thumbYResolution (tcYResolution, dng_urational (72, 1));
+		
+		tag_uint16 thumbResolutionUnit (tcResolutionUnit, ruInch);
+		
+		tag_uint32 thumbDataOffset (tcJPEGInterchangeFormat      , 0);
+		tag_uint32 thumbDataLength (tcJPEGInterchangeFormatLength, 0);
+		
+		if (thumbnail)
+			{
+			
+			thumbIFD.Add (&thumbCompression);
+			
+			thumbIFD.Add (&thumbXResolution);
+			thumbIFD.Add (&thumbYResolution);
+			thumbIFD.Add (&thumbResolutionUnit);
+			
+			thumbIFD.Add (&thumbDataOffset);
+			thumbIFD.Add (&thumbDataLength);
+			
+			thumbDataLength.Set (thumbnail->fCompressedData->LogicalSize ());
+			
+			uint32 thumbOffset = exifOffset + exifSet.Size ();
+			
+			mainIFD.SetChained (thumbOffset);
+			
+			thumbDataOffset.Set (thumbOffset + thumbIFD.Size ());
+			
+			}
+			
+		// Don't write anything unless the main IFD has some tags.
+		
+		if (mainIFD.Size () != 0)
+			{
+					
+			// Write TIFF Header.
+			
+			stream.SetWritePosition (0);
+			
+			stream.Put_uint16 (stream.BigEndian () ? byteOrderMM : byteOrderII);
+			
+			stream.Put_uint16 (42);
+			
+			stream.Put_uint32 (8);
+			
+			// Write the IFDs.
+			
+			mainIFD.Put (stream);
+			
+			exifSet.Put (stream);
+			
+			if (thumbnail)
+				{
+				
+				thumbIFD.Put (stream);
+				
+				stream.Put (thumbnail->fCompressedData->Buffer      (),
+							thumbnail->fCompressedData->LogicalSize ());
+				
+				}
+				
+			// Trim the file to this length.
+			
+			stream.Flush ();
+			
+			stream.SetLength (stream.Position ());
+			
+			}
+		
+		}
+		
+	return stream.AsMemoryBlock (allocator);
+		
+	}
+			
+/******************************************************************************/
+
+void dng_metadata::SetIPTC (AutoPtr<dng_memory_block> &block, uint64 offset)
+	{
+	
+	fIPTCBlock.Reset (block.Release ());
+	
+	fIPTCOffset = offset;
+	
+	}
+					  
+/******************************************************************************/
+
+void dng_metadata::SetIPTC (AutoPtr<dng_memory_block> &block)
+	{
+	
+	SetIPTC (block, kDNGStreamInvalidOffset);
+	
+	}
+					  
+/******************************************************************************/
+
+void dng_metadata::ClearIPTC ()
+	{
+	
+	fIPTCBlock.Reset ();
+	
+	fIPTCOffset = kDNGStreamInvalidOffset;
+	
+	}
+					  
+/*****************************************************************************/
+
+const void * dng_metadata::IPTCData () const
+	{
+	
+	if (fIPTCBlock.Get ())
+		{
+		
+		return fIPTCBlock->Buffer ();
+		
+		}
+		
+	return NULL;
+	
+	}
+
+/*****************************************************************************/
+
+uint32 dng_metadata::IPTCLength () const
+	{
+	
+	if (fIPTCBlock.Get ())
+		{
+		
+		return fIPTCBlock->LogicalSize ();
+		
+		}
+		
+	return 0;
+	
+	}
+		
+/*****************************************************************************/
+
+uint64 dng_metadata::IPTCOffset () const
+	{
+	
+	if (fIPTCBlock.Get ())
+		{
+		
+		return fIPTCOffset;
+		
+		}
+		
+	return kDNGStreamInvalidOffset;
+	
+	}
+		
+/*****************************************************************************/
+
+dng_fingerprint dng_metadata::IPTCDigest (bool includePadding) const
+	{
+	
+	if (IPTCLength ())
+		{
+		
+		dng_md5_printer printer;
+		
+		const uint8 *data = (const uint8 *) IPTCData ();
+		
+		uint32 count = IPTCLength ();
+		
+		// Because of some stupid ways of storing the IPTC data, the IPTC
+		// data might be padded with up to three zeros.  The official Adobe
+		// logic is to include these zeros in the digest.  However, older
+		// versions of the Camera Raw code did not include the padding zeros
+		// in the digest, so we support both methods and allow either to
+		// match.
+		
+		if (!includePadding)
+			{
+		
+			uint32 removed = 0;
+			
+			while ((removed < 3) && (count > 0) && (data [count - 1] == 0))
+				{
+				removed++;
+				count--;
+				}
+				
+			}
+		
+		printer.Process (data, count);
+						 
+		return printer.Result ();
+			
+		}
+	
+	return dng_fingerprint ();
+	
+	}
+		
+/******************************************************************************/
+
+void dng_metadata::RebuildIPTC (dng_memory_allocator &allocator,
+								bool padForTIFF)
+	{
+	
+	ClearIPTC ();
+	
+	fXMP->RebuildIPTC (*this, allocator, padForTIFF);
+	
+	dng_fingerprint digest = IPTCDigest ();
+	
+	fXMP->SetIPTCDigest (digest);
+	
+	}
+			  
+/*****************************************************************************/
+
+void dng_metadata::ResetXMP (dng_xmp * newXMP)
+	{
+	
+	fXMP.Reset (newXMP);
+
+	}
+
+/*****************************************************************************/
+
+void dng_metadata::ResetXMPSidecarNewer (dng_xmp * newXMP,
+										 bool inSidecar,
+										 bool isNewer )
+	{
+
+	fXMP.Reset (newXMP);
+
+	fXMPinSidecar = inSidecar;
+
+	fXMPisNewer = isNewer;
+
+	}
+
+/*****************************************************************************/
+
+bool dng_metadata::SetXMP (dng_host &host,
+						   const void *buffer,
+					 	   uint32 count,
+					 	   bool xmpInSidecar,
+					 	   bool xmpIsNewer)
+	{
+	
+	bool result = false;
+	
+	try
+		{
+		
+		AutoPtr<dng_xmp> tempXMP (host.Make_dng_xmp ());
+		
+		tempXMP->Parse (host, buffer, count);
+		
+		ResetXMPSidecarNewer (tempXMP.Release (), xmpInSidecar, xmpIsNewer);
+		
+		result = true;
+		
+		}
+		
+	catch (dng_exception &except)
+		{
+		
+		// Don't ignore transient errors.
+		
+		if (host.IsTransientError (except.ErrorCode ()))
+			{
+			
+			throw;
+			
+			}
+			
+		// Eat other parsing errors.
+		
+		}
+		
+	catch (...)
+		{
+		
+		// Eat unknown parsing exceptions.
+		
+		}
+	
+	return result;
+	
+	}
+
+/*****************************************************************************/
+
+void dng_metadata::SetEmbeddedXMP (dng_host &host,
+								   const void *buffer,
+								   uint32 count)
+	{
+	
+	if (SetXMP (host, buffer, count))
+		{
+		
+		dng_md5_printer printer;
+		
+		printer.Process (buffer, count);
+		
+		fEmbeddedXMPDigest = printer.Result ();
+		
+		// Remove any sidecar specific tags from embedded XMP.
+		
+		if (fXMP.Get ())
+			{
+		
+			fXMP->Remove (XMP_NS_PHOTOSHOP, "SidecarForExtension");
+			fXMP->Remove (XMP_NS_PHOTOSHOP, "EmbeddedXMPDigest");
+			
+			}
+		
+		}
+		
+	else
+		{
+		
+		fEmbeddedXMPDigest.Clear ();
+		
+		}
+
+	}
+
+/*****************************************************************************/
+
+void dng_metadata::SynchronizeMetadata ()
+	{
+	
+	if (!fOriginalExif.Get ())
+		{
+		
+		fOriginalExif.Reset (fExif->Clone ());
+		
+		}
+		
+	fXMP->ValidateMetadata ();
+	
+	fXMP->IngestIPTC (*this, fXMPisNewer);
+	
+	fXMP->SyncExif (*fExif.Get ());
+	
+	fXMP->SyncOrientation (*this, fXMPinSidecar);
+	
+	}
+					
+/*****************************************************************************/
+
+void dng_metadata::UpdateDateTime (const dng_date_time_info &dt)
+	{
+	
+	fExif->UpdateDateTime (dt);
+	
+	fXMP->UpdateDateTime (dt);
+	
+	}
+					
+/*****************************************************************************/
+
+void dng_metadata::UpdateDateTimeToNow ()
+	{
+	
+	dng_date_time_info dt;
+	
+	CurrentDateTimeAndZone (dt);
+	
+	UpdateDateTime (dt);
+	
+	fXMP->UpdateMetadataDate (dt);
+	
+	}
+					
+/*****************************************************************************/
+
+void dng_metadata::UpdateMetadataDateTimeToNow ()
+	{
+	
+	dng_date_time_info dt;
+	
+	CurrentDateTimeAndZone (dt);
+	
+	fXMP->UpdateMetadataDate (dt);
+	
+	}
+					
+/*****************************************************************************/
+
+dng_negative::dng_negative (dng_host &host)
+
+	:	fAllocator						(host.Allocator ())
+	
+	,	fModelName						()
+	,	fLocalName						()
+	,	fDefaultCropSizeH				()
+	,	fDefaultCropSizeV				()
+	,	fDefaultCropOriginH				(0, 1)
+	,	fDefaultCropOriginV				(0, 1)
+	,	fDefaultUserCropT				(0, 1)
+	,	fDefaultUserCropL				(0, 1)
+	,	fDefaultUserCropB				(1, 1)
+	,	fDefaultUserCropR				(1, 1)
+	,	fDefaultScaleH					(1, 1)
+	,	fDefaultScaleV					(1, 1)
+	,	fBestQualityScale				(1, 1)
+	,	fOriginalDefaultFinalSize		()
+	,	fOriginalBestQualityFinalSize	()
+	,	fOriginalDefaultCropSizeH	    ()
+	,	fOriginalDefaultCropSizeV	    ()
+	,	fRawToFullScaleH				(1.0)
+	,	fRawToFullScaleV				(1.0)
+	,	fBaselineNoise					(100, 100)
+	,	fNoiseReductionApplied			(0, 0)
+	,	fNoiseProfile					()
+	,	fBaselineExposure				(  0, 100)
+	,	fBaselineSharpness				(100, 100)
+	,	fChromaBlurRadius				()
+	,	fAntiAliasStrength				(100, 100)
+	,	fLinearResponseLimit			(100, 100)
+	,	fShadowScale					(1, 1)
+	,	fColorimetricReference			(crSceneReferred)
+    ,   fFloatingPoint                  (false)
+	,	fColorChannels					(0)
+	,	fAnalogBalance					()
+	,	fCameraNeutral					()
+	,	fCameraWhiteXY					()
+	,	fCameraCalibration1				()
+	,	fCameraCalibration2				()
+	,	fCameraCalibrationSignature		()
+	,	fCameraProfile					()
+	,	fAsShotProfileName				()
+	,	fRawImageDigest					()
+	,	fNewRawImageDigest				()
+	,	fRawDataUniqueID				()
+	,	fOriginalRawFileName			()
+	,	fHasOriginalRawFileData			(false)
+	,	fOriginalRawFileData			()
+	,	fOriginalRawFileDigest			()
+	,	fDNGPrivateData					()
+	,	fMetadata						(host)
+	,	fLinearizationInfo				()
+	,	fMosaicInfo						()
+	,	fOpcodeList1					(1)
+	,	fOpcodeList2					(2)
+	,	fOpcodeList3					(3)
+	,	fStage1Image					()
+	,	fStage2Image					()
+	,	fStage3Image					()
+	,	fStage3Gain						(1.0)
+	,	fIsPreview						(false)
+	,	fIsDamaged						(false)
+	,	fRawImageStage					(rawImageStageNone)
+	,	fRawImage						()
+	,	fRawFloatBitDepth				(0)
+	,	fRawJPEGImage					()
+	,	fRawJPEGImageDigest				()
+	,	fTransparencyMask				()
+	,	fRawTransparencyMask			()
+	,	fRawTransparencyMaskBitDepth	(0)
+	,	fUnflattenedStage3Image			()
 
 	{
 
@@ -207,18 +788,14 @@ dng_negative::~dng_negative ()
 void dng_negative::Initialize ()
 	{
 	
-	fExif.Reset (MakeExif ());
-	
-	fXMP.Reset (MakeXMP ());
-	
 	}
 
 /******************************************************************************/
 
-dng_negative * dng_negative::Make (dng_memory_allocator &allocator)
+dng_negative * dng_negative::Make (dng_host &host)
 	{
 	
-	AutoPtr<dng_negative> result (new dng_negative (allocator));
+	AutoPtr<dng_negative> result (new dng_negative (host));
 	
 	if (!result.Get ())
 		{
@@ -233,35 +810,22 @@ dng_negative * dng_negative::Make (dng_memory_allocator &allocator)
 
 /******************************************************************************/
 
-void dng_negative::SetBaseOrientation (const dng_orientation &orientation)
+dng_metadata * dng_negative::CloneInternalMetadata () const
 	{
 	
-	fHasBaseOrientation = true;
+	return InternalMetadata ().Clone (Allocator ());
 	
-	fBaseOrientation = orientation;
+	}
+
+/******************************************************************************/
+
+dng_orientation dng_negative::ComputeOrientation (const dng_metadata &metadata) const
+	{
+	
+	return metadata.BaseOrientation ();
 	
 	}
 		
-/******************************************************************************/
-
-dng_orientation dng_negative::Orientation () const
-	{
-	
-	return BaseOrientation ();
-	
-	}
-		
-/******************************************************************************/
-
-void dng_negative::ApplyOrientation (const dng_orientation &orientation)
-	{
-	
-	fBaseOrientation += orientation;
-	
-	fXMP->SetOrientation (fBaseOrientation);
-
-	}
-				  
 /******************************************************************************/
 
 void dng_negative::SetAnalogBalance (const dng_vector &b)
@@ -474,6 +1038,16 @@ void dng_negative::AddProfile (AutoPtr<dng_camera_profile> &profile)
 				
 				}
 				
+			// If the profile we are deleting wasn't read from disk then the new
+			// profile should be marked as such also.
+			
+			if (!fCameraProfile [0]->WasReadFromDisk ())
+				{
+				
+				profile->SetWasReadFromDisk (false);
+				
+				}
+				
 			// Delete the profile with default name.
 			
 			delete fCameraProfile [0];
@@ -511,6 +1085,16 @@ void dng_negative::AddProfile (AutoPtr<dng_camera_profile> &profile)
 				{
 				
 				profile->SetWasReadFromDNG ();
+				
+				}
+				
+			// If the profile we are deleting wasn't read from disk then the new
+			// profile should be marked as such also.
+			
+			if (!fCameraProfile [index]->WasReadFromDisk ())
+				{
+				
+				profile->SetWasReadFromDisk (false);
 				
 				}
 				
@@ -560,6 +1144,57 @@ void dng_negative::ClearProfiles ()
 	// Now empty list.
 	
 	fCameraProfile.clear ();
+	
+	}
+
+/*****************************************************************************/
+
+void dng_negative::ClearProfiles (bool clearBuiltinMatrixProfiles,
+								  bool clearReadFromDisk)
+	{
+
+	// If neither flag is set, then there's nothing to do.
+
+	if (!clearBuiltinMatrixProfiles &&
+		!clearReadFromDisk)
+		{
+		return;
+		}
+	
+	// Delete any camera profiles in this negative that match the specified criteria.
+
+	dng_std_vector<dng_camera_profile *>::iterator iter = fCameraProfile.begin ();
+	dng_std_vector<dng_camera_profile *>::iterator next;
+	
+	for (; iter != fCameraProfile.end (); iter = next)
+		{
+
+		dng_camera_profile *profile = *iter;
+
+		// If the profile is invalid (i.e., NULL pointer), or meets one of the
+		// specified criteria, then axe it.
+
+		if (!profile ||
+			(clearBuiltinMatrixProfiles && profile->WasBuiltinMatrix ()) ||
+			(clearReadFromDisk			&& profile->WasReadFromDisk	 ()))
+			{
+			
+			delete profile;
+
+			next = fCameraProfile.erase (iter);
+
+			}
+
+		// Otherwise, just advance to the next element.
+
+		else
+			{
+			
+			next = iter + 1;
+			
+			}
+
+		}
 	
 	}
 
@@ -734,7 +1369,8 @@ const dng_camera_profile * dng_negative::ProfileByID (const dng_camera_profile_i
 
 /*****************************************************************************/
 
-const dng_camera_profile * dng_negative::CameraProfileToEmbed () const
+const dng_camera_profile * dng_negative::ComputeCameraProfileToEmbed
+										(const dng_metadata & /* metadata */) const
 	{
 	
 	uint32 index;
@@ -805,64 +1441,257 @@ dng_color_spec * dng_negative::MakeColorSpec (const dng_camera_profile_id &id) c
 							   
 /*****************************************************************************/
 
+dng_fingerprint dng_negative::FindImageDigest (dng_host &host,
+											   const dng_image &image)
+	{
+	
+	dng_md5_printer printer;
+	
+	dng_pixel_buffer buffer (image.Bounds (), 
+							 0, 
+							 image.Planes (),
+							 image.PixelType (), 
+							 pcInterleaved, 
+							 NULL);
+	
+	// Sometimes we expand 8-bit data to 16-bit data while reading or
+	// writing, so always compute the digest of 8-bit data as 16-bits.
+	
+	if (buffer.fPixelType == ttByte)
+		{
+		buffer.fPixelType = ttShort;
+		buffer.fPixelSize = 2;
+		}
+	
+	const uint32 kBufferRows = 16;
+	
+	uint32 bufferBytes = 0;
+	
+	if (!SafeUint32Mult (kBufferRows, buffer.fRowStep,	 &bufferBytes) ||
+		!SafeUint32Mult (bufferBytes, buffer.fPixelSize, &bufferBytes))
+		{
+		
+		ThrowOverflow ("Arithmetic overflow computing buffer size.");
+		
+		}
+	
+	AutoPtr<dng_memory_block> bufferData (host.Allocate (bufferBytes));
+	
+	buffer.fData = bufferData->Buffer ();
+	
+	dng_rect area;
+	
+	dng_tile_iterator iter (dng_point (kBufferRows,
+									   image.Width ()),
+							image.Bounds ());
+							
+	while (iter.GetOneTile (area))
+		{
+		
+		host.SniffForAbort ();
+		
+		buffer.fArea = area;
+		
+		image.Get (buffer);
+		
+		uint32 count = buffer.fArea.H () *
+					   buffer.fRowStep *
+					   buffer.fPixelSize;
+					   
+		#if qDNGBigEndian
+		
+		// We need to use the same byte order to compute
+		// the digest, no matter the native order.  Little-endian
+		// is more common now, so use that.
+		
+		switch (buffer.fPixelSize)
+			{
+			
+			case 1:
+				break;
+			
+			case 2:
+				{
+				DoSwapBytes16 ((uint16 *) buffer.fData, count >> 1);
+				break;
+				}
+			
+			case 4:
+				{
+				DoSwapBytes32 ((uint32 *) buffer.fData, count >> 2);
+				break;
+				}
+				
+			default:
+				{
+				DNG_REPORT ("Unexpected pixel size");
+				break;
+				}
+			
+			}
+		
+		#endif
+
+		printer.Process (buffer.fData,
+						 count);
+		
+		}
+			
+	return printer.Result ();
+	
+	}
+							   
+/*****************************************************************************/
+
 void dng_negative::FindRawImageDigest (dng_host &host) const
 	{
 	
 	if (fRawImageDigest.IsNull ())
 		{
 		
-		const dng_image &image = RawImage ();
-	
-		dng_md5_printer printer;
+		// Since we are adding the floating point and transparency support 
+		// in DNG 1.4, and there are no legacy floating point or transparent
+		// DNGs, switch to using the more MP friendly algorithm to compute
+		// the digest for these images.
 		
-		dng_pixel_buffer buffer;
-		
-		buffer.fPlane  = 0;
-		buffer.fPlanes = image.Planes ();
-		
-		buffer.fRowStep   = image.Planes () * image.Width ();
-		buffer.fColStep   = image.Planes ();
-		buffer.fPlaneStep = 1;
-		
-		buffer.fPixelType = image.PixelType ();
-		buffer.fPixelSize = image.PixelSize ();
-		
-		// Sometimes we expand 8-bit data to 16-bit data while reading or
-		// writing, so always compute the digest of 8-bit data as 16-bits.
-		
-		if (buffer.fPixelType == ttByte)
+		if (RawImage ().PixelType () == ttFloat || RawTransparencyMask ())
 			{
-			buffer.fPixelType = ttShort;
-			buffer.fPixelSize = 2;
+			
+			FindNewRawImageDigest (host);
+			
+			fRawImageDigest = fNewRawImageDigest;
+			
 			}
-		
-		const uint32 kBufferRows = 16;
-		
-		uint32 bufferBytes = kBufferRows * buffer.fRowStep * buffer.fPixelSize;
-		
-		AutoPtr<dng_memory_block> bufferData (host.Allocate (bufferBytes));
-		
-		buffer.fData = bufferData->Buffer ();
-		
-		dng_rect area;
-		
-		dng_tile_iterator iter (dng_point (kBufferRows,
-										   image.Width ()),
-								image.Bounds ());
-								
-		while (iter.GetOneTile (area))
+			
+		else
 			{
 			
-			host.SniffForAbort ();
+			#if qDNGValidate
 			
-			buffer.fArea = area;
+			dng_timer timeScope ("FindRawImageDigest time");
+
+			#endif
+		
+			fRawImageDigest = FindImageDigest (host, RawImage ());
 			
-			image.Get (buffer);
+			}
+	
+		}
+	
+	}
+							   
+/*****************************************************************************/
+
+class dng_find_new_raw_image_digest_task : public dng_area_task
+	{
+	
+	private:
+	
+		enum
+			{
+			kTileSize = 256
+			};
 			
-			uint32 count = buffer.fArea.H () *
-						   buffer.fRowStep *
+		const dng_image &fImage;
+		
+		uint32 fPixelType;
+		uint32 fPixelSize;
+		
+		uint32 fTilesAcross;
+		uint32 fTilesDown;
+		
+		uint32 fTileCount;
+		
+		AutoArray<dng_fingerprint> fTileHash;
+		
+		AutoPtr<dng_memory_block> fBufferData [kMaxMPThreads];
+	
+	public:
+	
+		dng_find_new_raw_image_digest_task (const dng_image &image,
+											uint32 pixelType)
+
+			:	dng_area_task ("dng_find_new_raw_image_digest_task")
+		
+			,	fImage       (image)
+			,	fPixelType   (pixelType)
+			,	fPixelSize	 (TagTypeSize (pixelType))
+			,	fTilesAcross (0)
+			,	fTilesDown   (0)
+			,	fTileCount   (0)
+			,	fTileHash    (NULL)
+			
+			{
+			
+			fMinTaskArea = 1;
+									
+			fUnitCell = dng_point (Min_int32 (kTileSize, fImage.Bounds ().H ()),
+								   Min_int32 (kTileSize, fImage.Bounds ().W ()));
+								   
+			fMaxTileSize = fUnitCell;
+						
+			}
+	
+		virtual void Start (uint32 threadCount,
+							const dng_point &tileSize,
+							dng_memory_allocator *allocator,
+							dng_abort_sniffer * /* sniffer */)
+			{
+			
+			if (tileSize != fUnitCell)
+				{
+				ThrowProgramError ();
+				}
+				
+			fTilesAcross = (fImage.Bounds ().W () + fUnitCell.h - 1) / fUnitCell.h;
+			fTilesDown   = (fImage.Bounds ().H () + fUnitCell.v - 1) / fUnitCell.v;
+			
+			fTileCount = fTilesAcross * fTilesDown;
+						 
+			fTileHash.Reset (new dng_fingerprint [fTileCount]);
+			
+			const uint32 bufferSize =
+				ComputeBufferSize (fPixelType, 
+								   tileSize, 
+								   fImage.Planes (),
+								   padNone);
+								
+			for (uint32 index = 0; index < threadCount; index++)
+				{
+				
+				fBufferData [index].Reset (allocator->Allocate (bufferSize));
+				
+				}
+			
+			}
+
+		virtual void Process (uint32 threadIndex,
+							  const dng_rect &tile,
+							  dng_abort_sniffer * /* sniffer */)
+			{
+			
+			int32 colIndex = (tile.l - fImage.Bounds ().l) / fUnitCell.h;
+			int32 rowIndex = (tile.t - fImage.Bounds ().t) / fUnitCell.v;
+			
+			DNG_ASSERT (tile.l == fImage.Bounds ().l + colIndex * fUnitCell.h &&
+						tile.t == fImage.Bounds ().t + rowIndex * fUnitCell.v,
+						"Bad tile origin");
+			
+			uint32 tileIndex = rowIndex * fTilesAcross + colIndex;
+			
+			dng_pixel_buffer buffer (tile, 
+									 0, 
+									 fImage.Planes (),
+									 fPixelType, 
+									 pcPlanar,
+									 fBufferData [threadIndex]->Buffer ());
+			
+			fImage.Get (buffer);
+			
+			uint32 count = buffer.fPlaneStep *
+						   buffer.fPlanes *
 						   buffer.fPixelSize;
-						   
+			
 			#if qDNGBigEndian
 			
 			// We need to use the same byte order to compute
@@ -894,16 +1723,132 @@ void dng_negative::FindRawImageDigest (dng_host &host) const
 					}
 				
 				}
-			
-			#endif
 
-			printer.Process (buffer.fData,
-							 count);
+			#endif
+			
+			dng_md5_printer printer;
+			
+			printer.Process (buffer.fData, count);
+							 
+			fTileHash [tileIndex] = printer.Result ();
 			
 			}
 			
-		fRawImageDigest = printer.Result ();
+		dng_fingerprint Result ()
+			{
+			
+			dng_md5_printer printer;
+			
+			for (uint32 tileIndex = 0; tileIndex < fTileCount; tileIndex++)
+				{
+				
+				printer.Process (fTileHash [tileIndex] . data, 16);
+				
+				}
+				
+			return printer.Result ();
+			
+			}
+		
+	};
+
+/*****************************************************************************/
+
+void dng_negative::FindNewRawImageDigest (dng_host &host) const
+	{
 	
+	if (fNewRawImageDigest.IsNull ())
+		{
+		
+		#if qDNGValidate
+		
+		dng_timer timeScope ("FindNewRawImageDigest time");
+
+		#endif
+		
+		// Find fast digest of the raw image.
+		
+			{
+		
+			const dng_image &rawImage = RawImage ();
+			
+			// Find pixel type that will be saved in the file.  When saving DNGs, we convert
+			// some 16-bit data to 8-bit data, so we need to do the matching logic here.
+			
+			uint32 rawPixelType = rawImage.PixelType ();
+			
+			if (rawPixelType == ttShort)
+				{
+			
+				// See if we are using a linearization table with <= 256 entries, in which
+				// case the useful data will all fit within 8-bits.
+				
+				const dng_linearization_info *rangeInfo = GetLinearizationInfo ();
+			
+				if (rangeInfo)
+					{
+
+					if (rangeInfo->fLinearizationTable.Get ())
+						{
+						
+						uint32 entries = rangeInfo->fLinearizationTable->LogicalSize () >> 1;
+						
+						if (entries <= 256)
+							{
+							
+							rawPixelType = ttByte;
+							
+							}
+														
+						}
+						
+					}
+
+				}
+			
+			// Find the fast digest on the raw image.
+				
+			dng_find_new_raw_image_digest_task task (rawImage, rawPixelType);
+			
+			host.PerformAreaTask (task, rawImage.Bounds ());
+			
+			fNewRawImageDigest = task.Result ();
+				
+			}
+			
+		// If there is a transparancy mask, we need to include that in the
+		// digest also.
+		
+		if (RawTransparencyMask () != NULL)
+			{
+			
+			// Find the fast digest on the raw mask.
+			
+			dng_fingerprint maskDigest;
+			
+				{
+				
+				dng_find_new_raw_image_digest_task task (*RawTransparencyMask (),
+														 RawTransparencyMask ()->PixelType ());
+				
+				host.PerformAreaTask (task, RawTransparencyMask ()->Bounds ());
+				
+				maskDigest = task.Result ();
+				
+				}
+				
+			// Combine the two digests into a single digest.
+			
+			dng_md5_printer printer;
+			
+			printer.Process (fNewRawImageDigest.data, 16);
+			
+			printer.Process (maskDigest.data, 16);
+			
+			fNewRawImageDigest = printer.Result ();
+			
+			}
+		
 		}
 	
 	}
@@ -913,103 +1858,207 @@ void dng_negative::FindRawImageDigest (dng_host &host) const
 void dng_negative::ValidateRawImageDigest (dng_host &host)
 	{
 	
-	if (Stage1Image () && !IsPreview () && fRawImageDigest.IsValid ())
+	if (Stage1Image () && !IsPreview () && (fRawImageDigest   .IsValid () ||
+										    fNewRawImageDigest.IsValid ()))
 		{
 		
-		dng_fingerprint oldDigest = fRawImageDigest;
+		bool isNewDigest = fNewRawImageDigest.IsValid ();
 		
-		try
+		dng_fingerprint &rawDigest = isNewDigest ? fNewRawImageDigest
+												 : fRawImageDigest;
+		
+		// For lossy compressed JPEG images, we need to compare the stored
+		// digest to the digest computed from the compressed data, since
+		// decompressing lossy JPEG data is itself a lossy process.
+		
+		if (RawJPEGImageDigest ().IsValid () || RawJPEGImage ())
 			{
 			
-			fRawImageDigest.Clear ();
+			// Compute the raw JPEG image digest if we have not done so
+			// already.
 			
-			FindRawImageDigest (host);
+			FindRawJPEGImageDigest (host);
+			
+			if (rawDigest != RawJPEGImageDigest ())
+				{
+				
+				#if qDNGValidate
+				
+				ReportError ("RawImageDigest does not match raw jpeg image");
+				
+				#else
+				
+				SetIsDamaged (true);
+				
+				#endif
+				
+				}
 			
 			}
 			
-		catch (...)
+		// Else we can compare the stored digest to the image in memory.
+			
+		else
 			{
-			
-			fRawImageDigest = oldDigest;
-			
-			throw;
-			
-			}
 		
-		if (oldDigest != fRawImageDigest)
-			{
+			dng_fingerprint oldDigest = rawDigest;
 			
-			#if qDNGValidate
-			
-			ReportError ("RawImageDigest does not match raw image");
-			
-			#else
-			
-			// Note that Lightroom 1.4 Windows had a bug that corrupts the
-			// first four bytes of the RawImageDigest tag.  So if the last
-			// twelve bytes match, this is very likely the result of the
-			// bug, and not an actual corrupt file.  So don't report this
-			// to the user--just fix it.
-			
+			try
 				{
-			
-				bool matchLast12 = true;
 				
-				for (uint32 j = 4; j < 16; j++)
+				rawDigest.Clear ();
+				
+				if (isNewDigest)
 					{
-					matchLast12 = matchLast12 && (oldDigest.data [j] == fRawImageDigest.data [j]);
+					
+					FindNewRawImageDigest (host);
+					
 					}
 					
-				if (matchLast12)
+				else
 					{
-					return;
+					
+					FindRawImageDigest (host);
+					
+					}
+				
+				}
+				
+			catch (...)
+				{
+				
+				rawDigest = oldDigest;
+				
+				throw;
+				
+				}
+			
+			if (oldDigest != rawDigest)
+				{
+				
+				#if qDNGValidate
+				
+				if (isNewDigest)
+					{
+					ReportError ("NewRawImageDigest does not match raw image");
+					}
+				else
+					{
+					ReportError ("RawImageDigest does not match raw image");
+					}
+				
+				SetIsDamaged (true);
+				
+				#else
+				
+				if (!isNewDigest)
+					{
+				
+					// Note that Lightroom 1.4 Windows had a bug that corrupts the
+					// first four bytes of the RawImageDigest tag.  So if the last
+					// twelve bytes match, this is very likely the result of the
+					// bug, and not an actual corrupt file.  So don't report this
+					// to the user--just fix it.
+					
+						{
+					
+						bool matchLast12 = true;
+						
+						for (uint32 j = 4; j < 16; j++)
+							{
+							matchLast12 = matchLast12 && (oldDigest.data [j] == fRawImageDigest.data [j]);
+							}
+							
+						if (matchLast12)
+							{
+							return;
+							}
+							
+						}
+						
+					// Sometimes Lightroom 1.4 would corrupt more than the first four
+					// bytes, but for all those files that I have seen so far the
+					// resulting first four bytes are 0x08 0x00 0x00 0x00.
+					
+					if (oldDigest.data [0] == 0x08 &&
+						oldDigest.data [1] == 0x00 &&
+						oldDigest.data [2] == 0x00 &&
+						oldDigest.data [3] == 0x00)
+						{
+						return;
+						}
+						
 					}
 					
+				SetIsDamaged (true);
+				
+				#endif
+				
 				}
 				
-			// Sometimes Lightroom 1.4 would corrupt more than the first four
-			// bytes, but for all those files that I have seen so far the
-			// resulting first four bytes are 0x08 0x00 0x00 0x00.
-			
-			if (oldDigest.data [0] == 0x08 &&
-				oldDigest.data [1] == 0x00 &&
-				oldDigest.data [2] == 0x00 &&
-				oldDigest.data [3] == 0x00)
-				{
-				return;
-				}
-				
-			SetIsDamaged (true);
-			
-			#endif
-			
 			}
 			
 		}
 	
 	}
-							   
+
+/*****************************************************************************/
+
+// Since fRawDataUniqueID is a mutable field that can be modified
+// by const routines, we need to protect with a mutex.
+
+static dng_mutex sRawDataUniqueIDMutex ("sRawDataUniqueIDMutex");
+
+/*****************************************************************************/
+
+dng_fingerprint dng_negative::RawDataUniqueID () const
+    {
+    
+    dng_lock_mutex lock (&sRawDataUniqueIDMutex);
+    
+    return fRawDataUniqueID;
+    
+    }
+
 /*****************************************************************************/
 
 // If the raw data unique ID is missing, compute one based on a MD5 hash of
-// the raw image data and the model name, plus other commonly changed
+// the raw image hash and the model name, plus other commonly changed
 // data that can affect rendering.
 
 void dng_negative::FindRawDataUniqueID (dng_host &host) const
 	{
-	
-	if (fRawDataUniqueID.IsNull ())
+    
+	if (RawDataUniqueID ().IsNull ())
 		{
-		
-		FindRawImageDigest (host);
-		
+        
 		dng_md5_printer_stream printer;
 		
-		printer.SetBigEndian ();
+		// If we have a raw jpeg image, it is much faster to
+		// use its digest as part of the unique ID since
+		// the data size is much smaller.  We cannot use it
+		// if there a transparency mask, since that is not
+		// included in the RawJPEGImageDigest.
 		
-		// Include the raw image digest in the unique ID.
+		if (RawJPEGImage () && !RawTransparencyMask ())
+			{
+			
+			FindRawJPEGImageDigest (host);
+			
+			printer.Put (fRawJPEGImageDigest.data, 16);
+			
+			}
 		
-		printer.Put (fRawImageDigest.data, 16);
+		// Include the new raw image digest in the unique ID.
+		
+		else
+			{
+		
+			FindNewRawImageDigest (host);
+					
+			printer.Put (fNewRawImageDigest.data, 16);
+			
+			}
 		
 		// Include model name.
 					
@@ -1030,6 +2079,20 @@ void dng_negative::FindRawDataUniqueID (dng_host &host) const
 		
 		printer.Put_uint32 (fDefaultCropOriginV.n);
 		printer.Put_uint32 (fDefaultCropOriginV.d);
+
+		// Include default user crop.
+
+		printer.Put_uint32 (fDefaultUserCropT.n);
+		printer.Put_uint32 (fDefaultUserCropT.d);
+		
+		printer.Put_uint32 (fDefaultUserCropL.n);
+		printer.Put_uint32 (fDefaultUserCropL.d);
+		
+		printer.Put_uint32 (fDefaultUserCropB.n);
+		printer.Put_uint32 (fDefaultUserCropB.d);
+		
+		printer.Put_uint32 (fDefaultUserCropR.n);
+		printer.Put_uint32 (fDefaultUserCropR.d);
 		
 		// Include opcode lists, since lens correction utilities can modify
 		// these values and they affect rendering.
@@ -1037,6 +2100,8 @@ void dng_negative::FindRawDataUniqueID (dng_host &host) const
 		fOpcodeList1.FingerprintToStream (printer);
 		fOpcodeList2.FingerprintToStream (printer);
 		fOpcodeList3.FingerprintToStream (printer);
+        
+        dng_lock_mutex lock (&sRawDataUniqueIDMutex);
 		
 		fRawDataUniqueID = printer.Result ();
 	
@@ -1133,19 +2198,18 @@ void dng_negative::ValidateOriginalRawFileDigest ()
 							   
 /******************************************************************************/
 
-dng_rect dng_negative::DefaultCropArea (real64 scaleH,
-				    	  			    real64 scaleV) const
+dng_rect dng_negative::DefaultCropArea () const
 	{
 	
 	// First compute the area using simple rounding.
 		
 	dng_rect result;
 	
-	result.l = Round_int32 (fDefaultCropOriginH.As_real64 () * fRawToFullScaleH * scaleH);
-	result.t = Round_int32 (fDefaultCropOriginV.As_real64 () * fRawToFullScaleV * scaleV);
+	result.l = Round_int32 (fDefaultCropOriginH.As_real64 () * fRawToFullScaleH);
+	result.t = Round_int32 (fDefaultCropOriginV.As_real64 () * fRawToFullScaleV);
 	
-	result.r = result.l + Round_int32 (fDefaultCropSizeH.As_real64 () * fRawToFullScaleH * scaleH);
-	result.b = result.t + Round_int32 (fDefaultCropSizeV.As_real64 () * fRawToFullScaleV * scaleV);
+	result.r = result.l + Round_int32 (fDefaultCropSizeH.As_real64 () * fRawToFullScaleH);
+	result.b = result.t + Round_int32 (fDefaultCropSizeV.As_real64 () * fRawToFullScaleV);
 	
 	// Sometimes the simple rounding causes the resulting default crop
 	// area to slide off the scaled image area.  So we force this not
@@ -1156,26 +2220,45 @@ dng_rect dng_negative::DefaultCropArea (real64 scaleH,
 	if (image)
 		{
 	
-		dng_point scaledSize;
+		dng_point imageSize = image->Size ();
 		
-		scaledSize.h = Round_int32 (image->Width  () * scaleH);
-		scaledSize.v = Round_int32 (image->Height () * scaleV);
-				
-		if (result.r > scaledSize.h)
+		if (result.r > imageSize.h)
 			{
-			result.l -= result.r - scaledSize.h;
-			result.r  = scaledSize.h;
+			result.l -= result.r - imageSize.h;
+			result.r  = imageSize.h;
 			}
 			
-		if (result.b > scaledSize.v)
+		if (result.b > imageSize.v)
 			{
-			result.t -= result.b - scaledSize.v;
-			result.b  = scaledSize.v;
+			result.t -= result.b - imageSize.v;
+			result.b  = imageSize.v;
 			}
 			
 		}
 		
 	return result;
+	
+	}
+
+/*****************************************************************************/
+
+real64 dng_negative::TotalBaselineExposure (const dng_camera_profile_id &profileID) const
+	{
+	
+	real64 total = BaselineExposure ();
+
+	const dng_camera_profile *profile = ProfileByID (profileID);
+	
+	if (profile)
+		{
+
+		real64 offset = profile->BaselineExposureOffset ().As_real64 ();
+
+		total += offset;
+		
+		}
+
+	return total;
 	
 	}
 
@@ -1200,352 +2283,6 @@ void dng_negative::SetShadowScale (const dng_urational &scale)
 	
 	}
 			
-/******************************************************************************/
-
-dng_memory_block * dng_negative::BuildExifBlock (const dng_resolution *resolution,
-												 bool includeIPTC,
-												 bool minimalEXIF,
-												 const dng_jpeg_preview *thumbnail) const
-	{
-	
-	dng_memory_stream stream (Allocator ());
-	
-		{
-	
-		// Create the main IFD
-											 
-		dng_tiff_directory mainIFD;
-		
-		// Optionally include the resolution tags.
-		
-		dng_resolution res;
-		
-		if (resolution)
-			{
-			res = *resolution;
-			}
-	
-		tag_urational tagXResolution (tcXResolution, res.fXResolution);
-		tag_urational tagYResolution (tcYResolution, res.fYResolution);
-		
-		tag_uint16 tagResolutionUnit (tcResolutionUnit, res.fResolutionUnit);
-		
-		if (resolution)
-			{
-			mainIFD.Add (&tagXResolution   );
-			mainIFD.Add (&tagYResolution   );
-			mainIFD.Add (&tagResolutionUnit);
-			}
-
-		// Optionally include IPTC block.
-		
-		tag_iptc tagIPTC (IPTCData   (),
-						  IPTCLength ());
-			
-		if (includeIPTC && tagIPTC.Count ())
-			{
-			
-			mainIFD.Add (&tagIPTC);
-			
-			}
-							
-		// Exif tags.
-		
-		dng_exif exifBlock;
-		
-		if (!minimalEXIF)
-			{
-			exifBlock = *GetExif ();
-			}
-		
-		exif_tag_set exifSet (mainIFD,
-							  exifBlock,
-							  IsMakerNoteSafe () && !minimalEXIF,
-							  MakerNoteData   (),
-							  MakerNoteLength (),
-							  false);
-							  
-		// Figure out the Exif IFD offset.
-		
-		uint32 exifOffset = 8 + mainIFD.Size ();
-		
-		exifSet.Locate (exifOffset);
-		
-		// Thumbnail IFD (if any).
-		
-		dng_tiff_directory thumbIFD;
-		
-		tag_uint16 thumbCompression (tcCompression, ccOldJPEG);
-		
-		tag_urational thumbXResolution (tcXResolution, dng_urational (72, 1));
-		tag_urational thumbYResolution (tcYResolution, dng_urational (72, 1));
-		
-		tag_uint16 thumbResolutionUnit (tcResolutionUnit, ruInch);
-		
-		tag_uint32 thumbDataOffset (tcJPEGInterchangeFormat      , 0);
-		tag_uint32 thumbDataLength (tcJPEGInterchangeFormatLength, 0);
-		
-		if (thumbnail)
-			{
-			
-			thumbIFD.Add (&thumbCompression);
-			
-			thumbIFD.Add (&thumbXResolution);
-			thumbIFD.Add (&thumbYResolution);
-			thumbIFD.Add (&thumbResolutionUnit);
-			
-			thumbIFD.Add (&thumbDataOffset);
-			thumbIFD.Add (&thumbDataLength);
-			
-			thumbDataLength.Set (thumbnail->fCompressedData->LogicalSize ());
-			
-			uint32 thumbOffset = exifOffset + exifSet.Size ();
-			
-			mainIFD.SetChained (thumbOffset);
-			
-			thumbDataOffset.Set (thumbOffset + thumbIFD.Size ());
-			
-			}
-			
-		// Don't write anything unless the main IFD has some tags.
-		
-		if (mainIFD.Size () != 0)
-			{
-					
-			// Write TIFF Header.
-			
-			stream.SetWritePosition (0);
-			
-			stream.Put_uint16 (stream.BigEndian () ? byteOrderMM : byteOrderII);
-			
-			stream.Put_uint16 (42);
-			
-			stream.Put_uint32 (8);
-			
-			// Write the IFDs.
-			
-			mainIFD.Put (stream);
-			
-			exifSet.Put (stream);
-			
-			if (thumbnail)
-				{
-				
-				thumbIFD.Put (stream);
-				
-				stream.Put (thumbnail->fCompressedData->Buffer      (),
-							thumbnail->fCompressedData->LogicalSize ());
-				
-				}
-				
-			// Trim the file to this length.
-			
-			stream.Flush ();
-			
-			stream.SetLength (stream.Position ());
-			
-			}
-		
-		}
-		
-	return stream.AsMemoryBlock (Allocator ());
-		
-	}
-			
-/******************************************************************************/
-
-void dng_negative::SetIPTC (AutoPtr<dng_memory_block> &block, uint64 offset)
-	{
-	
-	fIPTCBlock.Reset (block.Release ());
-	
-	fIPTCOffset = offset;
-	
-	}
-					  
-/******************************************************************************/
-
-void dng_negative::SetIPTC (AutoPtr<dng_memory_block> &block)
-	{
-	
-	SetIPTC (block, kDNGStreamInvalidOffset);
-	
-	}
-					  
-/******************************************************************************/
-
-void dng_negative::ClearIPTC ()
-	{
-	
-	fIPTCBlock.Reset ();
-	
-	fIPTCOffset = kDNGStreamInvalidOffset;
-	
-	}
-					  
-/*****************************************************************************/
-
-const void * dng_negative::IPTCData () const
-	{
-	
-	if (fIPTCBlock.Get ())
-		{
-		
-		return fIPTCBlock->Buffer ();
-		
-		}
-		
-	return NULL;
-	
-	}
-
-/*****************************************************************************/
-
-uint32 dng_negative::IPTCLength () const
-	{
-	
-	if (fIPTCBlock.Get ())
-		{
-		
-		return fIPTCBlock->LogicalSize ();
-		
-		}
-		
-	return 0;
-	
-	}
-		
-/*****************************************************************************/
-
-uint64 dng_negative::IPTCOffset () const
-	{
-	
-	if (fIPTCBlock.Get ())
-		{
-		
-		return fIPTCOffset;
-		
-		}
-		
-	return kDNGStreamInvalidOffset;
-	
-	}
-		
-/*****************************************************************************/
-
-dng_fingerprint dng_negative::IPTCDigest (bool includePadding) const
-	{
-	
-	if (IPTCLength ())
-		{
-		
-		dng_md5_printer printer;
-		
-		const uint8 *data = (const uint8 *) IPTCData ();
-		
-		uint32 count = IPTCLength ();
-		
-		// Because of some stupid ways of storing the IPTC data, the IPTC
-		// data might be padded with up to three zeros.  The official Adobe
-		// logic is to include these zeros in the digest.  However, older
-		// versions of the Camera Raw code did not include the padding zeros
-		// in the digest, so we support both methods and allow either to
-		// match.
-		
-		if (!includePadding)
-			{
-		
-			uint32 removed = 0;
-			
-			while ((removed < 3) && (count > 0) && (data [count - 1] == 0))
-				{
-				removed++;
-				count--;
-				}
-				
-			}
-		
-		printer.Process (data, count);
-						 
-		return printer.Result ();
-			
-		}
-	
-	return dng_fingerprint ();
-	
-	}
-		
-/******************************************************************************/
-
-void dng_negative::RebuildIPTC (bool padForTIFF,
-								bool forceUTF8)
-	{
-	
-	ClearIPTC ();
-	
-	fXMP->RebuildIPTC (*this, padForTIFF, forceUTF8);
-	
-	dng_fingerprint digest = IPTCDigest ();
-	
-	fXMP->SetIPTCDigest (digest);
-	
-	}
-			  
-/*****************************************************************************/
-
-bool dng_negative::SetXMP (dng_host &host,
-						   const void *buffer,
-					 	   uint32 count,
-					 	   bool xmpInSidecar,
-					 	   bool xmpIsNewer)
-	{
-	
-	bool result = false;
-	
-	try
-		{
-		
-		AutoPtr<dng_xmp> tempXMP (MakeXMP ());
-		
-		tempXMP->Parse (host, buffer, count);
-		
-		fXMP.Reset (tempXMP.Release ());
-		
-		fXMPinSidecar = xmpInSidecar;
-		
-		fXMPisNewer = xmpIsNewer;
-		
-		result = true;
-		
-		}
-		
-	catch (dng_exception &except)
-		{
-		
-		// Don't ignore transient errors.
-		
-		if (host.IsTransientError (except.ErrorCode ()))
-			{
-			
-			throw;
-			
-			}
-			
-		// Eat other parsing errors.
-		
-		}
-		
-	catch (...)
-		{
-		
-		// Eat unknown parsing exceptions.
-		
-		}
-	
-	return result;
-	
-	}
-		
 /******************************************************************************/
 
 void dng_negative::SetActiveArea (const dng_rect &area)
@@ -1636,7 +2373,8 @@ void dng_negative::SetBlackLevel (real64 black,
 void dng_negative::SetQuadBlacks (real64 black0,
 						    	  real64 black1,
 						    	  real64 black2,
-						    	  real64 black3)
+						    	  real64 black3,
+								  int32 plane)
 	{
 	
 	NeedLinearizationInfo ();
@@ -1645,14 +2383,29 @@ void dng_negative::SetQuadBlacks (real64 black0,
 								    
 	info.fBlackLevelRepeatRows = 2;
 	info.fBlackLevelRepeatCols = 2;
+
+	if (plane < 0)
+		{
 	
-	for (uint32 j = 0; j < kMaxSamplesPerPixel; j++)
+		for (uint32 j = 0; j < kMaxSamplesPerPixel; j++)
+			{
+
+			info.fBlackLevel [0] [0] [j] = black0;
+			info.fBlackLevel [0] [1] [j] = black1;
+			info.fBlackLevel [1] [0] [j] = black2;
+			info.fBlackLevel [1] [1] [j] = black3;
+
+			}
+
+		}
+
+	else
 		{
 		
-		info.fBlackLevel [0] [0] [j] = black0;
-		info.fBlackLevel [0] [1] [j] = black1;
-		info.fBlackLevel [1] [0] [j] = black2;
-		info.fBlackLevel [1] [1] [j] = black3;
+		info.fBlackLevel [0] [0] [plane] = black0;
+		info.fBlackLevel [0] [1] [plane] = black1;
+		info.fBlackLevel [1] [0] [plane] = black2;
+		info.fBlackLevel [1] [1] [plane] = black3;
 		
 		}
 		
@@ -1673,13 +2426,14 @@ void dng_negative::SetRowBlacks (const real64 *blacks,
 		
 		dng_linearization_info &info = *fLinearizationInfo.Get ();
 		
-		uint32 byteCount = count * sizeof (real64);
-									    
-		info.fBlackDeltaV.Reset (Allocator ().Allocate (byteCount));
+		dng_safe_uint32 byteCount = 
+			dng_safe_uint32 (count) * (uint32) sizeof (real64);
+		
+		info.fBlackDeltaV.Reset (Allocator ().Allocate (byteCount.Get ()));
 		
 		DoCopyBytes (blacks,
 					 info.fBlackDeltaV->Buffer (),
-					 byteCount);
+					 byteCount.Get ());
 		
 		info.RoundBlacks ();
 		
@@ -1709,13 +2463,14 @@ void dng_negative::SetColumnBlacks (const real64 *blacks,
 		
 		dng_linearization_info &info = *fLinearizationInfo.Get ();
 		
-		uint32 byteCount = count * sizeof (real64);
-									    
-		info.fBlackDeltaH.Reset (Allocator ().Allocate (byteCount));
+		dng_safe_uint32 byteCount = 
+			dng_safe_uint32 (count) * (uint32) sizeof (real64);
+		
+		info.fBlackDeltaH.Reset (Allocator ().Allocate (byteCount.Get ()));
 		
 		DoCopyBytes (blacks,
 					 info.fBlackDeltaH->Buffer (),
-					 byteCount);
+					 byteCount.Get ());
 		
 		info.RoundBlacks ();
 		
@@ -1744,6 +2499,13 @@ uint32 dng_negative::WhiteLevel (uint32 plane) const
 									    
 		return Round_uint32 (info.fWhiteLevel [plane]);
 									    
+		}
+		
+	if (RawImage ().PixelType () == ttFloat)
+		{
+		
+		return 1;
+		
 		}
 		
 	return 0x0FFFF;
@@ -1914,6 +2676,103 @@ void dng_negative::SetFujiMosaic (uint32 phase)
 			
 	}
 
+/*****************************************************************************/
+
+void dng_negative::SetFujiMosaic6x6 (uint32 phase)
+	{
+	
+	NeedMosaicInfo ();
+	
+	dng_mosaic_info &info = *fMosaicInfo.Get ();
+	
+	ColorKeyCode color0 = (ColorKeyCode) info.fCFAPlaneColor [0];
+	ColorKeyCode color1 = (ColorKeyCode) info.fCFAPlaneColor [1];
+	ColorKeyCode color2 = (ColorKeyCode) info.fCFAPlaneColor [2];
+
+	const uint32 patSize = 6;
+	
+	info.fCFAPatternSize = dng_point (patSize, patSize);
+
+	info.fCFAPattern [0] [0] = color1;
+	info.fCFAPattern [0] [1] = color2;
+	info.fCFAPattern [0] [2] = color1;
+	info.fCFAPattern [0] [3] = color1;
+	info.fCFAPattern [0] [4] = color0;
+	info.fCFAPattern [0] [5] = color1;
+
+	info.fCFAPattern [1] [0] = color0;
+	info.fCFAPattern [1] [1] = color1;
+	info.fCFAPattern [1] [2] = color0;
+	info.fCFAPattern [1] [3] = color2;
+	info.fCFAPattern [1] [4] = color1;
+	info.fCFAPattern [1] [5] = color2;
+
+	info.fCFAPattern [2] [0] = color1;
+	info.fCFAPattern [2] [1] = color2;
+	info.fCFAPattern [2] [2] = color1;
+	info.fCFAPattern [2] [3] = color1;
+	info.fCFAPattern [2] [4] = color0;
+	info.fCFAPattern [2] [5] = color1;
+
+	info.fCFAPattern [3] [0] = color1;
+	info.fCFAPattern [3] [1] = color0;
+	info.fCFAPattern [3] [2] = color1;
+	info.fCFAPattern [3] [3] = color1;
+	info.fCFAPattern [3] [4] = color2;
+	info.fCFAPattern [3] [5] = color1;
+
+	info.fCFAPattern [4] [0] = color2;
+	info.fCFAPattern [4] [1] = color1;
+	info.fCFAPattern [4] [2] = color2;
+	info.fCFAPattern [4] [3] = color0;
+	info.fCFAPattern [4] [4] = color1;
+	info.fCFAPattern [4] [5] = color0;
+
+	info.fCFAPattern [5] [0] = color1;
+	info.fCFAPattern [5] [1] = color0;
+	info.fCFAPattern [5] [2] = color1;
+	info.fCFAPattern [5] [3] = color1;
+	info.fCFAPattern [5] [4] = color2;
+	info.fCFAPattern [5] [5] = color1;
+
+	DNG_REQUIRE (phase >= 0 && phase < patSize * patSize,
+				 "Bad phase in SetFujiMosaic6x6.");
+
+	if (phase > 0)
+		{
+		
+		dng_mosaic_info temp = info;
+
+		uint32 phaseRow = phase / patSize;
+
+		uint32 phaseCol = phase - (phaseRow * patSize);
+
+		for (uint32 dstRow = 0; dstRow < patSize; dstRow++)
+			{
+			
+			uint32 srcRow = (dstRow + phaseRow) % patSize;
+			
+			for (uint32 dstCol = 0; dstCol < patSize; dstCol++)
+				{
+
+				uint32 srcCol = (dstCol + phaseCol) % patSize;
+			
+				temp.fCFAPattern [dstRow] [dstCol] = info.fCFAPattern [srcRow] [srcCol];
+
+				}
+			
+			}
+
+		info = temp;
+		
+		}
+		
+	info.fColorPlanes = 3;
+	
+	info.fCFALayout = 1;
+			
+	}
+
 /******************************************************************************/
 
 void dng_negative::SetQuadMosaic (uint32 pattern)
@@ -2042,7 +2901,7 @@ void dng_negative::Parse (dng_host &host,
 	
 	// Find IFD holding the main raw information.
 	
-	dng_ifd &rawIFD = *info.fIFD [info.fMainIndex].Get ();
+	dng_ifd &rawIFD = *info.fIFD [info.fMainIndex];
 	
 	// Model name.
 	
@@ -2074,6 +2933,13 @@ void dng_negative::Parse (dng_host &host,
 
 	SetDefaultCropOrigin (rawIFD.fDefaultCropOriginH,
 						  rawIFD.fDefaultCropOriginV);
+
+	// Default user crop rectangle.
+
+	SetDefaultUserCrop (rawIFD.fDefaultUserCropT,
+						rawIFD.fDefaultUserCropL,
+						rawIFD.fDefaultUserCropB,
+						rawIFD.fDefaultUserCropR);
 						        
 	// Default scale.
 		
@@ -2123,7 +2989,11 @@ void dng_negative::Parse (dng_host &host,
 	// Colorimetric reference.
 	
 	SetColorimetricReference (shared.fColorimetricReference);
-	
+
+    // Floating point flag.
+
+    SetFloatingPoint (rawIFD.fSampleFormat [0] == sfFloatingPoint);
+
 	// Color channels.
 		
 	SetColorChannels (shared.fCameraProfile.fColorPlanes);
@@ -2267,6 +3137,15 @@ void dng_negative::Parse (dng_host &host,
 		
 		}
 			
+	// New raw image data digest.
+	
+	if (shared.fNewRawImageDigest.IsValid ())
+		{
+		
+		SetNewRawImageDigest (shared.fNewRawImageDigest);
+		
+		}
+			
 	// Raw data unique ID.
 	
 	if (shared.fRawDataUniqueID.IsValid ())
@@ -2332,7 +3211,7 @@ void dng_negative::Parse (dng_host &host,
 		
 	// Hand off EXIF metadata to negative.
 	
-	fExif.Reset (info.fExif.Release ());
+	ResetExif (info.fExif.Release ());
 	
 	// Parse linearization info.
 	
@@ -2355,6 +3234,86 @@ void dng_negative::Parse (dng_host &host,
 							  
 		}
 						  
+	// Fill in original sizes.
+	
+	if (shared.fOriginalDefaultFinalSize.h > 0 &&
+		shared.fOriginalDefaultFinalSize.v > 0)
+		{
+		
+		SetOriginalDefaultFinalSize (shared.fOriginalDefaultFinalSize);
+		
+		SetOriginalBestQualityFinalSize (shared.fOriginalDefaultFinalSize);
+		
+		SetOriginalDefaultCropSize (dng_urational (shared.fOriginalDefaultFinalSize.h, 1),
+									dng_urational (shared.fOriginalDefaultFinalSize.v, 1));
+		
+		}
+		
+	if (shared.fOriginalBestQualityFinalSize.h > 0 &&
+		shared.fOriginalBestQualityFinalSize.v > 0)
+		{
+		
+		SetOriginalBestQualityFinalSize (shared.fOriginalBestQualityFinalSize);
+		
+		}
+		
+	if (shared.fOriginalDefaultCropSizeH.As_real64 () >= 1.0 &&
+		shared.fOriginalDefaultCropSizeV.As_real64 () >= 1.0)
+		{
+		
+		SetOriginalDefaultCropSize (shared.fOriginalDefaultCropSizeH,
+									shared.fOriginalDefaultCropSizeV);
+		
+		}
+		
+	}
+
+/*****************************************************************************/
+
+void dng_negative::SetDefaultOriginalSizes ()
+	{
+	
+	// Fill in original sizes if we don't have them already.
+	
+	if (OriginalDefaultFinalSize () == dng_point ())
+		{
+		
+		SetOriginalDefaultFinalSize (dng_point (DefaultFinalHeight (),
+												DefaultFinalWidth  ()));
+		
+		}
+		
+	if (OriginalBestQualityFinalSize () == dng_point ())
+		{
+		
+		SetOriginalBestQualityFinalSize (dng_point (BestQualityFinalHeight (),
+													BestQualityFinalWidth  ()));
+		
+		}
+		
+	if (OriginalDefaultCropSizeH ().NotValid () ||
+		OriginalDefaultCropSizeV ().NotValid ())
+		{
+		
+		SetOriginalDefaultCropSize (DefaultCropSizeH (),
+									DefaultCropSizeV ());
+		
+		}
+
+	}
+
+/*****************************************************************************/
+
+void dng_negative::SetOriginalSizes (const dng_point &size)
+	{
+    
+    SetOriginalDefaultFinalSize (size);
+    
+    SetOriginalBestQualityFinalSize (size);
+    
+    SetOriginalDefaultCropSize (dng_urational (size.h, 1),
+                                dng_urational (size.v, 1));
+	
 	}
 
 /*****************************************************************************/
@@ -2371,6 +3330,10 @@ void dng_negative::PostParse (dng_host &host,
 	if (host.NeedsMeta ())
 		{
 		
+		// Fill in original sizes if we don't have them already.
+		
+		SetDefaultOriginalSizes ();
+				
 		// MakerNote.
 		
 		if (shared.fMakerNoteCount)
@@ -2427,13 +3390,13 @@ void dng_negative::PostParse (dng_host &host,
 			stream.Get (block->Buffer      (),
 						block->LogicalSize ());
 						
-			fValidEmbeddedXMP = SetXMP (host,
-										block->Buffer      (),
-										block->LogicalSize ());
+			Metadata ().SetEmbeddedXMP (host,
+									    block->Buffer      (),
+									    block->LogicalSize ());
 										
 			#if qDNGValidate
 			
-			if (!fValidEmbeddedXMP)
+			if (!Metadata ().HaveValidEmbeddedXMP ())
 				{
 				ReportError ("The embedded XMP is invalid");
 				}
@@ -2489,52 +3452,6 @@ void dng_negative::PostParse (dng_host &host,
 		
 	}
 							
-/*****************************************************************************/
-
-void dng_negative::SynchronizeMetadata ()
-	{
-	
-	if (!fOriginalExif.Get ())
-		{
-		
-		fOriginalExif.Reset (fExif->Clone ());
-		
-		}
-		
-	fXMP->ValidateMetadata ();
-	
-	fXMP->IngestIPTC (*this, fXMPisNewer);
-	
-	fXMP->SyncExif (*fExif.Get ());
-	
-	fXMP->SyncOrientation (*this, fXMPinSidecar);
-	
-	}
-					
-/*****************************************************************************/
-
-void dng_negative::UpdateDateTime (const dng_date_time_info &dt)
-	{
-	
-	fExif->UpdateDateTime (dt);
-	
-	fXMP->UpdateDateTime (dt);
-	
-	}
-					
-/*****************************************************************************/
-
-void dng_negative::UpdateDateTimeToNow ()
-	{
-	
-	dng_date_time_info dt;
-	
-	CurrentDateTimeAndZone (dt);
-	
-	UpdateDateTime (dt);
-	
-	}
-					
 /*****************************************************************************/
 
 bool dng_negative::SetFourColorBayer ()
@@ -2602,13 +3519,77 @@ const dng_image & dng_negative::RawImage () const
 		return *fStage1Image.Get ();
 		}
 		
-	DNG_ASSERT (fStage3Image.Get (),
+	if (fUnflattenedStage3Image.Get ())
+		{
+		return *fUnflattenedStage3Image.Get ();
+		}
+		
+	DNG_REQUIRE (fStage3Image.Get (),
 				"dng_negative::RawImage with no raw image");
 		    
 	return *fStage3Image.Get ();
 	
 	}
+
+/*****************************************************************************/
+
+const dng_jpeg_image * dng_negative::RawJPEGImage () const
+	{
+
+	return fRawJPEGImage.Get ();
+
+	}
+
+/*****************************************************************************/
+
+void dng_negative::SetRawJPEGImage (AutoPtr<dng_jpeg_image> &jpegImage)
+	{
+
+	fRawJPEGImage.Reset (jpegImage.Release ());
+
+	}
+
+/*****************************************************************************/
+
+void dng_negative::ClearRawJPEGImage ()
+	{
+	
+	fRawJPEGImage.Reset ();
+
+	}
+
+/*****************************************************************************/
+
+void dng_negative::FindRawJPEGImageDigest (dng_host &host) const
+	{
+	
+	if (fRawJPEGImageDigest.IsNull ())
+		{
+		
+		if (fRawJPEGImage.Get ())
+			{
 			
+			#if qDNGValidate
+			
+			dng_timer timer ("FindRawJPEGImageDigest time");
+			 
+			#endif
+			
+			fRawJPEGImageDigest = fRawJPEGImage->FindDigest (host);
+			
+			}
+			
+		else
+			{
+			
+			ThrowProgramError ("No raw JPEG image");
+			
+			}
+		
+		}
+	
+	}
+		
 /*****************************************************************************/
 
 void dng_negative::ReadStage1Image (dng_host &host,
@@ -2616,15 +3597,73 @@ void dng_negative::ReadStage1Image (dng_host &host,
 									dng_info &info)
 	{
 	
-	dng_ifd &rawIFD = *info.fIFD [info.fMainIndex].Get ();
+	// Allocate image we are reading.
+	
+	dng_ifd &rawIFD = *info.fIFD [info.fMainIndex];
 	
 	fStage1Image.Reset (host.Make_dng_image (rawIFD.Bounds (),
 											 rawIFD.fSamplesPerPixel,
 											 rawIFD.PixelType ()));
 					
+	// See if we should grab the compressed JPEG data.
+	
+	AutoPtr<dng_jpeg_image> jpegImage;
+	
+	if (host.SaveDNGVersion () >= dngVersion_1_4_0_0 &&
+		!host.PreferredSize () &&
+		!host.ForPreview () &&
+		rawIFD.fCompression == ccLossyJPEG)
+		{
+		
+		jpegImage.Reset (new dng_jpeg_image);
+		
+		}
+		
+	// See if we need to compute the digest of the compressed JPEG data
+	// while reading.
+	
+	bool needJPEGDigest = (RawImageDigest    ().IsValid () ||
+						   NewRawImageDigest ().IsValid ()) &&
+						  rawIFD.fCompression == ccLossyJPEG &&
+						  jpegImage.Get () == NULL;
+	
+	dng_fingerprint jpegDigest;
+	
+	// Read the image.
+	
 	rawIFD.ReadImage (host,
 					  stream,
-					  *fStage1Image.Get ());
+					  *fStage1Image.Get (),
+					  jpegImage.Get (),
+					  needJPEGDigest ? &jpegDigest : NULL);
+					  
+	// Remember the raw floating point bit depth, if reading from
+	// a floating point image.
+	
+	if (fStage1Image->PixelType () == ttFloat)
+		{
+		
+		SetRawFloatBitDepth (rawIFD.fBitsPerSample [0]);
+		
+		}
+					  
+	// Remember the compressed JPEG data if we read it.
+	
+	if (jpegImage.Get ())
+		{
+				
+		SetRawJPEGImage (jpegImage);
+				
+		}
+		
+	// Remember the compressed JPEG digest if we computed it.
+	
+	if (jpegDigest.IsValid ())
+		{
+		
+		SetRawJPEGImageDigest (jpegDigest);
+		
+		}
 					  
 	// We are are reading the main image, we should read the opcode lists
 	// also.
@@ -2712,18 +3751,29 @@ void dng_negative::SetStage3Image (AutoPtr<dng_image> &image)
 	{
 	
 	fStage3Image.Reset (image.Release ());
+
+    SetFloatingPoint (fStage3Image->PixelType () == ttFloat);
 	
 	}
 
 /*****************************************************************************/
 
-void dng_negative::DoBuildStage2 (dng_host &host,
-								  uint32 pixelType)
+void dng_negative::DoBuildStage2 (dng_host &host)
 	{
 	
 	dng_image &stage1 = *fStage1Image.Get ();
 		
 	dng_linearization_info &info = *fLinearizationInfo.Get ();
+	
+	uint32 pixelType = ttShort;
+	
+	if (stage1.PixelType () == ttLong ||
+		stage1.PixelType () == ttFloat)
+		{
+		
+		pixelType = ttFloat;
+		
+		}
 	
 	fStage2Image.Reset (host.Make_dng_image (info.fActiveArea.Size (),
 											 stage1.Planes (),
@@ -2734,11 +3784,51 @@ void dng_negative::DoBuildStage2 (dng_host &host,
 					*fStage2Image.Get ());
 							 
 	}
-									   
+		
 /*****************************************************************************/
 
-void dng_negative::BuildStage2Image (dng_host &host,
-									 uint32 pixelType)
+void dng_negative::DoPostOpcodeList2 (dng_host & /* host */)
+	{
+	
+	// Nothing by default.
+	
+	}
+
+/*****************************************************************************/
+
+bool dng_negative::NeedDefloatStage2 (dng_host &host)
+	{
+	
+	if (fStage2Image->PixelType () == ttFloat)
+		{
+		
+		if (fRawImageStage >= rawImageStagePostOpcode2 &&
+			host.SaveDNGVersion () != dngVersion_None  &&
+			host.SaveDNGVersion () <  dngVersion_1_4_0_0)
+			{
+			
+			return true;
+			
+			}
+		
+		}
+	
+	return false;
+	
+	}
+		
+/*****************************************************************************/
+
+void dng_negative::DefloatStage2 (dng_host & /* host */)
+	{
+	
+	ThrowNotYetImplemented ("dng_negative::DefloatStage2");
+	
+	}
+		
+/*****************************************************************************/
+
+void dng_negative::BuildStage2Image (dng_host &host)
 	{
 	
 	// If reading the negative to save in DNG format, figure out
@@ -2747,11 +3837,28 @@ void dng_negative::BuildStage2Image (dng_host &host,
 	if (host.SaveDNGVersion () != dngVersion_None)
 		{
 		
-		if (fOpcodeList3.MinVersion (false) > host.SaveDNGVersion () ||
-			fOpcodeList3.AlwaysApply ())
+		// Transparency masks are only supported in DNG version 1.4 and
+		// later.  In this case, the flattening of the transparency mask happens
+		// on the the stage3 image.  
+		
+		if (TransparencyMask () && host.SaveDNGVersion () < dngVersion_1_4_0_0)
 			{
 			fRawImageStage = rawImageStagePostOpcode3;
 			}
+		
+		else if (fOpcodeList3.MinVersion (false) > host.SaveDNGVersion () ||
+			     fOpcodeList3.AlwaysApply ())
+			{
+			fRawImageStage = rawImageStagePostOpcode3;
+			}
+            
+        // If we are not doing a full resolution read, then always save the DNG
+        // from the processed stage 3 image.
+        
+        else if (host.PreferredSize ())
+            {
+			fRawImageStage = rawImageStagePostOpcode3;
+            }
 			
 		else if (host.SaveLinearDNG (*this))
 			{
@@ -2788,7 +3895,29 @@ void dng_negative::BuildStage2Image (dng_host &host,
 			{
 			fRawImageStage = rawImageStagePreOpcode1;
 			}
+			
+		// We should not save floating point stage1 images unless the target
+		// DNG version is high enough to understand floating point images. 
+		// We handle this by converting from floating point to integer if 
+		// required after building stage2 image.
+		
+		if (fStage1Image->PixelType () == ttFloat)
+			{
+			
+			if (fRawImageStage < rawImageStagePostOpcode2)
+				{
+				
+				if (host.SaveDNGVersion () < dngVersion_1_4_0_0)
+					{
 					
+					fRawImageStage = rawImageStagePostOpcode2;
+					
+					}
+					
+				}
+				
+			}
+			
 		}
 		
 	// Grab clone of raw image if required.
@@ -2798,8 +3927,13 @@ void dng_negative::BuildStage2Image (dng_host &host,
 		
 		fRawImage.Reset (fStage1Image->Clone ());
 		
-		}
+		if (fTransparencyMask.Get ())
+			{
+			fRawTransparencyMask.Reset (fTransparencyMask->Clone ());
+			}
 		
+		}
+
 	else
 		{
 		
@@ -2807,6 +3941,19 @@ void dng_negative::BuildStage2Image (dng_host &host,
 		// to recompute the raw image digest.
 		
 		ClearRawImageDigest ();
+		
+		// If we don't grab the unprocessed stage 1 image, then
+		// the raw JPEG image is no longer valid.
+		
+		ClearRawJPEGImage ();
+		
+		// Nor is the digest of the raw JPEG data.
+		
+		ClearRawJPEGImageDigest ();
+		
+		// We also don't know the raw floating point bit depth.
+		
+		SetRawFloatBitDepth (0);
 		
 		}
 		
@@ -2830,6 +3977,11 @@ void dng_negative::BuildStage2Image (dng_host &host,
 		
 		fRawImage.Reset (fStage1Image->Clone ());
 		
+		if (fTransparencyMask.Get ())
+			{
+			fRawTransparencyMask.Reset (fTransparencyMask->Clone ());
+			}
+		
 		}
 
 	// Finalize linearization info.
@@ -2843,12 +3995,11 @@ void dng_negative::BuildStage2Image (dng_host &host,
 		info.PostParse (host, *this);
 		
 		}
-	
+		
 	// Perform the linearization.
 	
-	DoBuildStage2 (host,
-			       pixelType);
-	
+	DoBuildStage2 (host);
+		
 	// Delete the stage1 image now that we have computed the stage 2 image.
 	
 	fStage1Image.Reset ();
@@ -2875,12 +4026,30 @@ void dng_negative::BuildStage2Image (dng_host &host,
 		
 		}
 		
+	// Hook for any required processing just after opcode list 2.
+	
+	DoPostOpcodeList2 (host);
+		
+	// Convert from floating point to integer if required.
+	
+	if (NeedDefloatStage2 (host))
+		{
+		
+		DefloatStage2 (host);
+		
+		}
+		
 	// Grab clone of raw image if required.
 	
 	if (fRawImageStage == rawImageStagePostOpcode2)
 		{
 		
 		fRawImage.Reset (fStage2Image->Clone ());
+		
+		if (fTransparencyMask.Get ())
+			{
+			fRawTransparencyMask.Reset (fTransparencyMask->Clone ());
+			}
 		
 		}
 	
@@ -2889,7 +4058,8 @@ void dng_negative::BuildStage2Image (dng_host &host,
 /*****************************************************************************/
 
 void dng_negative::DoInterpolateStage3 (dng_host &host,
-								        int32 srcPlane)
+								        int32 srcPlane,
+                                        dng_matrix *scaleTransforms)
 	{
 	
 	dng_image &stage2 = *fStage2Image.Get ();
@@ -2921,7 +4091,8 @@ void dng_negative::DoInterpolateStage3 (dng_host &host,
 					  stage2,
 					  *fStage3Image.Get (),
 					  downScale,
-					  srcPlane);
+					  srcPlane,
+                      scaleTransforms);
 
 	}
 									   
@@ -2929,13 +4100,14 @@ void dng_negative::DoInterpolateStage3 (dng_host &host,
 
 // Interpolate and merge a multi-channel CFA image.
 
-void dng_negative::DoMergeStage3 (dng_host &host)
+void dng_negative::DoMergeStage3 (dng_host &host,
+                                  dng_matrix *scaleTransforms)
 	{
 	
 	// The DNG SDK does not provide multi-channel CFA image merging code.
 	// It just grabs the first channel and uses that.
 	
-	DoInterpolateStage3 (host, 0);
+	DoInterpolateStage3 (host, 0, scaleTransforms);
 				   
 	// Just grabbing the first channel would often result in the very
 	// bright image using the baseline exposure value.
@@ -2947,7 +4119,8 @@ void dng_negative::DoMergeStage3 (dng_host &host)
 /*****************************************************************************/
 
 void dng_negative::DoBuildStage3 (dng_host &host,
-								  int32 srcPlane)
+								  int32 srcPlane,
+                                  dng_matrix *scaleTransforms)
 	{
 	
 	// If we don't have a mosaic pattern, then just move the stage 2
@@ -2974,7 +4147,8 @@ void dng_negative::DoBuildStage3 (dng_host &host,
 		if ((fStage2Image->Planes () > 1) && (srcPlane < 0))
 			{
 			
-			DoMergeStage3 (host);
+			DoMergeStage3 (host,
+                           scaleTransforms);
 			
 			}
 			
@@ -2983,7 +4157,9 @@ void dng_negative::DoBuildStage3 (dng_host &host,
 		else
 			{
 				
-			DoInterpolateStage3 (host, srcPlane);
+			DoInterpolateStage3 (host,
+                                 srcPlane,
+                                 scaleTransforms);
 						   
 			}
 		
@@ -3017,7 +4193,7 @@ void dng_negative::BuildStage3Image (dng_host &host,
 		
 	// Do the interpolation as required.
 	
-	DoBuildStage3 (host, srcPlane);
+	DoBuildStage3 (host, srcPlane, NULL);
 	
 	// Delete the stage2 image now that we have computed the stage 3 image.
 	
@@ -3061,6 +4237,10 @@ void dng_negative::BuildStage3Image (dng_host &host,
 
 		}
 		
+	// Resample the transparency mask if required.
+	
+	ResizeTransparencyToMatchStage3 (host);
+			
 	// Grab clone of raw image if required.
 	
 	if (fRawImageStage == rawImageStagePreOpcode3)
@@ -3068,6 +4248,11 @@ void dng_negative::BuildStage3Image (dng_host &host,
 		
 		fRawImage.Reset (fStage3Image->Clone ());
 		
+		if (fTransparencyMask.Get ())
+			{
+			fRawTransparencyMask.Reset (fTransparencyMask->Clone ());
+			}
+
 		}
 		
 	// Process opcode list 3.
@@ -3082,44 +4267,662 @@ void dng_negative::BuildStage3Image (dng_host &host,
 		fOpcodeList3.Clear ();
 		
 		}
+		
+	// Just in case the opcode list 3 changed the image size, resample the
+	// transparency mask again if required.  This is nearly always going
+	// to be a fast NOP operation.
+	
+	ResizeTransparencyToMatchStage3 (host);
+
+    // Update Floating Point flag.
+ 
+    SetFloatingPoint (fStage3Image->PixelType () == ttFloat);
 	
 	// Don't need to grab a copy of raw data at this stage since
-	// it is kept around as the stage 3 image. 
+	// it is kept around as the stage 3 image.
 	
 	}
 		
-/*****************************************************************************/
+/******************************************************************************/
 
-dng_exif * dng_negative::MakeExif ()
+class dng_gamma_encode_proxy : public dng_1d_function
 	{
 	
-	dng_exif *exif = new dng_exif ();
+	private:
 	
-	if (!exif)
-		{
-		ThrowMemoryFull ();
-		}
+		real64 fBlack;
+		real64 fWhite;
 		
-	return exif;
+		bool fIsSceneReferred;
+		
+		real64 scale;
+		real64 t1;
+		
+	public:
+		
+		dng_gamma_encode_proxy (real64 black,
+							    real64 white,
+							    bool isSceneReferred)
+							   
+			:	fBlack (black)
+			,	fWhite (white)
+			,	fIsSceneReferred (isSceneReferred)
+			
+			,	scale (1.0 / (fWhite - fBlack))
+			,	t1 (1.0 / (27.0 * pow (5.0, 3.0 / 2.0)))
+			
+			{
+			}
+			
+		virtual real64 Evaluate (real64 x) const
+			{
+			
+			x = Pin_real64 (0.0, (x - fBlack) * scale, 1.0);
+			
+			real64 y;
+			
+			if (fIsSceneReferred)
+				{
+			
+				real64 t = pow (sqrt (25920.0 * x * x + 1.0) * t1 + x * (8.0 / 15.0), 1.0 / 3.0);
+				
+				y = t - 1.0 / (45.0 * t);
+				
+				DNG_ASSERT (Abs_real64 (x - (y / 16.0 + y * y * y * 15.0 / 16.0)) < 0.0000001,
+							"Round trip error");
+							
+				}
+				
+			else
+				{
+				
+				y = (sqrt (960.0 * x + 1.0) - 1.0) / 30.0;
+				
+				DNG_ASSERT (Abs_real64 (x - (y / 16.0 + y * y * (15.0 / 16.0))) < 0.0000001,
+							"Round trip error");
+							
+				}
+				
+			return y;
+			
+			}
 	
-	}
-		
+	};
+
 /*****************************************************************************/
 
-dng_xmp * dng_negative::MakeXMP ()
+class dng_encode_proxy_task: public dng_area_task,
+							 private dng_uncopyable
 	{
 	
-	dng_xmp *xmp = new dng_xmp (Allocator ());
+	private:
 	
-	if (!xmp)
+		const dng_image &fSrcImage;
+		
+		dng_image &fDstImage;
+		
+		AutoPtr<dng_memory_block> fTable16 [kMaxColorPlanes];
+			
+	public:
+	
+		dng_encode_proxy_task (dng_host &host,
+							   const dng_image &srcImage,
+							   dng_image &dstImage,
+							   const real64 *black,
+							   const real64 *white,
+							   bool isSceneReferred);
+							 
+		virtual dng_rect RepeatingTile1 () const
+			{
+			return fSrcImage.RepeatingTile ();
+			}
+			
+		virtual dng_rect RepeatingTile2 () const
+			{
+			return fDstImage.RepeatingTile ();
+			}
+			
+		virtual void Process (uint32 threadIndex,
+							  const dng_rect &tile,
+							  dng_abort_sniffer *sniffer);
+								  
+	};
+
+/*****************************************************************************/
+
+dng_encode_proxy_task::dng_encode_proxy_task (dng_host &host,
+											  const dng_image &srcImage,
+										      dng_image &dstImage,
+										      const real64 *black,
+										      const real64 *white,
+										      bool isSceneReferred)
+
+	:	dng_area_task ("dng_encode_proxy_task")
+										
+	,	fSrcImage (srcImage)
+	,	fDstImage (dstImage)
+	
+	{
+	
+	for (uint32 plane = 0; plane < fSrcImage.Planes (); plane++)
 		{
-		ThrowMemoryFull ();
+		
+		dng_gamma_encode_proxy gamma (black [plane],
+									  white [plane],
+									  isSceneReferred);
+									  
+		dng_1d_table table32;
+		
+		table32.Initialize (host.Allocator (), gamma);
+		
+		fTable16 [plane] . Reset (host.Allocate (0x10000 * sizeof (uint16)));
+		
+		table32.Expand16 (fTable16 [plane]->Buffer_uint16 ());
+										 
 		}
 		
-	return xmp;
+	}
+
+/*****************************************************************************/
+
+void dng_encode_proxy_task::Process (uint32 /* threadIndex */,
+								     const dng_rect &tile,
+							  	     dng_abort_sniffer * /* sniffer */)
+	{
+	
+	dng_const_tile_buffer srcBuffer (fSrcImage, tile);
+	dng_dirty_tile_buffer dstBuffer (fDstImage, tile);
+	
+	int32 sColStep = srcBuffer.fColStep;
+	int32 dColStep = dstBuffer.fColStep;
+	
+	const uint16 *noise = dng_dither::Get ().NoiseBuffer16 ();
+	
+	for (uint32 plane = 0; plane < fSrcImage.Planes (); plane++)
+		{
+		
+		const uint16 *map = fTable16 [plane]->Buffer_uint16 ();
+		
+		for (int32 row = tile.t; row < tile.b; row++)
+			{
+			
+			const uint16 *sPtr = srcBuffer.ConstPixel_uint16 (row, tile.l, plane);
+			
+			uint8 *dPtr = dstBuffer.DirtyPixel_uint8 (row, tile.l, plane);
+			
+			const uint16 *rPtr = &noise [(row & dng_dither::kRNGMask) * dng_dither::kRNGSize];
+
+			for (int32 col = tile.l; col < tile.r; col++)
+				{
+				
+				uint32 x = *sPtr;
+				
+				uint32 r = rPtr [col & dng_dither::kRNGMask];
+				
+				x = map [x];
+				
+				x = (((x << 8) - x) + r) >> 16;
+				
+				*dPtr = (uint8) x;
+				
+				sPtr += sColStep;
+				dPtr += dColStep;
+				
+				}
+			
+			}
+			
+		}
+		
+	}
+								  
+/******************************************************************************/
+
+dng_image * dng_negative::EncodeRawProxy (dng_host &host,
+										  const dng_image &srcImage,
+										  dng_opcode_list &opcodeList) const
+	{
+	
+	if (srcImage.PixelType () != ttShort)
+		{
+		return NULL;
+		}
+		
+	real64 black [kMaxColorPlanes];
+	real64 white [kMaxColorPlanes];
+	
+	bool isSceneReferred = (ColorimetricReference () == crSceneReferred);
+	
+		{
+		
+		const real64 kClipFraction = 0.00001;
+	
+		uint64 pixels = (uint64) srcImage.Bounds ().H () *
+						(uint64) srcImage.Bounds ().W ();
+						
+		uint32 limit = Round_int32 ((real64) pixels * kClipFraction);
+		
+		AutoPtr<dng_memory_block> histData (host.Allocate (65536 * sizeof (uint32)));
+		
+		uint32 *hist = histData->Buffer_uint32 ();
+			
+		for (uint32 plane = 0; plane < srcImage.Planes (); plane++)
+			{
+			
+			HistogramArea (host,
+						   srcImage,
+						   srcImage.Bounds (),
+						   hist,
+						   65535,
+						   plane);
+						   
+			uint32 total = 0;
+
+			uint32 upper = 65535;
+
+			while (total + hist [upper] <= limit && upper > 255)
+				{
+				
+				total += hist [upper];
+				
+				upper--;
+				
+				}
+	
+			total = 0;
+			
+			uint32 lower = 0;
+			
+			while (total + hist [lower] <= limit && lower < upper - 255)
+				{
+				
+				total += hist [lower];
+				
+				lower++;
+				
+				}
+			
+			black [plane] = lower / 65535.0;
+			white [plane] = upper / 65535.0;
+		
+			}
+			
+		}
+		
+	// Apply the gamma encoding, using dither when downsampling to 8-bit.
+	
+	AutoPtr<dng_image> dstImage (host.Make_dng_image (srcImage.Bounds (),
+													  srcImage.Planes (),
+													  ttByte));
+
+		{
+		
+		dng_encode_proxy_task task (host,
+							        srcImage,
+									*dstImage,
+									black,
+									white,
+									isSceneReferred);
+		
+		host.PerformAreaTask (task,
+							  srcImage.Bounds ());
+	
+		}
+				  
+	// Add opcodes to undo the gamma encoding.
+	
+		{
+	
+		for (uint32 plane = 0; plane < srcImage.Planes (); plane++)
+			{
+			
+			dng_area_spec areaSpec (srcImage.Bounds (),
+									plane);
+			
+			real64 coefficient [4];
+			
+			coefficient [0] = 0.0;
+			coefficient [1] = 1.0 / 16.0;
+			
+			if (isSceneReferred)
+				{
+				coefficient [2] = 0.0;
+				coefficient [3] = 15.0 / 16.0;
+				}
+			else
+				{
+				coefficient [2] = 15.0 / 16.0;
+				coefficient [3] = 0.0;
+				}
+			
+			coefficient [0] *= white [plane] - black [plane];
+			coefficient [1] *= white [plane] - black [plane];
+			coefficient [2] *= white [plane] - black [plane];
+			coefficient [3] *= white [plane] - black [plane];
+			
+			coefficient [0] += black [plane];
+			
+			AutoPtr<dng_opcode> opcode (new dng_opcode_MapPolynomial (areaSpec,
+																	  isSceneReferred ? 3 : 2,
+																	  coefficient));
+																	  
+			opcodeList.Append (opcode);
+			
+			}
+			
+		}
+		
+	return dstImage.Release ();
 	
 	}
+									  
+/******************************************************************************/
+
+void dng_negative::AdjustProfileForStage3 ()
+	{
+
+	// For dng_sdk, the stage3 image's color space is always the same as the
+	// raw image's color space.
+	
+	}
+									  
+/******************************************************************************/
+
+void dng_negative::ConvertToProxy (dng_host &host,
+								   dng_image_writer &writer,
+								   uint32 proxySize,
+								   uint64 proxyCount)
+	{
+	
+	if (!proxySize)
+		{
+		proxySize = kMaxImageSide;
+		}
+	
+	if (!proxyCount)
+		{
+		proxyCount = (uint64) proxySize * proxySize;
+		}
+	
+	// Don't need to private data around in non-full size proxies.
+	
+	if (proxySize  < kMaxImageSide ||
+		proxyCount < kMaxImageSide * kMaxImageSide)
+		{
+	
+		ClearMakerNote ();
 		
+		ClearPrivateData ();
+		
+		}
+	
+	// See if we already have an acceptable proxy image.
+	
+	if (fRawImage.Get () &&
+		fRawImage->PixelType () == ttByte &&
+		fRawImage->Bounds () == DefaultCropArea () &&
+		fRawImage->Bounds ().H () <= proxySize &&
+		fRawImage->Bounds ().W () <= proxySize &&
+		(uint64) fRawImage->Bounds ().H () *
+		(uint64) fRawImage->Bounds ().W () <= proxyCount &&
+        fRawToFullScaleH == 1.0 &&
+        fRawToFullScaleV == 1.0 &&
+		(!GetMosaicInfo () || !GetMosaicInfo ()->IsColorFilterArray ()) &&
+		fRawJPEGImage.Get () &&
+		(!RawTransparencyMask () || RawTransparencyMask ()->PixelType () == ttByte))
+		{
+		
+		return;
+		
+		}
+		
+	if (fRawImage.Get () &&
+		fRawImage->PixelType () == ttFloat &&
+		fRawImage->Bounds ().H () <= proxySize &&
+		fRawImage->Bounds ().W () <= proxySize &&
+		(uint64) fRawImage->Bounds ().H () *
+		(uint64) fRawImage->Bounds ().W () <= proxyCount &&
+        fRawToFullScaleH == 1.0 &&
+        fRawToFullScaleV == 1.0 &&
+		RawFloatBitDepth () == 16 &&
+		(!RawTransparencyMask () || RawTransparencyMask ()->PixelType () == ttByte))
+		{
+		
+		return;
+		
+		}
+	
+	// Clear any grabbed raw image, since we are going to start
+	// building the proxy with the stage3 image.
+
+	fRawImage.Reset ();
+	
+	ClearRawJPEGImage ();
+	
+	SetRawFloatBitDepth (0);
+	
+	ClearLinearizationInfo ();
+	
+	ClearMosaicInfo ();
+	
+	fOpcodeList1.Clear ();
+	fOpcodeList2.Clear ();
+	fOpcodeList3.Clear ();
+	
+	// Adjust the profile to match the stage 3 image, if required.
+	
+	AdjustProfileForStage3 ();
+	
+	// Not saving the raw-most image, do the old raw digest is no
+	// longer valid.
+		
+	ClearRawImageDigest ();
+	
+	ClearRawJPEGImageDigest ();
+	
+	// Trim off extra pixels outside the default crop area.
+	
+	dng_rect defaultCropArea = DefaultCropArea ();
+	
+	if (Stage3Image ()->Bounds () != defaultCropArea)
+		{
+		
+		fStage3Image->Trim (defaultCropArea);
+		
+		if (fTransparencyMask.Get ())
+			{
+			fTransparencyMask->Trim (defaultCropArea);
+			}
+		
+		fDefaultCropOriginH = dng_urational (0, 1);
+		fDefaultCropOriginV = dng_urational (0, 1);
+		
+		}
+		
+	// Figure out the requested proxy pixel size.
+	
+	real64 aspectRatio = AspectRatio ();
+	
+	dng_point newSize (proxySize, proxySize);
+	
+	if (aspectRatio >= 1.0)
+		{
+		newSize.v = Max_int32 (1, Round_int32 (proxySize / aspectRatio));
+		}
+	else
+		{
+		newSize.h = Max_int32 (1, Round_int32 (proxySize * aspectRatio));
+		}
+		
+	newSize.v = Min_int32 (newSize.v, DefaultFinalHeight ());
+	newSize.h = Min_int32 (newSize.h, DefaultFinalWidth  ());
+	
+	if ((uint64) newSize.v *
+	    (uint64) newSize.h > proxyCount)
+		{
+
+		if (aspectRatio >= 1.0)
+			{
+			
+			newSize.h = (uint32) sqrt (proxyCount * aspectRatio);
+			
+			newSize.v = Max_int32 (1, Round_int32 (newSize.h / aspectRatio));
+			
+			}
+			
+		else
+			{
+			
+			newSize.v = (uint32) sqrt (proxyCount / aspectRatio);
+			
+			newSize.h = Max_int32 (1, Round_int32 (newSize.v * aspectRatio));
+												   
+			}
+															   
+		}
+		
+	// If this is fewer pixels, downsample the stage 3 image to that size.
+	
+	dng_point oldSize = defaultCropArea.Size ();
+    
+    real64 pixelAspect = PixelAspectRatio ();
+	
+	if ((uint64) newSize.v * (uint64) newSize.h <
+		(uint64) oldSize.v * (uint64) oldSize.h ||
+        pixelAspect < 0.99 ||
+        pixelAspect > 1.01)
+		{
+		
+		const dng_image &srcImage (*Stage3Image ());
+		
+		AutoPtr<dng_image> dstImage (host.Make_dng_image (newSize,
+														  srcImage.Planes (),
+														  srcImage.PixelType ()));
+														  
+		host.ResampleImage (srcImage,
+							*dstImage);
+														 
+		fStage3Image.Reset (dstImage.Release ());
+		
+		fDefaultCropSizeH = dng_urational (newSize.h, 1);
+		fDefaultCropSizeV = dng_urational (newSize.v, 1);
+		
+		fDefaultScaleH = dng_urational (1, 1);
+		fDefaultScaleV = dng_urational (1, 1);
+		
+		fBestQualityScale = dng_urational (1, 1);
+		
+		fRawToFullScaleH = 1.0;
+		fRawToFullScaleV = 1.0;
+		
+		}
+        
+    // If there is still a raw to full scale factor, we need to
+    // remove it and adjust the crop coordinates.
+        
+    else if (fRawToFullScaleH != 1.0 ||
+             fRawToFullScaleV != 1.0)
+        {
+        
+		fDefaultCropSizeH = dng_urational (oldSize.h, 1);
+		fDefaultCropSizeV = dng_urational (oldSize.v, 1);
+		
+		fDefaultScaleH = dng_urational (1, 1);
+		fDefaultScaleV = dng_urational (1, 1);
+		
+		fBestQualityScale = dng_urational (1, 1);
+		
+		fRawToFullScaleH = 1.0;
+		fRawToFullScaleV = 1.0;
+        
+        }
+		
+	// Convert 32-bit floating point images to 16-bit floating point to
+	// save space.
+	
+	if (Stage3Image ()->PixelType () == ttFloat)
+		{
+		
+		fRawImage.Reset (host.Make_dng_image (Stage3Image ()->Bounds (),
+											  Stage3Image ()->Planes (),
+											  ttFloat));
+		
+		LimitFloatBitDepth (host,
+							*Stage3Image (),
+							*fRawImage,
+							16,
+							32768.0f);
+		
+		SetRawFloatBitDepth (16);
+		
+		SetWhiteLevel (32768);
+		
+		}
+		
+	else
+		{
+		
+		// Convert 16-bit deep images to 8-bit deep image for saving.
+		
+		fRawImage.Reset (EncodeRawProxy (host,
+										 *Stage3Image (),
+										 fOpcodeList2));
+										 
+		if (fRawImage.Get ())
+			{
+			
+			SetWhiteLevel (255);
+			
+			// Compute JPEG compressed version.
+			
+			if (fRawImage->PixelType () == ttByte &&
+				host.SaveDNGVersion () >= dngVersion_1_4_0_0)
+				{
+			
+				AutoPtr<dng_jpeg_image> jpegImage (new dng_jpeg_image);
+				
+				jpegImage->Encode (host,
+								   *this,
+								   writer,
+								   *fRawImage);
+								   
+				SetRawJPEGImage (jpegImage);
+								   
+				}
+			
+			}
+			
+		}
+		
+	// Deal with transparency mask.
+	
+	if (TransparencyMask ())
+		{
+		
+		const bool convertTo8Bit = true;
+		
+		ResizeTransparencyToMatchStage3 (host, convertTo8Bit);
+		
+		fRawTransparencyMask.Reset (fTransparencyMask->Clone ());
+		
+		}
+		
+	// Recompute the raw data unique ID, since we changed the image data.
+	
+	RecomputeRawDataUniqueID (host);
+			
+	}
+
+/*****************************************************************************/
+
+bool dng_negative::IsProxy () const
+    {
+    
+    return  (DefaultCropSizeH () != OriginalDefaultCropSizeH ()) &&
+            (DefaultCropSizeV () != OriginalDefaultCropSizeV ());
+    
+    }
+
 /*****************************************************************************/
 
 dng_linearization_info * dng_negative::MakeLinearizationInfo ()
@@ -3178,6 +4981,191 @@ void dng_negative::NeedMosaicInfo ()
 		
 		}
 	
+	}
+
+/*****************************************************************************/
+
+void dng_negative::SetTransparencyMask (AutoPtr<dng_image> &image,
+										uint32 bitDepth)
+	{
+	
+	fTransparencyMask.Reset (image.Release ());
+	
+	fRawTransparencyMaskBitDepth = bitDepth;
+	
+	}
+
+/*****************************************************************************/
+
+const dng_image * dng_negative::TransparencyMask () const
+	{
+	
+	return fTransparencyMask.Get ();
+	
+	}
+
+/*****************************************************************************/
+
+const dng_image * dng_negative::RawTransparencyMask () const
+	{
+	
+	if (fRawTransparencyMask.Get ())
+		{
+		
+		return fRawTransparencyMask.Get ();
+		
+		}
+		
+	return TransparencyMask ();
+	
+	}
+
+/*****************************************************************************/
+
+uint32 dng_negative::RawTransparencyMaskBitDepth () const
+	{
+	
+	if (fRawTransparencyMaskBitDepth)
+		{
+	
+		return fRawTransparencyMaskBitDepth;
+		
+		}
+		
+	const dng_image *mask = RawTransparencyMask ();
+	
+	if (mask)
+		{
+		
+		switch (mask->PixelType ())
+			{
+			
+			case ttByte:
+				return 8;
+				
+			case ttShort:
+				return 16;
+				
+			case ttFloat:
+				return 32;
+				
+			default:
+				ThrowProgramError ();
+				
+			}
+		
+		}
+		
+	return 0;
+	
+	}
+									  
+/*****************************************************************************/
+
+void dng_negative::ReadTransparencyMask (dng_host &host,
+									     dng_stream &stream,
+									     dng_info &info)
+	{
+	
+	if (info.fMaskIndex != -1)
+		{
+	
+		// Allocate image we are reading.
+		
+		dng_ifd &maskIFD = *info.fIFD [info.fMaskIndex];
+		
+		fTransparencyMask.Reset (host.Make_dng_image (maskIFD.Bounds (),
+													  1,
+													  maskIFD.PixelType ()));
+						
+		// Read the image.
+		
+		maskIFD.ReadImage (host,
+						   stream,
+						   *fTransparencyMask.Get ());
+						   
+		// Remember the pixel depth.
+		
+		fRawTransparencyMaskBitDepth = maskIFD.fBitsPerSample [0];
+						   
+		}
+
+	}
+
+/*****************************************************************************/
+
+void dng_negative::ResizeTransparencyToMatchStage3 (dng_host &host,
+													bool convertTo8Bit)
+	{
+	
+	if (TransparencyMask ())
+		{
+		
+		if ((TransparencyMask ()->Bounds () != fStage3Image->Bounds ()) ||
+			(TransparencyMask ()->PixelType () != ttByte && convertTo8Bit))
+			{
+			
+			AutoPtr<dng_image> newMask (host.Make_dng_image (fStage3Image->Bounds (),
+															 1,
+															 convertTo8Bit ?
+															 ttByte :
+															 TransparencyMask ()->PixelType ()));
+									
+			host.ResampleImage (*TransparencyMask (),
+								*newMask);
+						   
+			fTransparencyMask.Reset (newMask.Release ());
+			
+			if (!fRawTransparencyMask.Get ())
+				{
+				fRawTransparencyMaskBitDepth = 0;
+				}
+			
+			}
+			
+		}
+		
+	}
+
+/*****************************************************************************/
+
+bool dng_negative::NeedFlattenTransparency (dng_host & /* host */)
+	{
+	
+	if (TransparencyMask ())
+		{
+		
+		return true;
+	
+		}
+	
+	return false;
+		
+	}
+									  
+/*****************************************************************************/
+
+void dng_negative::FlattenTransparency (dng_host & /* host */)
+	{
+	
+	ThrowNotYetImplemented ();
+	
+	}
+									  
+/*****************************************************************************/
+
+const dng_image * dng_negative::UnflattenedStage3Image () const
+	{
+	
+	if (fUnflattenedStage3Image.Get ())
+		{
+		
+		return fUnflattenedStage3Image.Get ();
+		
+		}
+		
+	return fStage3Image.Get ();
+		
 	}
 
 /*****************************************************************************/

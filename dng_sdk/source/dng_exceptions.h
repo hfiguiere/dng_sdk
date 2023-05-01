@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_exceptions.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_exceptions.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /** \file
  * C++ exception support for DNG SDK.
@@ -24,6 +24,16 @@
 
 #include "dng_errors.h"
 #include "dng_flags.h"
+
+/*****************************************************************************/
+
+#ifndef DNG_NO_RETURN
+#ifdef __GNUC__
+#define DNG_NO_RETURN __attribute__((noreturn))
+#else
+#define DNG_NO_RETURN
+#endif
+#endif
 
 /*****************************************************************************/
 
@@ -83,7 +93,7 @@ class dng_exception
 void Throw_dng_error (dng_error_code err,
 					  const char * message = NULL,
 					  const char * sub_message = NULL,
-					  bool silent = false);
+					  bool silent = false) DNG_NO_RETURN;
 
 /******************************************************************************/
 
@@ -111,6 +121,18 @@ inline void ThrowProgramError (const char * sub_message = NULL)
 	{
 	
 	Throw_dng_error (dng_error_unknown, NULL, sub_message);
+	
+	}
+
+/*****************************************************************************/
+
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_overflow.
+
+inline void ThrowOverflow (const char * sub_message = NULL)
+	{
+	
+	Throw_dng_error (dng_error_overflow, NULL, sub_message);
 	
 	}
 
@@ -155,10 +177,11 @@ inline void ThrowUserCanceled ()
 /// \brief Convenience function to throw dng_exception with error code
 /// dng_error_host_insufficient .
 
-inline void ThrowHostInsufficient (const char * sub_message = NULL)
+inline void ThrowHostInsufficient (const char * sub_message = NULL,
+                                   bool silent = false)
 	{
 	
-	Throw_dng_error (dng_error_host_insufficient, NULL, sub_message);
+	Throw_dng_error (dng_error_host_insufficient, NULL, sub_message, silent);
 	
 	}
 
@@ -279,6 +302,18 @@ inline void ThrowImageTooBigTIFF ()
 	{
 	
 	Throw_dng_error (dng_error_image_too_big_tiff);
+	
+	}
+
+/*****************************************************************************/
+
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_unsupported_dng .
+
+inline void ThrowUnsupportedDNG ()
+	{
+	
+	Throw_dng_error (dng_error_unsupported_dng);
 	
 	}
 

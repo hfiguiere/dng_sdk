@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_render.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_render.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -25,6 +25,7 @@
 #include "dng_image.h"
 #include "dng_negative.h"
 #include "dng_resample.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_utils.h"
 
 /*****************************************************************************/
@@ -724,6 +725,12 @@ class dng_render_task: public dng_filter_task
 		dng_matrix fRGBtoFinal;
 		
 		dng_1d_table fEncodeGamma;
+
+		AutoPtr<dng_1d_table> fHueSatMapEncode;
+		AutoPtr<dng_1d_table> fHueSatMapDecode;
+
+		AutoPtr<dng_1d_table> fLookTableEncode;
+		AutoPtr<dng_1d_table> fLookTableDecode;
 	
 		AutoPtr<dng_memory_block> fTempBuffer [kMaxMPThreads];
 		
@@ -756,7 +763,8 @@ dng_render_task::dng_render_task (const dng_image &srcImage,
 								  const dng_render &params,
 								  const dng_point &srcOffset)
 								  
-	:	dng_filter_task (srcImage,
+	:	dng_filter_task ("dng_render_task",
+						 srcImage,
 						 dstImage)
 						 
 	,	fNegative  (negative )
@@ -777,6 +785,12 @@ dng_render_task::dng_render_task (const dng_image &srcImage,
 	,	fRGBtoFinal ()
 	
 	,	fEncodeGamma ()
+
+	,	fHueSatMapEncode ()
+	,	fHueSatMapDecode ()
+
+	,	fLookTableEncode ()
+	,	fLookTableDecode ()
 	
 	{
 	
@@ -809,10 +823,10 @@ void dng_render_task::Start (uint32 threadCount,
 							
 	// Compute camera space to linear ProPhoto RGB parameters.
 	
+	dng_camera_profile_id profileID;	// Default profile ID.
+		
 	if (!fNegative.IsMonochrome ())
 		{
-		
-		dng_camera_profile_id profileID;	// Default profile ID.
 		
 		AutoPtr<dng_color_spec> spec (fNegative.MakeColorSpec (profileID));
 		
@@ -864,15 +878,37 @@ void dng_render_task::Start (uint32 threadCount,
 				fLookTable.Reset (new dng_hue_sat_map (profile->LookTable ()));
 				
 				}
+
+			if (profile->HueSatMapEncoding () != encoding_Linear)
+				{
+					
+				BuildHueSatMapEncodingTable (*allocator,
+											 profile->HueSatMapEncoding (),
+											 fHueSatMapEncode,
+											 fHueSatMapDecode,
+											 false);
+					
+				}
+			
+			if (profile->LookTableEncoding () != encoding_Linear)
+				{
+					
+				BuildHueSatMapEncodingTable (*allocator,
+											 profile->LookTableEncoding (),
+											 fLookTableEncode,
+											 fLookTableDecode,
+											 false);
+					
+				}
 			
 			}
 		
 		}
 		
 	// Compute exposure/shadows ramp.
-	
+
 	real64 exposure = fParams.Exposure () +
-					  fNegative.BaselineExposure () -
+					  fNegative.TotalBaselineExposure (profileID) -
 					  (log (fNegative.Stage3Gain ()) / log (2.0));
 	
 		{
@@ -923,10 +959,18 @@ void dng_render_task::Start (uint32 threadCount,
 		fEncodeGamma.Initialize (*allocator, finalSpace.GammaFunction ());
 		
 		}
-							
+
 	// Allocate temp buffer to hold one row of RGB data.
 							
-	uint32 tempBufferSize = tileSize.h * sizeof (real32) * 3;
+	uint32 tempBufferSize = 0;
+	
+	if (!SafeUint32Mult (tileSize.h, (uint32) sizeof (real32), &tempBufferSize) ||
+		!SafeUint32Mult (tempBufferSize, 3, &tempBufferSize))
+		{
+		
+		ThrowOverflow ("Arithmetic overflow computing buffer size.");
+		
+		}
 	
 	for (uint32 threadIndex = 0; threadIndex < threadCount; threadIndex++)
 		{
@@ -973,9 +1017,9 @@ void dng_render_task::ProcessArea (uint32 threadIndex,
 				// For monochrome cameras, this just requires copying
 				// the data into all three color channels.
 				
-				DoCopyBytes (sPtrA, tPtrR, srcCols * sizeof (real32));
-				DoCopyBytes (sPtrA, tPtrG, srcCols * sizeof (real32));
-				DoCopyBytes (sPtrA, tPtrB, srcCols * sizeof (real32));
+				DoCopyBytes (sPtrA, tPtrR, srcCols * (uint32) sizeof (real32));
+				DoCopyBytes (sPtrA, tPtrG, srcCols * (uint32) sizeof (real32));
+				DoCopyBytes (sPtrA, tPtrB, srcCols * (uint32) sizeof (real32));
 				
 				}
 				
@@ -1030,7 +1074,9 @@ void dng_render_task::ProcessArea (uint32 threadIndex,
 										 tPtrG,
 										 tPtrB,
 										 srcCols,
-										 *fHueSatMap.Get ());
+										 *fHueSatMap.Get (),
+										 fHueSatMapEncode.Get (),
+										 fHueSatMapDecode.Get ());
 					
 					}
 				
@@ -1055,7 +1101,7 @@ void dng_render_task::ProcessArea (uint32 threadIndex,
 						   srcCols,
 						   fExposureRamp);
 		
-		// Apply Hue/Sat map, if any.
+		// Apply look table, if any.
 		
 		if (fLookTable.Get ())
 			{
@@ -1067,7 +1113,9 @@ void dng_render_task::ProcessArea (uint32 threadIndex,
 								 tPtrG,
 								 tPtrB,
 								 srcCols,
-								 *fLookTable.Get ());
+								 *fLookTable.Get (),
+								 fLookTableEncode.Get (),
+								 fLookTableDecode.Get ());
 			
 			}
 
@@ -1171,7 +1219,7 @@ dng_render::dng_render (dng_host &host,
 	
 	{
 	
-	// Switch to NOP default parameters for non-scence referred data.
+	// Switch to NOP default parameters for non-scene referred data.
 	
 	if (fNegative.ColorimetricReference () != crSceneReferred)
 		{
@@ -1194,6 +1242,15 @@ dng_render::dng_render (dng_host &host,
 		profile->ToneCurve ().Solve (*fProfileToneCurve.Get ());
 		
 		fToneCurve = fProfileToneCurve.Get ();
+		
+		}
+
+	// Turn off default shadow mapping if requested by profile.
+
+	if (profile && (profile->DefaultBlackRender () == defaultBlackRender_None))
+		{
+		
+		fShadows = 0.0;
 		
 		}
 	

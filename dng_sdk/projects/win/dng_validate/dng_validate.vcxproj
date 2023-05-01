@@ -1,0 +1,236 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Validate Debug|Win32">
+      <Configuration>Validate Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Validate Debug|x64">
+      <Configuration>Validate Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Validate Release|Win32">
+      <Configuration>Validate Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Validate Release|x64">
+      <Configuration>Validate Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}</ProjectGuid>
+    <RootNamespace>dng_validate</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\settings\dngsdkRoot.props" />
+    <Import Project="..\settings\dngsdkBuild.props" />
+    <Import Project="..\settings\dngsdkFlags.props" />
+    <Import Project="..\settings\dngsdkRelease.props" />
+    <Import Project="..\settings\dngsdk32.props" />
+    <Import Project="..\settings\dngsdkValidateFlags.props" />
+    <Import Project="..\settings\dngsdkValidateTarget.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\settings\dngsdkRoot.props" />
+    <Import Project="..\settings\dngsdkBuild.props" />
+    <Import Project="..\settings\dngsdkFlags.props" />
+    <Import Project="..\settings\dngsdkDebug.props" />
+    <Import Project="..\settings\dngsdk32.props" />
+    <Import Project="..\settings\dngsdkValidateFlags.props" />
+    <Import Project="..\settings\dngsdkValidateTarget.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\settings\dngsdkRoot.props" />
+    <Import Project="..\settings\dngsdkBuild.props" />
+    <Import Project="..\settings\dngsdkFlags.props" />
+    <Import Project="..\settings\dngsdkRelease.props" />
+    <Import Project="..\settings\dngsdk64.props" />
+    <Import Project="..\settings\dngsdkValidateFlags.props" />
+    <Import Project="..\settings\dngsdkValidateTarget.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\settings\dngsdkRoot.props" />
+    <Import Project="..\settings\dngsdkBuild.props" />
+    <Import Project="..\settings\dngsdkFlags.props" />
+    <Import Project="..\settings\dngsdkDebug.props" />
+    <Import Project="..\settings\dngsdk64.props" />
+    <Import Project="..\settings\dngsdkValidateFlags.props" />
+    <Import Project="..\settings\dngsdkValidateTarget.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Validate Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Validate Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Validate Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Validate Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Validate Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Validate Release|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'" />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'">
+    <IntDir>$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(Configuration)\$(Platform)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|Win32'">
+    <IntDir>$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(Configuration)\$(Platform)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|Win32'">
+    <IntDir>$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(Configuration)\$(Platform)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'">
+    <IntDir>$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(Configuration)\$(Platform)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+    </ClCompile>
+    <ProjectReference />
+    <Link>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+    </ClCompile>
+    <ProjectReference />
+    <Link>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+    </ClCompile>
+    <ProjectReference />
+    <Link>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+    </ClCompile>
+    <ProjectReference />
+    <Link>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\libjpeg\jaricom.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcapimin.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcapistd.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcarith.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jccoefct.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jccolor.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcdctmgr.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jchuff.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcinit.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcmainct.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcmarker.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcmaster.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcomapi.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcparam.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcprepct.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jcsample.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jctrans.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdapimin.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdapistd.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdarith.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdatadst.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdatasrc.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdcoefct.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdcolor.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jddctmgr.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdhuff.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdinput.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdmainct.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdmarker.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdmaster.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdmerge.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdpostct.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdsample.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jdtrans.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jerror.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jfdctflt.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jfdctfst.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jfdctint.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jidctflt.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jidctfst.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jidctint.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jmemmgr.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jmemnobs.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jquant1.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jquant2.c" />
+    <ClCompile Include="..\..\..\..\libjpeg\jutils.c" />
+    <ClCompile Include="..\..\..\source\dng_validate.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\libjpeg\jconfig.h" />
+    <ClInclude Include="..\..\..\..\libjpeg\jdct.h" />
+    <ClInclude Include="..\..\..\..\libjpeg\jerror.h" />
+    <ClInclude Include="..\..\..\..\libjpeg\jpeglib.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\dng_sdk\dng_sdk.vcxproj">
+      <Project>{2c99a4a0-17d0-4fe7-9f81-f434a8434680}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

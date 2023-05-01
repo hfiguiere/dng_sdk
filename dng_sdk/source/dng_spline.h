@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_spline.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_spline.h#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -19,8 +19,7 @@
 /*****************************************************************************/
 
 #include "dng_1d_function.h"
-
-#include <vector>
+#include "dng_memory.h"
 
 /*****************************************************************************/
 
@@ -53,10 +52,10 @@ class dng_spline_solver: public dng_1d_function
 	
 	protected:
 	
-		std::vector<real64> X;
-		std::vector<real64> Y;
+		dng_std_vector<real64> X;
+		dng_std_vector<real64> Y;
 		
-		std::vector<real64> S;
+		dng_std_vector<real64> S;
 		
 	public:
 	
@@ -68,20 +67,12 @@ class dng_spline_solver: public dng_1d_function
 
 		void Add (real64 x, real64 y);
 
-		void Solve ();
+		virtual void Solve ();
 
 		virtual bool IsIdentity () const;
 
 		virtual real64 Evaluate (real64 x) const;
 
-	private:
-	
-		// Hidden copy constructor and assignment operator.
-	
-		dng_spline_solver (const dng_spline_solver &solver);
-		
-		dng_spline_solver & operator= (const dng_spline_solver &solver);
-		
 	};
 
 /*****************************************************************************/

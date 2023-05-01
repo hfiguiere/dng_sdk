@@ -1,15 +1,32 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2012 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_validate.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_validate.cpp#3 $ */ 
+/* $DateTime: 2016/01/19 15:23:55 $ */
+/* $Change: 1059947 $ */
+/* $Author: erichan $ */
+
+// Process exit codes
+// ------------------
+//
+// As usual, 0 indicates success.
+//
+// If an exception occurs, the exit code will be equal to:
+//
+//    DNG SDK error code - 100000 + 100
+//
+// For example, the error dng_error_memory, which has a DNG SDK error code of
+// 100005, is returned as an exit code of 105.
+//
+// This convention accounts for the fact that the shell truncates process exit
+// codes to 8 bits and that the exit code 1 is used by ASAN to signal that a
+// memory error occurred (so mapping the first DNG SDK error code to an exit
+// code of 1 would not be a good idea).
 
 /*****************************************************************************/
 
@@ -40,11 +57,9 @@
 		
 /*****************************************************************************/
 
-#define kDNGValidateVersion "1.3"
+#define kDNGValidateVersion "1.4"
 		
 /*****************************************************************************/
-
-static uint32 gMathDataType = ttShort;
 
 static bool gFourColorBayer = false;
 		
@@ -53,6 +68,8 @@ static int32 gMosaicPlane = -1;
 static uint32 gPreferredSize = 0;
 static uint32 gMinimumSize   = 0;
 static uint32 gMaximumSize   = 0;
+
+static uint32 gProxyDNGSize = 0;
 
 static const dng_color_space *gFinalSpace = &dng_space_sRGB::Get ();
 
@@ -100,7 +117,7 @@ static dng_error_code dng_validate (const char *filename)
 			
 			host.SetSaveLinearDNG (false);
 			
-			host.SetKeepOriginalFile (true);
+			host.SetKeepOriginalFile (false);
 			
 			}
 			
@@ -132,6 +149,15 @@ static dng_error_code dng_validate (const char *filename)
 				dng_timer timer ("Raw image read time");
 
 				negative->ReadStage1Image (host, stream, info);
+				
+				}
+				
+			if (info.fMaskIndex != -1)
+				{
+				
+				dng_timer timer ("Transparency mask read time");
+
+				negative->ReadTransparencyMask (host, stream, info);
 				
 				}
 				
@@ -177,8 +203,7 @@ static dng_error_code dng_validate (const char *filename)
 			
 			dng_timer timer ("Linearization time");
 			
-			negative->BuildStage2Image (host,
-									    gMathDataType);
+			negative->BuildStage2Image (host);
 						         
 			}
 					 
@@ -212,6 +237,32 @@ static dng_error_code dng_validate (const char *filename)
 							
 			}
 			
+		// Convert to proxy, if requested.
+		
+		if (gProxyDNGSize)
+			{
+			
+			dng_timer timer ("ConvertToProxy time");
+			
+			dng_image_writer writer;
+			
+			negative->ConvertToProxy (host,
+									  writer,
+									  gProxyDNGSize);
+		
+			}
+			
+		// Flatten transparency, if required.
+		
+		if (negative->NeedFlattenTransparency (host))
+			{
+			
+			dng_timer timer ("FlattenTransparency time");
+		
+			negative->FlattenTransparency (host);
+			
+			}
+			
 		if (gDumpStage3.NotEmpty ())
 			{
 			
@@ -231,48 +282,112 @@ static dng_error_code dng_validate (const char *filename)
 			
 			}
 			
-		// Update metadata.
-			
-		negative->UpdateDateTimeToNow ();
-		
 		// Output DNG file if requested.
 			
 		if (gDumpDNG.NotEmpty ())
 			{
 			
-			// Build thumbnail image.
+			// Build the preview list.
 			
-			dng_image_preview thumbnail;
+			dng_preview_list previewList;
 			
+			dng_date_time_info dateTimeInfo;
+			
+			CurrentDateTimeAndZone (dateTimeInfo);
+											  
+			for (uint32 previewIndex = 0; previewIndex < 2; previewIndex++)
 				{
 				
-				dng_timer timer ("Build thumbnail time");
+				// Skip preview if writing a compresssed main image to save space
+				// in this example code.
 				
-				dng_render render (host, *negative);
-				
-				render.SetFinalSpace (negative->IsMonochrome () ? dng_space_GrayGamma22::Get ()
-																: dng_space_sRGB       ::Get ());
-				
-				render.SetFinalPixelType (ttByte);
-				
-				render.SetMaximumSize (256);
+				if (negative->RawJPEGImage () != NULL && previewIndex > 0)
+					{
+					break;
+					}
+					
+				// Report timing.
 			
-				thumbnail.fImage.Reset (render.Render ());
+				dng_timer timer (previewIndex == 0 ? "Build thumbnail time"
+												   : "Build preview time");
 				
-				thumbnail.fInfo.fApplicationName   .Set ("dng_validate");
-				thumbnail.fInfo.fApplicationVersion.Set (kDNGValidateVersion);
+				// Render a preview sized image.
 				
-				thumbnail.fInfo.fSettingsName.Set ("Default");
-
-				thumbnail.fInfo.fColorSpace = thumbnail.fImage->Planes () == 1 ?
-											  previewColorSpace_GrayGamma22 :
-											  previewColorSpace_sRGB;
-											
-				dng_date_time_info dateTimeInfo;
+				AutoPtr<dng_image> previewImage;
 				
-				CurrentDateTimeAndZone (dateTimeInfo);
+					{
+					
+					dng_render render (host, *negative);
+					
+					render.SetFinalSpace (negative->IsMonochrome () ? dng_space_GrayGamma22::Get ()
+																	: dng_space_sRGB       ::Get ());
+					
+					render.SetFinalPixelType (ttByte);
+					
+					render.SetMaximumSize (previewIndex == 0 ? 256 : 1024);
+				
+					previewImage.Reset (render.Render ());
+				
+					}
+					
+				// Don't write the preview if it is same size as thumbnail.
+				
+				if (previewIndex > 0 &&
+					Max_uint32 (previewImage->Bounds ().W (),
+								previewImage->Bounds ().H ()) <= 256)
+					{
+					break;
+					}
+				
+				// If we have compressed JPEG data, create a compressed thumbnail.  Otherwise
+				// save a uncompressed thumbnail.
+				
+				bool useCompressedPreview = (negative->RawJPEGImage () != NULL) ||
+											(previewIndex > 0);
+				
+				AutoPtr<dng_preview> preview (useCompressedPreview ?
+											  (dng_preview *) new dng_jpeg_preview :
+											  (dng_preview *) new dng_image_preview);
 											  
-				thumbnail.fInfo.fDateTime = dateTimeInfo.Encode_ISO_8601 ();
+				// Setup up preview info.
+									
+				preview->fInfo.fApplicationName   .Set ("dng_validate");
+				preview->fInfo.fApplicationVersion.Set (kDNGValidateVersion);
+				
+				preview->fInfo.fSettingsName.Set ("Default");
+
+				preview->fInfo.fColorSpace = previewImage->Planes () == 1 ?
+											 previewColorSpace_GrayGamma22 :
+											 previewColorSpace_sRGB;
+											
+				preview->fInfo.fDateTime = dateTimeInfo.Encode_ISO_8601 ();
+				
+				if (!useCompressedPreview)
+					{
+					
+					dng_image_preview *imagePreview = dynamic_cast<dng_image_preview *> (preview.Get ());
+				
+					imagePreview->fImage.Reset (previewImage.Release ());
+					
+					}
+					
+				else
+					{
+
+					dng_jpeg_preview *jpegPreview = dynamic_cast<dng_jpeg_preview *> (preview.Get ());
+					
+					int32 quality = (previewIndex == 0 ? 8 : 5);
+
+					dng_image_writer writer;
+					
+					writer.EncodeJPEGPreview (host,
+										      *previewImage,
+										      *jpegPreview,
+											  quality);
+										  
+					}
+		
+				previewList.Append (preview);
 				
 				}
 				
@@ -280,17 +395,18 @@ static dng_error_code dng_validate (const char *filename)
 			
 			dng_file_stream stream2 (gDumpDNG.Get (), true);
 			
-			dng_image_writer writer;
-			
 				{
 				
 				dng_timer timer ("Write DNG time");
 			
+				dng_image_writer writer;
+			
 				writer.WriteDNG (host,
 								 stream2,
 								 *negative.Get (),
-								 thumbnail,
-								 ccJPEG);
+								 &previewList,
+								 dngVersion_Current,
+								 false);
 
 				}
 				
@@ -348,11 +464,11 @@ static dng_error_code dng_validate (const char *filename)
 			
 			dng_file_stream stream2 (gDumpTIF.Get (), true);
 			
-			dng_image_writer writer;
-			
 				{
 				
 				dng_timer timer ("Write TIFF time");
+			
+				dng_image_writer writer;
 			
 				writer.WriteTIFF (host,
 								  stream2,
@@ -395,7 +511,7 @@ static dng_error_code dng_validate (const char *filename)
 
 int main (int argc, char *argv [])
 	{
-	
+
 	try
 		{
 
@@ -411,19 +527,19 @@ int main (int argc, char *argv [])
 					 "(32-bit)"
 					 #endif
 					 "\n"
-					 "Copyright 2005-2009 Adobe Systems, Inc.\n"
+					 "Copyright 2005-2016 Adobe Systems, Inc.\n"
 					 "\n"
 					 "Usage:  %s [options] file1 file2 ...\n"
 					 "\n"
 					 "Valid options:\n"
 					 "-v            Verbose mode\n"
 					 "-d <num>      Dump line limit (implies -v)\n"
-					 "-f            Use floating point math\n"
 					 "-b4           Use four-color Bayer interpolation\n"
 					 "-s <num>      Use this sample of multi-sample CFAs\n"
 					 "-size <num>   Preferred preview image size\n"
 					 "-min <num>    Minimum preview image size\n"
 					 "-max <num>    Maximum preview image size\n" 
+					 "-proxy <num>  Target size for proxy DNG\n"
 					 "-cs1          Color space: \"sRGB\" (default)\n"
 					 "-cs2          Color space: \"Adobe RGB\"\n"
 					 "-cs3          Color space: \"ProPhoto RGB\"\n"
@@ -477,11 +593,6 @@ int main (int argc, char *argv [])
 					
 				}
 				
-			else if (option.Matches ("f", true))
-				{
-				gMathDataType = ttFloat;
-				}
-					
 			else if (option.Matches ("s", true))
 				{
 				
@@ -549,6 +660,22 @@ int main (int argc, char *argv [])
 					return 1;
 					}
 					
+				}
+					
+			else if (option.Matches ("proxy", true))
+				{
+				
+				if (index + 1 < argc)
+					{
+					gProxyDNGSize = (uint32) atoi (argv [++index]);
+					}
+					
+				else
+					{
+					fprintf (stderr, "*** Missing number after -proxy\n");
+					return 1;
+					}
+
 				}
 					
 			else if (option.Matches ("cs1", true))
@@ -736,10 +863,12 @@ int main (int argc, char *argv [])
 		while (index < argc)
 			{
 			
-			if (dng_validate (argv [index++]) != dng_error_none)
+			dng_error_code error_code = dng_validate (argv [index++]);
+
+			if (error_code != dng_error_none)
 				{
 				
-				result = 1;
+				result = error_code - dng_error_unknown + 100;
 				
 				}
 			

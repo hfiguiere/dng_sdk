@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2015 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_xmp_sdk.cpp#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_xmp_sdk.cpp#5 $ */ 
+/* $DateTime: 2016/04/27 13:45:00 $ */
+/* $Change: 1074050 $ */
+/* $Author: erichan $ */
 
 /*****************************************************************************/
 
@@ -18,7 +18,9 @@
 #include "dng_auto_ptr.h"
 #include "dng_assertions.h"
 #include "dng_exceptions.h"
+#include "dng_flags.h"
 #include "dng_host.h"
+#include "dng_local_string.h"
 #include "dng_memory.h"
 #include "dng_string.h"
 #include "dng_string_list.h"
@@ -41,11 +43,15 @@
 #include <new>
 #include <string>
 
-#ifdef _MSC_VER
-#pragma warning ( disable : 4267 ) // possible loss of data
-#endif
-
 #define TXMP_STRING_TYPE std::string
+
+#define XMP_INCLUDE_XMPFILES qDNGXMPFiles
+
+#define XMP_StaticBuild 1
+
+#if qiPhone
+#undef UNIX_ENV
+#endif
 
 #include "XMP.incl_cpp"
 
@@ -55,16 +61,25 @@ const char *XMP_NS_TIFF	      = "http://ns.adobe.com/tiff/1.0/";
 const char *XMP_NS_EXIF	      = "http://ns.adobe.com/exif/1.0/";
 const char *XMP_NS_PHOTOSHOP  = "http://ns.adobe.com/photoshop/1.0/";
 const char *XMP_NS_XAP        = "http://ns.adobe.com/xap/1.0/";
+const char *XMP_NS_XAP_RIGHTS = "http://ns.adobe.com/xap/1.0/rights/";
 const char *XMP_NS_DC		  = "http://purl.org/dc/elements/1.1/";
 const char *XMP_NS_XMP_NOTE   = "http://ns.adobe.com/xmp/note/";
+const char *XMP_NS_MM         = "http://ns.adobe.com/xap/1.0/mm/";
 
 const char *XMP_NS_CRS		  = "http://ns.adobe.com/camera-raw-settings/1.0/";
 const char *XMP_NS_CRSS		  = "http://ns.adobe.com/camera-raw-saved-settings/1.0/";
 const char *XMP_NS_AUX		  = "http://ns.adobe.com/exif/1.0/aux/";
 
+const char *XMP_NS_LCP		  = "http://ns.adobe.com/photoshop/1.0/camera-profile";
+
 const char *XMP_NS_IPTC		  = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
+const char *XMP_NS_IPTC_EXT   = "http://iptc.org/std/Iptc4xmpExt/2008-02-29/";
 
 const char *XMP_NS_CRX 		  = "http://ns.adobe.com/lightroom-settings-experimental/1.0/";
+
+const char *XMP_NS_DNG		  = "http://ns.adobe.com/dng/1.0/";
+
+const char *XMP_NS_PANO		  = "http://ns.adobe.com/photoshop/1.0/panorama-profile";
 
 /******************************************************************************/
 
@@ -83,7 +98,7 @@ const char *XMP_NS_CRX 		  = "http://ns.adobe.com/lightroom-settings-experimenta
 			{\
 			char errBuffer [256];\
 			sprintf (errBuffer, "Info: XMP " routine " threw '%s' exception", errMessage);\
-			DNG_REPORT ( errBuffer);\
+			DNG_REPORT (errBuffer);\
 			}\
 		else\
 			{\
@@ -141,7 +156,7 @@ dng_xmp_private::dng_xmp_private (const dng_xmp_private &xmp)
 	if (xmp.fMeta)
 		{
 		
-		fMeta = new SXMPMeta (*xmp.fMeta);
+		fMeta = new SXMPMeta (xmp.fMeta->Clone (0));
 		
 		if (!fMeta)
 			{
@@ -204,7 +219,8 @@ static bool gInitializedXMP = false;
 
 /*****************************************************************************/
 
-void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces)
+void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces,
+								 const char *software)
 	{
 	
 	if (!gInitializedXMP)
@@ -244,6 +260,42 @@ void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces)
 				
 				}
 			
+			// Register LCP (lens correction profiles) namespace
+			
+				{
+				
+				TXMP_STRING_TYPE ss;
+				
+				SXMPMeta::RegisterNamespace (XMP_NS_LCP,
+											 "stCamera",
+											 &ss);
+				
+				}
+				
+			// Register DNG format metadata namespace
+			
+				{
+				
+				TXMP_STRING_TYPE ss;
+				
+				SXMPMeta::RegisterNamespace (XMP_NS_DNG,
+											 "dng",
+											 &ss);
+				
+				}
+			
+			// Register panorama metadata namespace
+			
+				{
+				
+				TXMP_STRING_TYPE ss;
+				
+				SXMPMeta::RegisterNamespace (XMP_NS_PANO,
+											 "panorama",
+											 &ss);
+				
+				}
+			
 			// Register extra namespaces.
 			
 			if (extraNamespaces != NULL)
@@ -261,7 +313,35 @@ void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces)
 					}
 				
 				}
+				
+			#if qDNGXMPFiles
 			
+			#if qLinux || qAndroid
+            if (!SXMPFiles::Initialize (kXMPFiles_IgnoreLocalText))
+        	#else
+            if (!SXMPFiles::Initialize ())
+       	 	#endif
+				{
+				ThrowProgramError ();
+				}
+				
+			#endif
+				
+			#if qDNGXMPDocOps
+			
+			if (software)
+				{
+			
+				SXMPDocOps::SetAppName (software);
+				
+				}
+				
+			#else
+			
+			(void) software;
+	
+			#endif
+		
 			}
 			
 		CATCH_XMP ("Initialization", true)
@@ -283,6 +363,12 @@ void dng_xmp_sdk::TerminateSDK ()
 		try
 			{
 			
+			#if qDNGXMPFiles
+			
+			SXMPFiles::Terminate ();
+			
+			#endif
+		
 			SXMPMeta::Terminate ();
 		
 			}
@@ -370,7 +456,18 @@ void dng_xmp_sdk::NeedMeta ()
 		}
 
 	}
+						   
+/******************************************************************************/
 
+void * dng_xmp_sdk::GetPrivateMeta ()
+	{
+	
+	NeedMeta ();
+	
+	return (void *) fPrivate->fMeta;
+	
+	}
+						   
 /******************************************************************************/
 
 void dng_xmp_sdk::Parse (dng_host &host,
@@ -507,10 +604,10 @@ bool dng_xmp_sdk::HasNameSpace (const char *ns) const
 			
 			SXMPIterator iter (*fPrivate->fMeta, ns);
 			
-			TXMP_STRING_TYPE ns;
+			TXMP_STRING_TYPE nsTemp;
 			TXMP_STRING_TYPE prop;
 			
-			if (iter.Next (&ns,
+			if (iter.Next (&nsTemp,
 						   &prop,
 						   NULL,
 						   NULL))
@@ -579,6 +676,137 @@ void dng_xmp_sdk::RemoveProperties (const char *ns)
 	
 	}
 
+/*****************************************************************************/
+
+bool dng_xmp_sdk::IsEmptyString (const char *ns,
+								 const char *path)
+	{
+	
+	if (HasMeta ())
+		{
+		
+		try
+			{
+			
+			TXMP_STRING_TYPE ss;
+
+			XMP_OptionBits options = 0;
+			
+			if (fPrivate->fMeta->GetProperty (ns,
+											  path,
+											  &ss,
+											  &options))
+				{
+				
+				// Item must be simple.
+				
+				if (XMP_PropIsSimple (options))
+					{
+
+					// Check for null strings.
+					
+					return (ss.c_str ()     == 0 ||
+							ss.c_str () [0] == 0);
+						
+					}
+					
+				}
+			
+			}
+			
+		CATCH_XMP ("IsEmptyString", false)
+		
+		}
+	
+	return false;
+	
+	}
+								
+/*****************************************************************************/
+
+bool dng_xmp_sdk::IsEmptyArray (const char *ns,
+								const char *path)
+	{
+	
+	if (HasMeta ())
+		{
+		
+		try
+			{
+			
+			TXMP_STRING_TYPE ss;
+
+			XMP_OptionBits options = 0;
+			
+			if (fPrivate->fMeta->GetProperty (ns,
+											  path,
+											  &ss,
+											  &options))
+				{
+									
+				if (XMP_PropIsArray (options))
+					{
+					
+					if (fPrivate->fMeta->GetArrayItem (ns,
+													   path,
+													   1,
+													   &ss,
+													   &options))
+						{
+						
+						// If the first item is a null string...
+						
+						if (XMP_PropIsSimple (options))
+							{
+						
+							if ((ss.c_str ()     == 0 ||
+								 ss.c_str () [0] == 0))
+								{
+								
+								// And there is no second item.
+								
+								if (!fPrivate->fMeta->GetArrayItem (ns,
+																	path,
+																	2,
+																	&ss,
+																	&options))
+									{
+									
+									// Then we have an empty array.
+
+									return true;
+									
+									}
+								
+								}
+								
+							}
+							
+						}
+						
+					else	
+						{
+						
+						// Unable to get first item, so array is empty.
+						
+						return true;
+						
+						}
+						
+					}
+				
+				}
+			
+			}
+			
+		CATCH_XMP ("IsEmptyArray", false)
+		
+		}
+	
+	return false;
+	
+	}
+								
 /*****************************************************************************/
 
 void dng_xmp_sdk::ComposeArrayItemPath (const char *ns,
@@ -732,9 +960,14 @@ void dng_xmp_sdk::ValidateStringList (const char *ns,
 			bogus = false;
 						
 			}
+            
+        catch (...)
+            {
+            
+            // Array is probably bogus.  Don't need to report.
+            
+            }
 			
-		CATCH_XMP ("GetArrayItem", false)
-		
 		if (bogus)
 			{
 			
@@ -784,7 +1017,7 @@ bool dng_xmp_sdk::GetStringList (const char *ns,
 						
 			}
 			
-		CATCH_XMP ("GetArrayItem", false)
+		CATCH_XMP ("GetStringList", false)
 		
 		}
 		
@@ -823,7 +1056,41 @@ bool dng_xmp_sdk::GetAltLangDefault (const char *ns,
 				result = true;
 				
 				}
+
+			// Special Case: treat the following two representation equivalently.
+			// The first is an empty alt lang array; the second is an array with
+			// an empty item. It seems that xmp lib could be generating both under
+			// some circumstances!
+			//
+			// <dc:description>
+			//	<rdf:Alt/>
+			// </dc:description>
+			//
+			// and
+			//
+			// <dc:description>
+			//  <rdf:Alt>
+			//   <rdf:li xml:lang="x-default"/>
+			//  </rdf:Alt>
+			// </dc:description>
+
+			else if (fPrivate->fMeta->GetProperty (ns,
+												   path,
+												   &ss,
+												   NULL))
+				{
+				
+				if (ss.empty ())
+					{
 						
+					s.Clear ();
+						
+					result = true;
+					
+					}
+				
+				}
+				
 			}
 			
 		CATCH_XMP ("GetLocalizedText", false)
@@ -832,6 +1099,93 @@ bool dng_xmp_sdk::GetAltLangDefault (const char *ns,
 		
 	return result;
 		
+	}
+								
+/*****************************************************************************/
+
+bool dng_xmp_sdk::GetLocalString (const char *ns,
+								  const char *path,
+								  dng_local_string &s) const
+	{
+
+    dng_string defaultText;
+
+    if (GetAltLangDefault (ns, path, defaultText))
+        {
+
+        s.SetDefaultText (defaultText);
+
+        try
+            {
+
+            int32 count = CountArrayItems (ns, path);
+
+            if (count > 1)
+                {
+
+                for (int32 index = 1; index <= count; index++)
+                    {
+
+                    dng_string arrayItemPath;
+                        
+                    ComposeArrayItemPath (ns,
+                                          path,
+                                          index + 1,
+                                          arrayItemPath);
+
+                    TXMP_STRING_TYPE langS;
+
+                    if (fPrivate->fMeta->GetQualifier (ns,
+                                                       arrayItemPath.Get (),
+                                                       kXMP_NS_XML,
+                                                       "lang",
+                                                       &langS,
+                                                       NULL))
+                        {
+
+                        dng_string language;
+
+                        language.Set (langS.c_str ());
+
+                        if (language.IsEmpty () ||
+                            language.Matches ("x-default"))
+                            {
+                            continue;
+                            }
+
+                        TXMP_STRING_TYPE tranS;
+			
+                        if (fPrivate->fMeta->GetProperty (ns,
+                                                          arrayItemPath.Get (),
+                                                          &tranS,
+                                                          NULL))
+                            {
+
+                            dng_string translation;
+
+                            translation.Set (tranS.c_str ());
+
+                            s.AddTranslation (language,
+                                              translation);
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        CATCH_XMP ("GetLocalString", false)
+
+        return true;
+
+        }
+
+    return false;
+
 	}
 								
 /*****************************************************************************/
@@ -1015,6 +1369,47 @@ void dng_xmp_sdk::SetAltLangDefault (const char *ns,
 						   		   
 /*****************************************************************************/
 
+void dng_xmp_sdk::SetLocalString (const char *ns,
+								  const char *path,
+								  const dng_local_string &s)
+	{
+
+    SetAltLangDefault (ns, path, s.DefaultText ());
+
+	try
+		{
+
+        for (uint32 index = 0; index < s.TranslationCount (); index++)
+            {
+
+            dng_string arrayItemPath;
+                
+            ComposeArrayItemPath (ns,
+                                  path,
+                                  index + 2,
+                                  arrayItemPath);
+
+            fPrivate->fMeta->SetProperty (ns,
+                                          arrayItemPath.Get (),
+                                          s.Translation (index).Get ());
+
+            fPrivate->fMeta->SetQualifier (ns,
+                                           arrayItemPath.Get (),
+                                           kXMP_NS_XML,
+                                           "lang",
+                                           s.Language (index).Get (),
+                                           0);
+
+            }
+
+		}
+		
+	CATCH_XMP ("SetLocalizedText", true)
+	
+	}
+						   		   
+/*****************************************************************************/
+
 void dng_xmp_sdk::SetStructField (const char *ns,
 								  const char *path,
 								  const char *fieldNS,
@@ -1072,7 +1467,8 @@ dng_memory_block * dng_xmp_sdk::Serialize (dng_memory_allocator &allocator,
 									       bool asPacket,
 									       uint32 targetBytes,
 									       uint32 padBytes,
-									       bool forJPEG) const
+									       bool forJPEG,
+										   bool compact) const
 	{
 	
 	// The largest XMP packet you can embed in JPEG using normal methods: 
@@ -1086,7 +1482,10 @@ dng_memory_block * dng_xmp_sdk::Serialize (dng_memory_allocator &allocator,
 		
 		bool havePacket = false;
 		
-		uint32 formatOption = forJPEG ? kXMP_UseCompactFormat : 0;
+		// Note that the XMP lib is changing its default to compact format
+		// in the future, so the following line will need to change.
+		
+		uint32 formatOption = compact ? kXMP_UseCompactFormat : 0;
 		
 	    if (asPacket && targetBytes)
 	    	{
@@ -1271,32 +1670,6 @@ void dng_xmp_sdk::MergeFromJPEG (const dng_xmp_sdk *xmp)
 
 /*****************************************************************************/
 
-void dng_xmp_sdk::AppendXMP (const dng_xmp_sdk *xmp)
-	{
-	
-	if (xmp && xmp->HasMeta ())
-		{
-		
-		NeedMeta ();
-		
-		try
-			{
-
-			SXMPUtils::AppendProperties (*xmp->fPrivate->fMeta,
-									     fPrivate->fMeta,
-										 kXMPUtil_DoAllProperties |
-										 kXMPUtil_ReplaceOldValues);
-			
-			}
-			
-		CATCH_XMP ("AppendProperties", true)
-		
-		}
-	
-	}
-		
-/*****************************************************************************/
-
 void dng_xmp_sdk::ReplaceXMP (dng_xmp_sdk *xmp)
 	{
 	
@@ -1358,5 +1731,101 @@ bool dng_xmp_sdk::IteratePaths (IteratePathsCallback *callback,
 	return true;
 	
 	}
+
+/*****************************************************************************/
+
+#if qDNGXMPDocOps
+
+/*****************************************************************************/
+
+void dng_xmp_sdk::DocOpsOpenXMP (const char *srcMIME)
+	{
+	
+	if (srcMIME [0])
+		{
+		
+		NeedMeta ();
+		
+		try
+			{
+		
+			SXMPDocOps docOps;
+		
+			docOps.OpenXMP (fPrivate->fMeta,
+							srcMIME);
+							
+			}
+			
+		CATCH_XMP ("DocOpsOpenXMP", false)
+		
+		Set (XMP_NS_DC,
+			 "format",
+			 srcMIME);
+				 
+		}
+	
+	}
+
+/*****************************************************************************/
+
+void dng_xmp_sdk::DocOpsPrepareForSave (const char *srcMIME,
+										const char *dstMIME,
+										bool newPath)
+	{
+	
+	NeedMeta ();
+	
+	try
+		{
+	
+		SXMPDocOps docOps;
+		
+		docOps.OpenXMP (fPrivate->fMeta,
+						srcMIME,
+						"old path");
+						
+		docOps.NoteChange (kXMP_Part_All);
+		
+		docOps.PrepareForSave (dstMIME,
+							   newPath ? "new path" : "old path");
+							   
+		}
+						   
+	CATCH_XMP ("DocOpsPrepareForSave", false)
+	
+	Set (XMP_NS_DC,
+		 "format",
+		 dstMIME);
+		
+	}
+
+/*****************************************************************************/
+
+void dng_xmp_sdk::DocOpsUpdateMetadata (const char *srcMIME)
+	{
+	
+	NeedMeta ();
+	
+	try
+		{
+	
+		SXMPDocOps docOps;
+		
+		docOps.OpenXMP (fPrivate->fMeta,
+						srcMIME);
+						
+		docOps.NoteChange (kXMP_Part_Metadata);
+						
+		docOps.PrepareForSave (srcMIME);
+		
+		}
+		
+	CATCH_XMP ("DocOpsUpdateMetadata", false)
+	
+	}
+
+/*****************************************************************************/
+
+#endif
 
 /*****************************************************************************/

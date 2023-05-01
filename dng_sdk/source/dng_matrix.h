@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2012 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_matrix.h#1 $ */ 
-/* $DateTime: 2009/06/22 05:04:49 $ */
-/* $Change: 578634 $ */
-/* $Author: tknoll $ */
+/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_matrix.h#3 $ */ 
+/* $DateTime: 2016/03/10 15:52:07 $ */
+/* $Change: 1066836 $ */
+/* $Author: erichan $ */
 
 /** \file
  * Matrix and vector classes, including specialized 3x3 and 4x3 versions as
@@ -27,6 +27,9 @@
 #include "dng_types.h"
 
 /*****************************************************************************/
+
+/// \brief Class to represent 2D matrix up to kMaxColorPlanes x kMaxColorPlanes
+/// in size.
 
 class dng_matrix
 	{
@@ -93,6 +96,8 @@ class dng_matrix
 			}
 			
 		bool IsDiagonal () const;
+        
+        bool IsIdentity () const;
 			
 		real64 MaxEntry () const;
 		
@@ -103,10 +108,17 @@ class dng_matrix
 		void Round (real64 factor);
 		
 		void SafeRound (real64 factor);
+        
+        bool AlmostEqual (const dng_matrix &m,
+                          real64 slop = 1.0e-8) const;
+
+        bool AlmostIdentity (real64 slop = 1.0e-8) const;
 
 	};
 	
 /*****************************************************************************/
+
+/// \brief A 3x3 matrix.
 
 class dng_matrix_3by3: public dng_matrix
 	{
@@ -127,6 +139,8 @@ class dng_matrix_3by3: public dng_matrix
 
 /*****************************************************************************/
 
+/// \brief A 4x3 matrix. Handy for working with 4-color cameras.
+
 class dng_matrix_4by3: public dng_matrix
 	{
 	
@@ -144,6 +158,31 @@ class dng_matrix_4by3: public dng_matrix
 	};
 
 /*****************************************************************************/
+
+/// \brief A 4x4 matrix. Handy for GPU APIs.
+
+class dng_matrix_4by4: public dng_matrix
+	{
+	
+	public:
+	
+		dng_matrix_4by4 ();
+		
+		dng_matrix_4by4 (const dng_matrix &m);
+		
+		dng_matrix_4by4 (real64 a00, real64 a01, real64 a02, real64 a03,
+				         real64 a10, real64 a11, real64 a12, real64 a13,
+				         real64 a20, real64 a21, real64 a22, real64 a23,
+				         real64 a30, real64 a31, real64 a32, real64 a33);
+				    
+		dng_matrix_4by4 (real64 a00, real64 a11, real64 a22, real64 a33);
+	
+	};
+
+/*****************************************************************************/
+
+/// \brief Class to represent 1-dimensional vector with up to kMaxColorPlanes
+/// components.
 
 class dng_vector
 	{
@@ -218,6 +257,8 @@ class dng_vector
 
 /*****************************************************************************/
 
+/// \brief A 3-element vector.
+
 class dng_vector_3: public dng_vector
 	{
 	
@@ -230,6 +271,26 @@ class dng_vector_3: public dng_vector
 		dng_vector_3 (real64 a0,
 					  real64 a1,
 					  real64 a2);
+	
+	};
+
+/*****************************************************************************/
+
+/// \brief A 4-element vector.
+
+class dng_vector_4: public dng_vector
+	{
+	
+	public:
+	
+		dng_vector_4 ();
+		
+		dng_vector_4 (const dng_vector &v);
+		
+		dng_vector_4 (real64 a0,
+					  real64 a1,
+					  real64 a2,
+					  real64 a3);
 	
 	};
 
@@ -251,6 +312,11 @@ dng_vector operator* (real64 scale,
 
 dng_matrix operator+ (const dng_matrix &A,
 					  const dng_matrix &B);
+
+/*****************************************************************************/
+
+dng_vector operator- (const dng_vector &a,
+					  const dng_vector &b);
 
 /*****************************************************************************/
 
@@ -286,7 +352,17 @@ inline real64 MinEntry (const dng_vector &A)
 	{
 	return A.MinEntry ();
 	}
+
+/*****************************************************************************/
+
+real64 Dot (const dng_vector &a,
+			const dng_vector &b);
 					  
+/*****************************************************************************/
+
+real64 Distance (const dng_vector &a,
+				 const dng_vector &b);
+
 /*****************************************************************************/
 
 #endif
