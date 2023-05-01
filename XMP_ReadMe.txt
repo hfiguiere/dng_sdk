@@ -2,7 +2,7 @@ To build the DNG SDK, you also need to download and install the Adobe XMP SDK. I
 
 http://www.adobe.com/devnet/xmp/
 
-The XMP-SDK folder should be placed next to the dng_sdk folder (i.e. as a sibling of this read-me file).
+Rename the "XMP-Toolkit-SDK-<version>" folder to "XMP-SDK", and place it next to the dng_sdk folder (i.e. as a sibling of this read-me file).
 
 Note that the current XMP SDK also requires you to download in install expat.  It is available from:
 

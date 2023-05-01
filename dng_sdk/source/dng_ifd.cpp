@@ -6,9 +6,9 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_ifd.cpp#1 $ */ 
-/* $DateTime: 2008/03/09 14:29:54 $ */
-/* $Change: 431850 $ */
+/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_ifd.cpp#1 $ */ 
+/* $DateTime: 2009/06/22 05:04:49 $ */
+/* $Change: 578634 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -161,6 +161,15 @@ dng_ifd::dng_ifd ()
 	,	fSubTileBlockCols (1)
 	
 	,	fPreviewInfo ()
+	
+	,	fOpcodeList1Count  (0)
+	,	fOpcodeList1Offset (0)
+	
+	,	fOpcodeList2Count  (0)
+	,	fOpcodeList2Offset (0)
+	
+	,	fOpcodeList3Count  (0)
+	,	fOpcodeList3Offset (0)
 	
 	,	fLosslessJPEGBug16 (false)
 	
@@ -2214,6 +2223,87 @@ bool dng_ifd::ParseTag (dng_stream &stream,
 			
 			}
 			
+		case tcOpcodeList1:
+			{
+			
+			CheckMainIFD (parentCode, tagCode, fNewSubFileType);
+			
+			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
+			
+			fOpcodeList1Count  = tagCount;
+			fOpcodeList1Offset = tagOffset;
+			
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
+				
+				printf ("OpcodeList1: count = %u, offset = %u\n",
+						(unsigned) fOpcodeList1Count,
+						(unsigned) fOpcodeList1Offset);
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+				
+		case tcOpcodeList2:
+			{
+			
+			CheckMainIFD (parentCode, tagCode, fNewSubFileType);
+			
+			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
+			
+			fOpcodeList2Count  = tagCount;
+			fOpcodeList2Offset = tagOffset;
+			
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
+				
+				printf ("OpcodeList2: count = %u, offset = %u\n",
+						(unsigned) fOpcodeList2Count,
+						(unsigned) fOpcodeList2Offset);
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+				
+		case tcOpcodeList3:
+			{
+			
+			CheckMainIFD (parentCode, tagCode, fNewSubFileType);
+			
+			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
+			
+			fOpcodeList3Count  = tagCount;
+			fOpcodeList3Offset = tagOffset;
+			
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
+				
+				printf ("OpcodeList3: count = %u, offset = %u\n",
+						(unsigned) fOpcodeList3Count,
+						(unsigned) fOpcodeList3Offset);
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+				
 		default:
 			{
 			
@@ -2646,7 +2736,10 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 		case piBlackIsZero:
 			{
 			
-			if (isColor)
+			// Allow black in white previews even in color images since the
+			// raw processing software may be converting to grayscale.
+			
+			if (isColor && isMainIFD)
 				{
 				
 				#if qDNGValidate
@@ -3105,7 +3198,7 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 	if (fActiveArea != imageArea)
 		{
 		
-		if (shared.fDNGBackwardVersion < 0x01010000)
+		if (shared.fDNGBackwardVersion < dngVersion_1_1_0_0)
 			{
 			
 			#if qDNGValidate
@@ -3385,7 +3478,7 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 			
 			}
 		
-		if (shared.fDNGBackwardVersion < 0x01020000)
+		if (shared.fDNGBackwardVersion < dngVersion_1_2_0_0)
 			{
 			
 			#if qDNGValidate
@@ -3436,7 +3529,7 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 			
 			}
 		
-		if (shared.fDNGBackwardVersion < 0x01020000)
+		if (shared.fDNGBackwardVersion < dngVersion_1_2_0_0)
 			{
 			
 			#if qDNGValidate

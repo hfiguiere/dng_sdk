@@ -19,6 +19,7 @@
 		3852CA020BD6F4E20048EA83 /* dng_hue_sat_map.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3852C9FA0BD6F4E20048EA83 /* dng_hue_sat_map.h */; };
 		3852CA030BD6F4E20048EA83 /* dng_tone_curve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3852C9FB0BD6F4E20048EA83 /* dng_tone_curve.cpp */; };
 		3852CA040BD6F4E20048EA83 /* dng_tone_curve.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3852C9FC0BD6F4E20048EA83 /* dng_tone_curve.h */; };
+		C70288570FEFC11300DAE99B /* libXMPCoreStaticRelease.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C70288170FEFBB3A00DAE99B /* libXMPCoreStaticRelease.a */; };
 		C7085FE9097EF22B00F3BF1D /* dng_filter_task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7085FE7097EF22B00F3BF1D /* dng_filter_task.cpp */; };
 		C7085FEA097EF22B00F3BF1D /* dng_filter_task.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7085FE8097EF22B00F3BF1D /* dng_filter_task.h */; };
 		C7175EAB09CDD1710067F2AA /* dng_1d_function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7175EA909CDD1710067F2AA /* dng_1d_function.cpp */; };
@@ -37,6 +38,12 @@
 		C72A792009CE109200D26E5E /* dng_image_writer.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72A791E09CE109200D26E5E /* dng_image_writer.h */; };
 		C72A792109CE109200D26E5E /* dng_image_writer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C72A791D09CE109200D26E5E /* dng_image_writer.cpp */; };
 		C72A792209CE109200D26E5E /* dng_image_writer.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72A791E09CE109200D26E5E /* dng_image_writer.h */; };
+		C735D3A10EA5512A002D9DAC /* dng_opcode_list.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C735D39F0EA5512A002D9DAC /* dng_opcode_list.cpp */; };
+		C735D3A20EA5512A002D9DAC /* dng_opcode_list.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C735D39F0EA5512A002D9DAC /* dng_opcode_list.cpp */; };
+		C73938F70EF9953E0075B1D8 /* dng_misc_opcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C73938F50EF9953E0075B1D8 /* dng_misc_opcodes.cpp */; };
+		C73938F80EF9953E0075B1D8 /* dng_misc_opcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C73938F50EF9953E0075B1D8 /* dng_misc_opcodes.cpp */; };
+		C739390A0EF9962D0075B1D8 /* dng_gain_map.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C73939080EF9962D0075B1D8 /* dng_gain_map.cpp */; };
+		C739390B0EF9962D0075B1D8 /* dng_gain_map.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C73939080EF9962D0075B1D8 /* dng_gain_map.cpp */; };
 		C76C420E099B0FAE00E3871C /* dng_1d_table.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C76C420A099B0FAE00E3871C /* dng_1d_table.cpp */; };
 		C76C420F099B0FAE00E3871C /* dng_1d_table.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C76C420B099B0FAE00E3871C /* dng_1d_table.h */; };
 		C76C4210099B0FAE00E3871C /* dng_spline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C76C420C099B0FAE00E3871C /* dng_spline.cpp */; };
@@ -49,6 +56,8 @@
 		C778CDE109A14FF20011A302 /* dng_resample.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C778CDDF09A14FF20011A302 /* dng_resample.h */; };
 		C778CDE209A14FF20011A302 /* dng_resample.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C778CDDE09A14FF20011A302 /* dng_resample.cpp */; };
 		C778CDE309A14FF20011A302 /* dng_resample.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C778CDDF09A14FF20011A302 /* dng_resample.h */; };
+		C78A4B150EB0D76C00B761FA /* dng_bad_pixels.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C78A4B130EB0D76C00B761FA /* dng_bad_pixels.cpp */; };
+		C78A4B160EB0D76C00B761FA /* dng_bad_pixels.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C78A4B130EB0D76C00B761FA /* dng_bad_pixels.cpp */; };
 		C78E9D3209993D73003C04F9 /* dng_render.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C78E9D3009993D73003C04F9 /* dng_render.cpp */; };
 		C78E9D3309993D73003C04F9 /* dng_render.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C78E9D3109993D73003C04F9 /* dng_render.h */; };
 		C79C164009995BA200143696 /* dng_render.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C78E9D3009993D73003C04F9 /* dng_render.cpp */; };
@@ -157,19 +166,22 @@
 		C7A38501098D10B7004375CB /* dng_color_space.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7F94EF60988387A00BD9F83 /* dng_color_space.h */; };
 		C7A38502098D10B7004375CB /* dng_color_spec.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7F94EF80988387A00BD9F83 /* dng_color_spec.h */; };
 		C7A38503098D10B7004375CB /* dng_temperature.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7F94EFA0988387A00BD9F83 /* dng_temperature.h */; };
+		C7A7DE260EB0D8A900B6A136 /* dng_lens_correction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7A7DE240EB0D8A900B6A136 /* dng_lens_correction.cpp */; };
+		C7A7DE270EB0D8A900B6A136 /* dng_lens_correction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7A7DE240EB0D8A900B6A136 /* dng_lens_correction.cpp */; };
 		C7A8C4AF08DCB2EF0075C20C /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7A8C4AE08DCB2EF0075C20C /* Carbon.framework */; };
 		C7CD211E08F9681900D265DD /* dng_xmp_sdk.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7CD211A08F9681800D265DD /* dng_xmp_sdk.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		C7CD211F08F9681900D265DD /* dng_xmp_sdk.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7CD211B08F9681900D265DD /* dng_xmp_sdk.h */; };
 		C7CD212008F9681900D265DD /* dng_xmp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7CD211C08F9681900D265DD /* dng_xmp.cpp */; };
 		C7CD212108F9681900D265DD /* dng_xmp.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7CD211D08F9681900D265DD /* dng_xmp.h */; };
-		C7CE824A0D849AC100249435 /* libXMPCoreStaticRelease.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C7CE82450D849AB800249435 /* libXMPCoreStaticRelease.a */; };
-		C7CE824C0D849ACF00249435 /* libXMPCoreStaticDebug.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C7CE82430D849AB800249435 /* libXMPCoreStaticDebug.a */; };
 		C7E084EA0917BC1300739AD2 /* dng_mutex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E084E80917BC1300739AD2 /* dng_mutex.cpp */; };
 		C7E084EB0917BC1300739AD2 /* dng_mutex.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7E084E90917BC1300739AD2 /* dng_mutex.h */; };
+		C7E13A430EA54EA7007EB19C /* dng_opcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E13A410EA54EA7007EB19C /* dng_opcodes.cpp */; };
+		C7E13A440EA54EA7007EB19C /* dng_opcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E13A410EA54EA7007EB19C /* dng_opcodes.cpp */; };
 		C7E20E5E092CF37E00C3B275 /* dng_orientation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E20E5C092CF37E00C3B275 /* dng_orientation.cpp */; };
 		C7E20E5F092CF37E00C3B275 /* dng_orientation.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7E20E5D092CF37E00C3B275 /* dng_orientation.h */; };
 		C7E4C26308EA2BA90064232F /* dng_memory_stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E4C26108EA2BA90064232F /* dng_memory_stream.cpp */; };
 		C7E4C26408EA2BA90064232F /* dng_memory_stream.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7E4C26208EA2BA90064232F /* dng_memory_stream.h */; };
+		C7E99B7A0FEFED1100CF9B04 /* libXMPCoreStaticDebug.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C70288150FEFBB3A00DAE99B /* libXMPCoreStaticDebug.a */; };
 		C7F94EFB0988387A00BD9F83 /* dng_camera_profile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7F94EF30988387A00BD9F83 /* dng_camera_profile.cpp */; };
 		C7F94EFC0988387A00BD9F83 /* dng_camera_profile.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7F94EF40988387A00BD9F83 /* dng_camera_profile.h */; };
 		C7F94EFD0988387A00BD9F83 /* dng_color_space.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7F94EF50988387A00BD9F83 /* dng_color_space.cpp */; };
@@ -260,47 +272,33 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		C7CE82420D849AB800249435 /* PBXContainerItemProxy */ = {
+		C70288140FEFBB3A00DAE99B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			containerPortal = C70288090FEFBB3A00DAE99B /* XMPToolkitSDK.xcodeproj */;
 			proxyType = 2;
-			remoteGlobalIDString = DC49326C089A9441003ADAAF /* libXMPCoreStaticDebug.a */;
+			remoteGlobalIDString = DC49326C089A9441003ADAAF;
 			remoteInfo = "XMPCore Debug";
 		};
-		C7CE82440D849AB800249435 /* PBXContainerItemProxy */ = {
+		C70288160FEFBB3A00DAE99B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			containerPortal = C70288090FEFBB3A00DAE99B /* XMPToolkitSDK.xcodeproj */;
 			proxyType = 2;
-			remoteGlobalIDString = DC4932B0089A9726003ADAAF /* libXMPCoreStaticRelease.a */;
+			remoteGlobalIDString = DC4932B0089A9726003ADAAF;
 			remoteInfo = "XMPCore Release";
 		};
-		C7CE82460D849AB800249435 /* PBXContainerItemProxy */ = {
+		C70288180FEFBB3A00DAE99B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			containerPortal = C70288090FEFBB3A00DAE99B /* XMPToolkitSDK.xcodeproj */;
 			proxyType = 2;
-			remoteGlobalIDString = 01FC6CEC0B7B6D65008559A1 /* libXMPFilesStaticDebug.a */;
+			remoteGlobalIDString = 01FC6CEC0B7B6D65008559A1;
 			remoteInfo = "XMPFiles Debug";
 		};
-		C7CE82480D849AB800249435 /* PBXContainerItemProxy */ = {
+		C702881A0FEFBB3A00DAE99B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			containerPortal = C70288090FEFBB3A00DAE99B /* XMPToolkitSDK.xcodeproj */;
 			proxyType = 2;
-			remoteGlobalIDString = 01FC6D0A0B7B7514008559A1 /* libXMPFilesStaticRelease.a */;
+			remoteGlobalIDString = 01FC6D0A0B7B7514008559A1;
 			remoteInfo = "XMPFiles Release";
-		};
-		C7CE82510D849AF700249435 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
-			proxyType = 1;
-			remoteGlobalIDString = DC49326B089A9441003ADAAF /* XMPCore Debug */;
-			remoteInfo = "XMPCore Debug";
-		};
-		C7CE82580D849B0900249435 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
-			proxyType = 1;
-			remoteGlobalIDString = DC493293089A9726003ADAAF /* XMPCore Release */;
-			remoteInfo = "XMPCore Release";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -465,6 +463,7 @@
 		3852C9FB0BD6F4E20048EA83 /* dng_tone_curve.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_tone_curve.cpp; path = ../../source/dng_tone_curve.cpp; sourceTree = SOURCE_ROOT; };
 		3852C9FC0BD6F4E20048EA83 /* dng_tone_curve.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_tone_curve.h; path = ../../source/dng_tone_curve.h; sourceTree = SOURCE_ROOT; };
 		8DD76F6C0486A84900D96B5E /* dng_validate */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = dng_validate; sourceTree = BUILT_PRODUCTS_DIR; };
+		C70288090FEFBB3A00DAE99B /* XMPToolkitSDK.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = XMPToolkitSDK.xcodeproj; path = "../../../XMP-SDK/build/xcode2/XMPToolkitSDK.xcodeproj"; sourceTree = SOURCE_ROOT; };
 		C7085FE7097EF22B00F3BF1D /* dng_filter_task.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_filter_task.cpp; path = ../../source/dng_filter_task.cpp; sourceTree = SOURCE_ROOT; };
 		C7085FE8097EF22B00F3BF1D /* dng_filter_task.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_filter_task.h; path = ../../source/dng_filter_task.h; sourceTree = SOURCE_ROOT; };
 		C7175EA909CDD1710067F2AA /* dng_1d_function.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_1d_function.cpp; path = ../../source/dng_1d_function.cpp; sourceTree = SOURCE_ROOT; };
@@ -477,23 +476,34 @@
 		C722BC6F0D1834EF00800B9C /* dng_preview.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_preview.h; path = ../../source/dng_preview.h; sourceTree = SOURCE_ROOT; };
 		C72A791D09CE109200D26E5E /* dng_image_writer.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_image_writer.cpp; path = ../../source/dng_image_writer.cpp; sourceTree = SOURCE_ROOT; };
 		C72A791E09CE109200D26E5E /* dng_image_writer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_image_writer.h; path = ../../source/dng_image_writer.h; sourceTree = SOURCE_ROOT; };
+		C735D39F0EA5512A002D9DAC /* dng_opcode_list.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_opcode_list.cpp; path = ../../source/dng_opcode_list.cpp; sourceTree = SOURCE_ROOT; };
+		C735D3A00EA5512A002D9DAC /* dng_opcode_list.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_opcode_list.h; path = ../../source/dng_opcode_list.h; sourceTree = SOURCE_ROOT; };
+		C73938F50EF9953E0075B1D8 /* dng_misc_opcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_misc_opcodes.cpp; path = ../../source/dng_misc_opcodes.cpp; sourceTree = SOURCE_ROOT; };
+		C73938F60EF9953E0075B1D8 /* dng_misc_opcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_misc_opcodes.h; path = ../../source/dng_misc_opcodes.h; sourceTree = SOURCE_ROOT; };
+		C73939080EF9962D0075B1D8 /* dng_gain_map.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_gain_map.cpp; path = ../../source/dng_gain_map.cpp; sourceTree = SOURCE_ROOT; };
+		C73939090EF9962D0075B1D8 /* dng_gain_map.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_gain_map.h; path = ../../source/dng_gain_map.h; sourceTree = SOURCE_ROOT; };
 		C76C420A099B0FAE00E3871C /* dng_1d_table.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_1d_table.cpp; path = ../../source/dng_1d_table.cpp; sourceTree = SOURCE_ROOT; };
 		C76C420B099B0FAE00E3871C /* dng_1d_table.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_1d_table.h; path = ../../source/dng_1d_table.h; sourceTree = SOURCE_ROOT; };
 		C76C420C099B0FAE00E3871C /* dng_spline.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_spline.cpp; path = ../../source/dng_spline.cpp; sourceTree = SOURCE_ROOT; };
 		C76C420D099B0FAE00E3871C /* dng_spline.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_spline.h; path = ../../source/dng_spline.h; sourceTree = SOURCE_ROOT; };
 		C778CDDE09A14FF20011A302 /* dng_resample.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_resample.cpp; path = ../../source/dng_resample.cpp; sourceTree = SOURCE_ROOT; };
 		C778CDDF09A14FF20011A302 /* dng_resample.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_resample.h; path = ../../source/dng_resample.h; sourceTree = SOURCE_ROOT; };
+		C78A4B130EB0D76C00B761FA /* dng_bad_pixels.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_bad_pixels.cpp; path = ../../source/dng_bad_pixels.cpp; sourceTree = SOURCE_ROOT; };
+		C78A4B140EB0D76C00B761FA /* dng_bad_pixels.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_bad_pixels.h; path = ../../source/dng_bad_pixels.h; sourceTree = SOURCE_ROOT; };
 		C78E9D3009993D73003C04F9 /* dng_render.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_render.cpp; path = ../../source/dng_render.cpp; sourceTree = SOURCE_ROOT; };
 		C78E9D3109993D73003C04F9 /* dng_render.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_render.h; path = ../../source/dng_render.h; sourceTree = SOURCE_ROOT; };
 		C7A38507098D10B7004375CB /* dng_validate */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = dng_validate; sourceTree = BUILT_PRODUCTS_DIR; };
+		C7A7DE240EB0D8A900B6A136 /* dng_lens_correction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_lens_correction.cpp; path = ../../source/dng_lens_correction.cpp; sourceTree = SOURCE_ROOT; };
+		C7A7DE250EB0D8A900B6A136 /* dng_lens_correction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_lens_correction.h; path = ../../source/dng_lens_correction.h; sourceTree = SOURCE_ROOT; };
 		C7A8C4AE08DCB2EF0075C20C /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		C7CD211A08F9681800D265DD /* dng_xmp_sdk.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_xmp_sdk.cpp; path = ../../source/dng_xmp_sdk.cpp; sourceTree = SOURCE_ROOT; };
 		C7CD211B08F9681900D265DD /* dng_xmp_sdk.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_xmp_sdk.h; path = ../../source/dng_xmp_sdk.h; sourceTree = SOURCE_ROOT; };
 		C7CD211C08F9681900D265DD /* dng_xmp.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_xmp.cpp; path = ../../source/dng_xmp.cpp; sourceTree = SOURCE_ROOT; };
 		C7CD211D08F9681900D265DD /* dng_xmp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_xmp.h; path = ../../source/dng_xmp.h; sourceTree = SOURCE_ROOT; };
-		C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = XMPToolkit.xcodeproj; path = "../../../XMP-SDK/build/xcode/XMPToolkit.xcodeproj"; sourceTree = SOURCE_ROOT; };
 		C7E084E80917BC1300739AD2 /* dng_mutex.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_mutex.cpp; path = ../../source/dng_mutex.cpp; sourceTree = SOURCE_ROOT; };
 		C7E084E90917BC1300739AD2 /* dng_mutex.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_mutex.h; path = ../../source/dng_mutex.h; sourceTree = SOURCE_ROOT; };
+		C7E13A410EA54EA7007EB19C /* dng_opcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_opcodes.cpp; path = ../../source/dng_opcodes.cpp; sourceTree = SOURCE_ROOT; };
+		C7E13A420EA54EA7007EB19C /* dng_opcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_opcodes.h; path = ../../source/dng_opcodes.h; sourceTree = SOURCE_ROOT; };
 		C7E20E5C092CF37E00C3B275 /* dng_orientation.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_orientation.cpp; path = ../../source/dng_orientation.cpp; sourceTree = SOURCE_ROOT; };
 		C7E20E5D092CF37E00C3B275 /* dng_orientation.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_orientation.h; path = ../../source/dng_orientation.h; sourceTree = SOURCE_ROOT; };
 		C7E4C26108EA2BA90064232F /* dng_memory_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_memory_stream.cpp; path = ../../source/dng_memory_stream.cpp; sourceTree = SOURCE_ROOT; };
@@ -593,7 +603,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C7A8C4AF08DCB2EF0075C20C /* Carbon.framework in Frameworks */,
-				C7CE824A0D849AC100249435 /* libXMPCoreStaticRelease.a in Frameworks */,
+				C70288570FEFC11300DAE99B /* libXMPCoreStaticRelease.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -602,7 +612,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C7A384C8098D10B7004375CB /* Carbon.framework in Frameworks */,
-				C7CE824C0D849ACF00249435 /* libXMPCoreStaticDebug.a in Frameworks */,
+				C7E99B7A0FEFED1100CF9B04 /* libXMPCoreStaticDebug.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -623,6 +633,18 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				C73939080EF9962D0075B1D8 /* dng_gain_map.cpp */,
+				C73939090EF9962D0075B1D8 /* dng_gain_map.h */,
+				C73938F50EF9953E0075B1D8 /* dng_misc_opcodes.cpp */,
+				C73938F60EF9953E0075B1D8 /* dng_misc_opcodes.h */,
+				C7A7DE240EB0D8A900B6A136 /* dng_lens_correction.cpp */,
+				C7A7DE250EB0D8A900B6A136 /* dng_lens_correction.h */,
+				C78A4B130EB0D76C00B761FA /* dng_bad_pixels.cpp */,
+				C78A4B140EB0D76C00B761FA /* dng_bad_pixels.h */,
+				C735D39F0EA5512A002D9DAC /* dng_opcode_list.cpp */,
+				C735D3A00EA5512A002D9DAC /* dng_opcode_list.h */,
+				C7E13A410EA54EA7007EB19C /* dng_opcodes.cpp */,
+				C7E13A420EA54EA7007EB19C /* dng_opcodes.h */,
 				382CE4000D37B415002BCBAD /* dng_pthread.cpp */,
 				382CE4010D37B415002BCBAD /* dng_pthread.h */,
 				C722BC6E0D1834EF00800B9C /* dng_preview.cpp */,
@@ -762,18 +784,18 @@
 		38DA1D2A0C6FC37500CB6874 /* Subprojects */ = {
 			isa = PBXGroup;
 			children = (
-				C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */,
+				C70288090FEFBB3A00DAE99B /* XMPToolkitSDK.xcodeproj */,
 			);
 			name = Subprojects;
 			sourceTree = "<group>";
 		};
-		C7CE82380D849AB800249435 /* Products */ = {
+		C702880A0FEFBB3A00DAE99B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C7CE82430D849AB800249435 /* libXMPCoreStaticDebug.a */,
-				C7CE82450D849AB800249435 /* libXMPCoreStaticRelease.a */,
-				C7CE82470D849AB800249435 /* libXMPFilesStaticDebug.a */,
-				C7CE82490D849AB800249435 /* libXMPFilesStaticRelease.a */,
+				C70288150FEFBB3A00DAE99B /* libXMPCoreStaticDebug.a */,
+				C70288170FEFBB3A00DAE99B /* libXMPCoreStaticRelease.a */,
+				C70288190FEFBB3A00DAE99B /* libXMPFilesStaticDebug.a */,
+				C702881B0FEFBB3A00DAE99B /* libXMPFilesStaticRelease.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -800,7 +822,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				C7CE82590D849B0900249435 /* PBXTargetDependency */,
 			);
 			name = "dng_validate release";
 			productInstallPath = "$(HOME)/bin";
@@ -819,7 +840,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				C7CE82520D849AF700249435 /* PBXTargetDependency */,
 			);
 			name = "dng_validate debug";
 			productInstallPath = "$(HOME)/bin";
@@ -839,8 +859,8 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = C7CE82380D849AB800249435 /* Products */;
-					ProjectRef = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+					ProductGroup = C702880A0FEFBB3A00DAE99B /* Products */;
+					ProjectRef = C70288090FEFBB3A00DAE99B /* XMPToolkitSDK.xcodeproj */;
 				},
 			);
 			projectRoot = "";
@@ -852,32 +872,32 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		C7CE82430D849AB800249435 /* libXMPCoreStaticDebug.a */ = {
+		C70288150FEFBB3A00DAE99B /* libXMPCoreStaticDebug.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libXMPCoreStaticDebug.a;
-			remoteRef = C7CE82420D849AB800249435 /* PBXContainerItemProxy */;
+			remoteRef = C70288140FEFBB3A00DAE99B /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		C7CE82450D849AB800249435 /* libXMPCoreStaticRelease.a */ = {
+		C70288170FEFBB3A00DAE99B /* libXMPCoreStaticRelease.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libXMPCoreStaticRelease.a;
-			remoteRef = C7CE82440D849AB800249435 /* PBXContainerItemProxy */;
+			remoteRef = C70288160FEFBB3A00DAE99B /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		C7CE82470D849AB800249435 /* libXMPFilesStaticDebug.a */ = {
+		C70288190FEFBB3A00DAE99B /* libXMPFilesStaticDebug.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libXMPFilesStaticDebug.a;
-			remoteRef = C7CE82460D849AB800249435 /* PBXContainerItemProxy */;
+			remoteRef = C70288180FEFBB3A00DAE99B /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		C7CE82490D849AB800249435 /* libXMPFilesStaticRelease.a */ = {
+		C702881B0FEFBB3A00DAE99B /* libXMPFilesStaticRelease.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libXMPFilesStaticRelease.a;
-			remoteRef = C7CE82480D849AB800249435 /* PBXContainerItemProxy */;
+			remoteRef = C702881A0FEFBB3A00DAE99B /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -944,6 +964,12 @@
 				3852C9FF0BD6F4E20048EA83 /* dng_tone_curve.cpp in Sources */,
 				C722BC700D1834EF00800B9C /* dng_preview.cpp in Sources */,
 				382CE4020D37B415002BCBAD /* dng_pthread.cpp in Sources */,
+				C7E13A430EA54EA7007EB19C /* dng_opcodes.cpp in Sources */,
+				C735D3A10EA5512A002D9DAC /* dng_opcode_list.cpp in Sources */,
+				C78A4B150EB0D76C00B761FA /* dng_bad_pixels.cpp in Sources */,
+				C7A7DE260EB0D8A900B6A136 /* dng_lens_correction.cpp in Sources */,
+				C73938F70EF9953E0075B1D8 /* dng_misc_opcodes.cpp in Sources */,
+				C739390A0EF9962D0075B1D8 /* dng_gain_map.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1008,23 +1034,16 @@
 				3852CA030BD6F4E20048EA83 /* dng_tone_curve.cpp in Sources */,
 				C722BC720D1834EF00800B9C /* dng_preview.cpp in Sources */,
 				382CE4040D37B415002BCBAD /* dng_pthread.cpp in Sources */,
+				C7E13A440EA54EA7007EB19C /* dng_opcodes.cpp in Sources */,
+				C735D3A20EA5512A002D9DAC /* dng_opcode_list.cpp in Sources */,
+				C78A4B160EB0D76C00B761FA /* dng_bad_pixels.cpp in Sources */,
+				C7A7DE270EB0D8A900B6A136 /* dng_lens_correction.cpp in Sources */,
+				C73938F80EF9953E0075B1D8 /* dng_misc_opcodes.cpp in Sources */,
+				C739390B0EF9962D0075B1D8 /* dng_gain_map.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		C7CE82520D849AF700249435 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = "XMPCore Debug";
-			targetProxy = C7CE82510D849AF700249435 /* PBXContainerItemProxy */;
-		};
-		C7CE82590D849B0900249435 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = "XMPCore Release";
-			targetProxy = C7CE82580D849B0900249435 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		C7A38510098D14F7004375CB /* Default */ = {
@@ -1043,6 +1062,11 @@
 					"qDNGDebug=0",
 				);
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../../../XMP-SDK/public/libraries/macintosh/release\"";
 			};
 			name = Default;
 		};
@@ -1092,10 +1116,7 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "../../../XMP-SDK/public/include";
-				LIBRARY_SEARCH_PATHS = (
-					"../../../XMP-SDK/public/libraries/macintosh/release",
-					"../../../XMP-SDK/public/libraries/macintosh/debug",
-				);
+				LIBRARY_SEARCH_PATHS = "../../../XMP-SDK/**";
 				PREBINDING = NO;
 				PRODUCT_NAME = dng_validate;
 				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;

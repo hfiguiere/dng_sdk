@@ -6,12 +6,18 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_pthread.cpp#1 $ */ 
-/* $DateTime: 2008/03/09 14:29:54 $ */
-/* $Change: 431850 $ */
+/* $Id: //mondo/dng_sdk_1_3/dng_sdk/source/dng_pthread.cpp#1 $ */ 
+/* $DateTime: 2009/06/22 05:04:49 $ */
+/* $Change: 578634 $ */
 /* $Author: tknoll $ */
 
 #include "dng_pthread.h"
+
+/*****************************************************************************/
+
+#if qDNGThreadSafe
+
+/*****************************************************************************/
 
 #include "dng_assertions.h"
 
@@ -154,6 +160,15 @@ namespace
 		thread_wait_sema_inited = true;
 	}
 
+	void finalize_thread_TLS()
+	{
+		if (thread_wait_sema_inited)
+			{
+			::TlsFree(thread_wait_sema_TLS_index);
+			thread_wait_sema_inited = false;
+			}
+	}
+
 	dng_pthread_mutex_impl primaryHandleMapLock;
 
 	typedef std::map<DWORD, std::pair<HANDLE, void **> > ThreadMapType;
@@ -181,8 +196,12 @@ namespace
 		if (thread_wait_sema_inited)
 		{
 			HANDLE semaphore = (HANDLE)::TlsGetValue(thread_wait_sema_TLS_index);
+
 			if (semaphore != NULL)
+			{
+				::TlsSetValue(thread_wait_sema_TLS_index, NULL);
 				::CloseHandle(semaphore);
+			}
 		}
 	}
 
@@ -1058,10 +1077,15 @@ int dng_pthread_rwlock_wrlock(dng_pthread_rwlock_t *rwlock)
 
 /*****************************************************************************/
 
-void dng_pthread_disassociate ()
+void dng_pthread_disassociate()
 {
-	FreeThreadSemaphore ();
+	FreeThreadSemaphore();
 }
+
+void dng_pthread_terminate()
+	{
+	finalize_thread_TLS();
+	}
 
 /*****************************************************************************/
 
@@ -1110,5 +1134,9 @@ int dng_pthread_now (struct timespec *now)
 	return 0;
 	
 	}
+
+/*****************************************************************************/
+
+#endif qDNGThreadSafe
 
 /*****************************************************************************/
