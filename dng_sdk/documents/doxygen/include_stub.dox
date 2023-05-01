@@ -1,0 +1,11 @@
+/*!
+\page asl_include_stub ASL include stub page
+
+This stub page is included so Doxygen will include stuff that we haven't otherwise specified in a way Doxygen will include it automatically.
+
+\image html grant_munsey.jpg "Grant and his wife Sandy in 2000"
+
+\image html gil_design_guide.pdf "GIL Design Guide (PDF)"
+
+\image html gil_tutorial.pdf "GIL Tutorial (PDF)"
+*/
