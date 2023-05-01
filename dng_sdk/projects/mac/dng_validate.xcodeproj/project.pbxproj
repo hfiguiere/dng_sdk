@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		344F1F781C49946700955565 /* dng_safe_arithmetic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 344F1F761C49946700955565 /* dng_safe_arithmetic.cpp */; };
 		344F1F791C49946700955565 /* dng_safe_arithmetic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 344F1F761C49946700955565 /* dng_safe_arithmetic.cpp */; };
+		34E2339C27AC434700CA8B44 /* dng_jpeg_memory_source.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34E2339A27AC434600CA8B44 /* dng_jpeg_memory_source.cpp */; };
+		34E2339D27AC434700CA8B44 /* dng_jpeg_memory_source.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34E2339A27AC434600CA8B44 /* dng_jpeg_memory_source.cpp */; };
+		34E237E82757BC7B00DF6EF1 /* dng_big_table.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C738FAA51BEB1FED00CCC182 /* dng_big_table.cpp */; };
 		34E8842510D1371500062F22 /* dng_ref_counted_block.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34E8842110D1371500062F22 /* dng_ref_counted_block.cpp */; };
 		34E8842610D1371500062F22 /* dng_ref_counted_block.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34E8842110D1371500062F22 /* dng_ref_counted_block.cpp */; };
 		382CE4060D37B415002BCBAD /* dng_pthread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 382CE4000D37B415002BCBAD /* dng_pthread.cpp */; };
@@ -126,6 +129,8 @@
 		C78B951A157AFBB600A4675C /* jctrans.c in Sources */ = {isa = PBXBuildFile; fileRef = C78B9514157AFBB600A4675C /* jctrans.c */; };
 		C7A7DE280EB0D8A900B6A136 /* dng_lens_correction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7A7DE240EB0D8A900B6A136 /* dng_lens_correction.cpp */; };
 		C7A7DE290EB0D8A900B6A136 /* dng_lens_correction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7A7DE240EB0D8A900B6A136 /* dng_lens_correction.cpp */; };
+		C7CE248526D9416100A84135 /* dng_update_meta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7CE248426D9416100A84135 /* dng_update_meta.cpp */; };
+		C7CE248626D9416100A84135 /* dng_update_meta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7CE248426D9416100A84135 /* dng_update_meta.cpp */; };
 		C7E13A450EA54EA7007EB19C /* dng_opcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E13A410EA54EA7007EB19C /* dng_opcodes.cpp */; };
 		C7E13A460EA54EA7007EB19C /* dng_opcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E13A410EA54EA7007EB19C /* dng_opcodes.cpp */; };
 		C7E7AB220D08416000D5F031 /* dng_abort_sniffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7FFA56A08DCA62C00743F0C /* dng_abort_sniffer.cpp */; };
@@ -536,6 +541,8 @@
 		347D79341CD7D5C000C28650 /* ValidateDebug64.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = ValidateDebug64.xcconfig; path = xcconfig/ValidateDebug64.xcconfig; sourceTree = "<group>"; };
 		347D79361CD7D5C000C28650 /* ValidateRelease64.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = ValidateRelease64.xcconfig; path = xcconfig/ValidateRelease64.xcconfig; sourceTree = "<group>"; };
 		347D79371CD7D5C000C28650 /* xmp.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = xmp.xcconfig; path = xcconfig/xmp.xcconfig; sourceTree = "<group>"; };
+		34E2339A27AC434600CA8B44 /* dng_jpeg_memory_source.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_jpeg_memory_source.cpp; path = ../../source/dng_jpeg_memory_source.cpp; sourceTree = "<group>"; };
+		34E2339B27AC434600CA8B44 /* dng_jpeg_memory_source.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_jpeg_memory_source.h; path = ../../source/dng_jpeg_memory_source.h; sourceTree = "<group>"; };
 		34E8842110D1371500062F22 /* dng_ref_counted_block.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_ref_counted_block.cpp; path = ../../source/dng_ref_counted_block.cpp; sourceTree = SOURCE_ROOT; };
 		34E8842210D1371500062F22 /* dng_ref_counted_block.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_ref_counted_block.h; path = ../../source/dng_ref_counted_block.h; sourceTree = SOURCE_ROOT; };
 		382CE4000D37B415002BCBAD /* dng_pthread.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_pthread.cpp; path = ../../source/dng_pthread.cpp; sourceTree = SOURCE_ROOT; };
@@ -637,6 +644,8 @@
 		C7CD211B08F9681900D265DD /* dng_xmp_sdk.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_xmp_sdk.h; path = ../../source/dng_xmp_sdk.h; sourceTree = SOURCE_ROOT; };
 		C7CD211C08F9681900D265DD /* dng_xmp.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_xmp.cpp; path = ../../source/dng_xmp.cpp; sourceTree = SOURCE_ROOT; };
 		C7CD211D08F9681900D265DD /* dng_xmp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_xmp.h; path = ../../source/dng_xmp.h; sourceTree = SOURCE_ROOT; };
+		C7CE248326D9416100A84135 /* dng_update_meta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_update_meta.h; path = ../../source/dng_update_meta.h; sourceTree = "<group>"; };
+		C7CE248426D9416100A84135 /* dng_update_meta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_update_meta.cpp; path = ../../source/dng_update_meta.cpp; sourceTree = "<group>"; };
 		C7DCA31F224C4A14001231BB /* dng_simd_type.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_simd_type.h; path = ../../source/dng_simd_type.h; sourceTree = "<group>"; };
 		C7E084E80917BC1300739AD2 /* dng_mutex.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_mutex.cpp; path = ../../source/dng_mutex.cpp; sourceTree = SOURCE_ROOT; };
 		C7E084E90917BC1300739AD2 /* dng_mutex.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_mutex.h; path = ../../source/dng_mutex.h; sourceTree = SOURCE_ROOT; };
@@ -830,6 +839,8 @@
 				C719F5FD08E78313000A0AC5 /* dng_iptc.h */,
 				C7512AF11459CAD600A97398 /* dng_jpeg_image.cpp */,
 				C7512AF21459CAD600A97398 /* dng_jpeg_image.h */,
+				34E2339A27AC434600CA8B44 /* dng_jpeg_memory_source.cpp */,
+				34E2339B27AC434600CA8B44 /* dng_jpeg_memory_source.h */,
 				C7A7DE240EB0D8A900B6A136 /* dng_lens_correction.cpp */,
 				C7A7DE250EB0D8A900B6A136 /* dng_lens_correction.h */,
 				C7FFA58A08DCA62C00743F0C /* dng_linearization_info.cpp */,
@@ -910,6 +921,8 @@
 				3852C9FC0BD6F4E20048EA83 /* dng_tone_curve.h */,
 				C7FFA5B308DCA62C00743F0C /* dng_types.h */,
 				C74F91E01B6AE8010065FC0E /* dng_uncopyable.h */,
+				C7CE248426D9416100A84135 /* dng_update_meta.cpp */,
+				C7CE248326D9416100A84135 /* dng_update_meta.h */,
 				C7FFA5B408DCA62C00743F0C /* dng_utils.cpp */,
 				C7FFA5B508DCA62C00743F0C /* dng_utils.h */,
 				C7FFA5B608DCA62C00743F0C /* dng_validate.cpp */,
@@ -1180,6 +1193,7 @@
 				C78B94D8157AF88A00A4675C /* jidctfst.c in Sources */,
 				C78B94DA157AF88A00A4675C /* jidctint.c in Sources */,
 				C78B94E6157AF94400A4675C /* jcapimin.c in Sources */,
+				34E2339C27AC434700CA8B44 /* dng_jpeg_memory_source.cpp in Sources */,
 				C78B94E8157AF94400A4675C /* jcapistd.c in Sources */,
 				C78B94EA157AF94400A4675C /* jcarith.c in Sources */,
 				C78B94EC157AF94400A4675C /* jccoefct.c in Sources */,
@@ -1187,6 +1201,7 @@
 				C78B94F0157AF94400A4675C /* jcdctmgr.c in Sources */,
 				C78B94F2157AF94400A4675C /* jchuff.c in Sources */,
 				C78B94F4157AF94400A4675C /* jcinit.c in Sources */,
+				C7CE248526D9416100A84135 /* dng_update_meta.cpp in Sources */,
 				C78B94F6157AF94400A4675C /* jcmainct.c in Sources */,
 				C78B94F8157AF94400A4675C /* jcmarker.c in Sources */,
 				C78B94FD157AF98C00A4675C /* jquant1.c in Sources */,
@@ -1276,6 +1291,7 @@
 				C7512AF61459CAD600A97398 /* dng_jpeg_image.cpp in Sources */,
 				C78B9492157AF66400A4675C /* jcmaster.c in Sources */,
 				C78B94A6157AF78000A4675C /* jdapimin.c in Sources */,
+				34E237E82757BC7B00DF6EF1 /* dng_big_table.cpp in Sources */,
 				344F1F791C49946700955565 /* dng_safe_arithmetic.cpp in Sources */,
 				C78B94A8157AF78000A4675C /* jdapistd.c in Sources */,
 				C78B94AA157AF78000A4675C /* jdarith.c in Sources */,
@@ -1300,6 +1316,7 @@
 				C78B94D7157AF88A00A4675C /* jidctflt.c in Sources */,
 				C78B94D9157AF88A00A4675C /* jidctfst.c in Sources */,
 				C78B94DB157AF88A00A4675C /* jidctint.c in Sources */,
+				34E2339D27AC434700CA8B44 /* dng_jpeg_memory_source.cpp in Sources */,
 				C78B94E7157AF94400A4675C /* jcapimin.c in Sources */,
 				C78B94E9157AF94400A4675C /* jcapistd.c in Sources */,
 				C78B94EB157AF94400A4675C /* jcarith.c in Sources */,
@@ -1307,6 +1324,7 @@
 				C78B94EF157AF94400A4675C /* jccolor.c in Sources */,
 				C78B94F1157AF94400A4675C /* jcdctmgr.c in Sources */,
 				C78B94F3157AF94400A4675C /* jchuff.c in Sources */,
+				C7CE248626D9416100A84135 /* dng_update_meta.cpp in Sources */,
 				C78B94F5157AF94400A4675C /* jcinit.c in Sources */,
 				C78B94F7157AF94400A4675C /* jcmainct.c in Sources */,
 				C78B94F9157AF94400A4675C /* jcmarker.c in Sources */,

@@ -1,9 +1,17 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Validate Debug|ARM64">
+      <Configuration>Validate Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Validate Debug|x64">
       <Configuration>Validate Debug</Configuration>
       <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Validate Release|ARM64">
+      <Configuration>Validate Release</Configuration>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Validate Release|x64">
       <Configuration>Validate Release</Configuration>
@@ -14,18 +22,28 @@
     <ProjectGuid>{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}</ProjectGuid>
     <RootNamespace>dng_validate</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|ARM64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|ARM64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -40,6 +58,16 @@
     <Import Project="..\settings\dngsdkValidateFlags.props" />
     <Import Project="..\settings\dngsdkValidateTarget.props" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\settings\dngsdkRoot.props" />
+    <Import Project="..\settings\dngsdkBuild.props" />
+    <Import Project="..\settings\dngsdkFlags.props" />
+    <Import Project="..\settings\dngsdkRelease.props" />
+    <Import Project="..\settings\dngsdkArm64.props" />
+    <Import Project="..\settings\dngsdkValidateFlags.props" />
+    <Import Project="..\settings\dngsdkValidateTarget.props" />
+  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\settings\dngsdkRoot.props" />
@@ -50,21 +78,45 @@
     <Import Project="..\settings\dngsdkValidateFlags.props" />
     <Import Project="..\settings\dngsdkValidateTarget.props" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\settings\dngsdkRoot.props" />
+    <Import Project="..\settings\dngsdkBuild.props" />
+    <Import Project="..\settings\dngsdkFlags.props" />
+    <Import Project="..\settings\dngsdkDebug.props" />
+    <Import Project="..\settings\dngsdkArm64.props" />
+    <Import Project="..\settings\dngsdkValidateFlags.props" />
+    <Import Project="..\settings\dngsdkValidateTarget.props" />
+  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Validate Debug|ARM64'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'" />
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Validate Debug|ARM64'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Validate Debug|ARM64'" />
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Validate Release|ARM64'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'" />
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Validate Release|ARM64'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Validate Release|ARM64'" />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'">
     <IntDir>$(Configuration)\$(Platform)\</IntDir>
     <OutDir>$(Configuration)\$(Platform)\</OutDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|ARM64'">
+    <IntDir>$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(Configuration)\$(Platform)\</OutDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|x64'">
+    <IntDir>$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(Configuration)\$(Platform)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|ARM64'">
     <IntDir>$(Configuration)\$(Platform)\</IntDir>
     <OutDir>$(Configuration)\$(Platform)\</OutDir>
   </PropertyGroup>
@@ -83,6 +135,20 @@
       </DataExecutionPrevention>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Validate Debug|ARM64'">
+    <Midl />
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <AdditionalOptions>
+      </AdditionalOptions>
+    </ClCompile>
+    <ProjectReference />
+    <Link>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|x64'">
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
@@ -91,6 +157,20 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <AdditionalOptions />
+    </ClCompile>
+    <ProjectReference />
+    <Link>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Validate Release|ARM64'">
+    <Midl />
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <AdditionalOptions>
+      </AdditionalOptions>
     </ClCompile>
     <ProjectReference />
     <Link>
@@ -171,6 +251,7 @@
     <ClCompile Include="..\..\..\source\dng_info.cpp" />
     <ClCompile Include="..\..\..\source\dng_iptc.cpp" />
     <ClCompile Include="..\..\..\source\dng_jpeg_image.cpp" />
+    <ClCompile Include="..\..\..\source\dng_jpeg_memory_source.cpp" />
     <ClCompile Include="..\..\..\source\dng_lens_correction.cpp" />
     <ClCompile Include="..\..\..\source\dng_linearization_info.cpp" />
     <ClCompile Include="..\..\..\source\dng_local_string.cpp" />
@@ -251,6 +332,7 @@
     <ClInclude Include="..\..\..\source\dng_info.h" />
     <ClInclude Include="..\..\..\source\dng_iptc.h" />
     <ClInclude Include="..\..\..\source\dng_jpeg_image.h" />
+    <ClInclude Include="..\..\..\source\dng_jpeg_memory_source.h" />
     <ClInclude Include="..\..\..\source\dng_lens_correction.h" />
     <ClInclude Include="..\..\..\source\dng_linearization_info.h" />
     <ClInclude Include="..\..\..\source\dng_local_string.h" />

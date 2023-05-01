@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\..\..\libjpeg\jaricom.c">
@@ -218,6 +218,9 @@
       <Filter>dng_sdk</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\source\dng_jpeg_image.cpp">
+      <Filter>dng_sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\source\dng_jpeg_memory_source.cpp">
       <Filter>dng_sdk</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\source\dng_lens_correction.cpp">
@@ -451,6 +454,9 @@
       <Filter>dng_sdk</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\source\dng_jpeg_image.h">
+      <Filter>dng_sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\source\dng_jpeg_memory_source.h">
       <Filter>dng_sdk</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\source\dng_lens_correction.h">

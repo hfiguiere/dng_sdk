@@ -1,2 +1,2 @@
-XMP_LIB_PATH  = $(DNG_ROOT)/xmp_sdk/public/libraries/macintosh/intel_64/$(DNG_SDK_BUILD_MODE)
-XMP_LIB_FLAGS = -lXMPFilesStatic -lXMPCoreStatic
+XMP_LIB_PATH  = $(DNG_ROOT)/xmp/toolkit/public/libraries/macintosh/intel_64_libcpp/$(DNG_SDK_BUILD_MODE)
+XMP_LIB_FLAGS = -lXMPFilesStatic$(DNG_SDK_BUILD_MODE) -lXMPCoreStatic$(DNG_SDK_BUILD_MODE)

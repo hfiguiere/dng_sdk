@@ -2,8 +2,6 @@
 #include "dngsdkRelease.xcconfig"
 #include "xmp.xcconfig"
 
-ARCHS = $(ARCHS_STANDARD_64_BIT)
-
 CONFIGURATION_BUILD_DIR = $(MY_OUTPUT_BASE_DIR)/release64
 
 LIBRARY_SEARCH_PATHS = $(XMP_LIB_PATH)
