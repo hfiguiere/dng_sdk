@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_simple_image.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_simple_image.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -66,7 +66,29 @@ dng_simple_image::~dng_simple_image ()
 	{
 	
 	}
-		
+
+/*****************************************************************************/
+
+void dng_simple_image::SetPixelType (uint32 pixelType)
+	{
+	
+	dng_image::SetPixelType (pixelType);
+	
+	fBuffer.fPixelType = pixelType;
+	
+	}
+
+/*****************************************************************************/
+
+void dng_simple_image::SetPixelRange (uint32 pixelRange)
+	{
+	
+	dng_image::SetPixelRange (pixelRange);
+	
+	fBuffer.fPixelRange = pixelRange;
+	
+	}
+
 /*****************************************************************************/
 
 void dng_simple_image::Trim (const dng_rect &r)
@@ -143,15 +165,22 @@ void dng_simple_image::Rotate (const dng_orientation &orientation)
 		
 /*****************************************************************************/
 
-void dng_simple_image::AcquireTileBuffer (dng_pixel_buffer &buffer,
-										  const dng_rect &tile,
+void dng_simple_image::AcquireTileBuffer (dng_tile_buffer &buffer,
+										  const dng_rect &area,
 										  bool dirty) const
 	{
 	
-	buffer = fBuffer;
+	buffer.fArea = area;
 	
-	buffer.fArea = tile;
-	
+	buffer.fPlane      = fBuffer.fPlane;
+	buffer.fPlanes     = fBuffer.fPlanes;
+	buffer.fRowStep    = fBuffer.fRowStep;
+	buffer.fColStep    = fBuffer.fColStep;
+	buffer.fPlaneStep  = fBuffer.fPlaneStep;
+	buffer.fPixelType  = fBuffer.fPixelType;
+	buffer.fPixelSize  = fBuffer.fPixelSize;
+	buffer.fPixelRange = fBuffer.fPixelRange;
+
 	buffer.fData = (void *) fBuffer.ConstPixel (buffer.fArea.t,
 								  				buffer.fArea.l,
 								  				buffer.fPlane);

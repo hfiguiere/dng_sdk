@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_file_stream.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_file_stream.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Simple, portable, file read/write support.
@@ -42,21 +42,22 @@ class dng_file_stream: public dng_stream
 		/// \param output Set to true if writing, false otherwise.
 
 		dng_file_stream (const char *filename,
-						 bool output = false);
+						 bool output = false,
+						 uint32 bufferSize = kDefaultBufferSize);
 		
 		virtual ~dng_file_stream ();
 	
 	protected:
 	
-		virtual uint32 DoGetLength ();
+		virtual uint64 DoGetLength ();
 	
 		virtual void DoRead (void *data,
 							 uint32 count,
-							 uint32 offset);
+							 uint64 offset);
 		
 		virtual void DoWrite (const void *data,
 							  uint32 count,
-							  uint32 offset);
+							  uint64 offset);
 		
 	private:
 	

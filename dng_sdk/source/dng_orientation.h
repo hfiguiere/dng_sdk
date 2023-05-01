@@ -6,9 +6,9 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_orientation.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_orientation.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /******************************************************************************/
@@ -39,7 +39,8 @@ class dng_orientation
 			kMirror		 = 4,
 			kMirror90CW  = 5,
 			kMirror180	 = 6,
-			kMirror90CCW = 7
+			kMirror90CCW = 7,
+			kUnknown     = 8
 			};
 	
 		uint32 fAdobeOrientation;
@@ -127,6 +128,21 @@ class dng_orientation
 		static dng_orientation Mirror90CCW ()
 			{
 			return AdobeToDNG (kMirror90CCW);
+			}
+			
+		static dng_orientation Unknown ()
+			{
+			return AdobeToDNG (kUnknown);
+			}
+			
+		bool IsValid () const
+			{
+			return fAdobeOrientation < kUnknown;
+			}
+			
+		bool NotValid () const
+			{
+			return !IsValid ();
 			}
 			
 		bool FlipD () const;

@@ -1,20 +1,21 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_info.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_info.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
 
 #include "dng_info.h"
 
+#include "dng_camera_profile.h"
 #include "dng_exceptions.h"
 #include "dng_globals.h"
 #include "dng_host.h"
@@ -28,15 +29,16 @@
 
 dng_info::dng_info ()
 
-	:	fTIFFBlockOffset  (0)
-	,	fBigEndian        (false)
-	,	fMagic			  (0)
-	,	fExif			  ()
-	,	fShared			  ()
-	,	fMainIndex		  (-1)
-	,	fIFDCount		  (0)
-	,	fChainedIFDCount  (0)
-	,	fMakerNoteNextIFD (0)
+	:	fTIFFBlockOffset         (0)
+	,	fTIFFBlockOriginalOffset (kDNGStreamInvalidOffset)
+	,	fBigEndian				 (false)
+	,	fMagic					 (0)
+	,	fExif					 ()
+	,	fShared					 ()
+	,	fMainIndex				 (-1)
+	,	fIFDCount				 (0)
+	,	fChainedIFDCount		 (0)
+	,	fMakerNoteNextIFD		 (0)
 	
 	{
 	
@@ -57,10 +59,11 @@ void dng_info::ValidateMagic ()
 	switch (fMagic)
 		{
 		
-		case 42:		// Standard TIFF value
-		case 85:		// Panasonic
-		case 0x4f52:	// Olympus
-		case 0x5352:	// Olympus
+		case magicTIFF:
+		case magicExtendedProfile:
+		case magicPanasonic:
+		case magicOlympusA:
+		case magicOlympusB:
 			{
 			
 			return;
@@ -95,8 +98,8 @@ void dng_info::ParseTag (dng_host &host,
 						 uint32 tagCode,
 						 uint32 tagType,
 						 uint32 tagCount,
-						 uint32 tagOffset,
-						 int32 offsetDelta)
+						 uint64 tagOffset,
+						 int64 offsetDelta)
 	{
 	
 	bool isSubIFD = parentCode >= tcFirstSubIFD &&
@@ -306,8 +309,8 @@ void dng_info::ParseTag (dng_host &host,
 /*****************************************************************************/
 
 bool dng_info::ValidateIFD (dng_stream &stream,
-						    uint32 ifdOffset,
-						    int32 offsetDelta)
+						    uint64 ifdOffset,
+						    int64 offsetDelta)
 	{
 	
 	// Make sure we have a count.
@@ -359,7 +362,7 @@ bool dng_info::ValidateIFD (dng_stream &stream,
 		if (tag_data_size > 4)
 			{
 			
-			uint32 tagOffset = stream.Get_uint32 ();
+			uint64 tagOffset = stream.Get_uint32 ();
 							
 			tagOffset += offsetDelta;
 			
@@ -383,14 +386,18 @@ void dng_info::ParseIFD (dng_host &host,
 						 dng_exif *exif,
 						 dng_shared *shared,
 						 dng_ifd *ifd,
-						 uint32 ifdOffset,
-						 int32 offsetDelta,
+						 uint64 ifdOffset,
+						 int64 offsetDelta,
 						 uint32 parentCode)
 	{
 	
+	#if qDNGValidate
+
 	bool isMakerNote = (parentCode >= tcFirstMakerNoteIFD &&
 						parentCode <= tcLastMakerNoteIFD);
 	
+	#endif
+
 	stream.SetReadPosition (ifdOffset);
 	
 	if (ifd)
@@ -513,7 +520,7 @@ void dng_info::ParseIFD (dng_host &host,
 			
 			}
 			
-		uint32 tagOffset = ifdOffset + 2 + tag_index * 12 + 8;
+		uint64 tagOffset = ifdOffset + 2 + tag_index * 12 + 8;
 		
 		if (tagCount * tag_type_size > 4)
 			{
@@ -621,11 +628,11 @@ void dng_info::ParseIFD (dng_host &host,
 
 bool dng_info::ParseMakerNoteIFD (dng_host &host,
 								  dng_stream &stream,
-								  uint32 ifdSize,
-						 		  uint32 ifdOffset,
-								  int32 offsetDelta,
-								  uint32 minOffset,
-								  uint32 maxOffset,
+								  uint64 ifdSize,
+						 		  uint64 ifdOffset,
+								  int64 offsetDelta,
+								  uint64 minOffset,
+								  uint64 maxOffset,
 						 		  uint32 parentCode)
 	{
 	
@@ -667,6 +674,14 @@ bool dng_info::ParseMakerNoteIFD (dng_host &host,
 		
 		tagType = stream.Get_uint16 ();
 		
+		// Kludge: Some Canon MakerNotes contain tagType = 0 tags, so we
+		// need to ignore them.  This was a "firmware 1.0.4" Canon 40D raw file.
+		
+		if (parentCode == tcCanonMakerNote && tagType == 0)
+			{
+			continue;
+			}
+		
 		if (TagTypeSize (tagType) == 0)
 			{
 			return false;
@@ -699,9 +714,14 @@ bool dng_info::ParseMakerNoteIFD (dng_host &host,
 		tagType  = stream.Get_uint16 ();
 		tagCount = stream.Get_uint32 ();
 		
+		if (tagType == 0)
+			{
+			continue;
+			}
+		
 		uint32 tagSize = tagCount * TagTypeSize (tagType);
 		
-		uint32 tagOffset = ifdOffset + 2 + tagIndex * 12 + 8;
+		uint64 tagOffset = ifdOffset + 2 + tagIndex * 12 + 8;
 		
 		if (tagSize > 4)
 			{
@@ -723,6 +743,80 @@ bool dng_info::ParseMakerNoteIFD (dng_host &host,
 			
 			}
 			
+		// Olympus switched to using IFDs in version 3 makernotes.
+		
+		if (parentCode == tcOlympusMakerNote &&
+			tagType == ttIFD &&
+			tagCount == 1)
+			{
+			
+			uint32 olympusMakerParent = 0;
+			
+			switch (tagCode)
+				{
+				
+				case 8208:
+					olympusMakerParent = tcOlympusMakerNote8208;
+					break;
+					
+				case 8224:
+					olympusMakerParent = tcOlympusMakerNote8224;
+					break; 
+			
+				case 8240:
+					olympusMakerParent = tcOlympusMakerNote8240;
+					break; 
+			
+				case 8256:
+					olympusMakerParent = tcOlympusMakerNote8256;
+					break; 
+			
+				case 8272:
+					olympusMakerParent = tcOlympusMakerNote8272;
+					break; 
+			
+				case 12288:
+					olympusMakerParent = tcOlympusMakerNote12288;
+					break;
+					
+				default:
+					break;
+					
+				}
+				
+			if (olympusMakerParent)
+				{
+				
+				stream.SetReadPosition (tagOffset);
+			
+				uint64 subMakerNoteOffset = stream.Get_uint32 () + offsetDelta;
+				
+				if (subMakerNoteOffset >= minOffset &&
+					subMakerNoteOffset <  maxOffset)
+					{
+				
+					if (ParseMakerNoteIFD (host,
+										   stream,
+										   maxOffset - subMakerNoteOffset,
+										   subMakerNoteOffset,
+										   offsetDelta,
+										   minOffset,
+										   maxOffset,
+										   olympusMakerParent))
+						{
+						
+						continue;
+						
+						}
+						
+					}
+				
+				}
+				
+			stream.SetReadPosition (tagOffset);
+			
+			}
+		
 		ParseTag (host,
 				  stream,
 				  fExif.Get (),
@@ -766,10 +860,10 @@ bool dng_info::ParseMakerNoteIFD (dng_host &host,
 void dng_info::ParseMakerNote (dng_host &host,
 							   dng_stream &stream,
 							   uint32 makerNoteCount,
-							   uint32 makerNoteOffset,
-							   int32 offsetDelta,
-							   uint32 minOffset,
-							   uint32 maxOffset)
+							   uint64 makerNoteOffset,
+							   int64 offsetDelta,
+							   uint64 minOffset,
+							   uint64 maxOffset)
 	{
 	
 	uint8 firstBytes [16];
@@ -778,8 +872,8 @@ void dng_info::ParseMakerNote (dng_host &host,
 	
 	stream.SetReadPosition (makerNoteOffset);
 	
-	stream.Get (firstBytes, Min_uint32 (sizeof (firstBytes),
-									    makerNoteCount));
+	stream.Get (firstBytes, (uint32) Min_uint64 (sizeof (firstBytes),
+												 makerNoteCount));
 	
 	// Epson MakerNote with header.
 	
@@ -845,7 +939,7 @@ void dng_info::ParseMakerNote (dng_host &host,
 							   stream,
 							   makerNoteCount - 8,
 							   makerNoteOffset + 8,
-							   offsetDelta,
+							   makerNoteOffset,
 							   minOffset,
 							   maxOffset,
 							   tcLeicaMakerNote);
@@ -904,6 +998,54 @@ void dng_info::ParseMakerNote (dng_host &host,
 			
 		return;
 					
+		}
+		
+	// Newer version of Olympus MakerNote with byte order mark.
+	
+	if (memcmp (firstBytes, "OLYMPUS\000", 8) == 0)
+		{
+		
+		stream.SetReadPosition (makerNoteOffset + 8);
+		
+		bool bigEndian = false;
+		
+		uint16 endianMark = stream.Get_uint16 ();
+		
+		if (endianMark == byteOrderMM)
+			{
+			bigEndian = true;
+			}
+			
+		else if (endianMark != byteOrderII)
+			{
+			return;
+			}
+			
+		TempBigEndian temp_endian (stream, bigEndian);
+		
+		uint16 version = stream.Get_uint16 ();
+		
+		if (version != 3)
+			{
+			return;
+			}
+		
+		if (makerNoteCount > 12)
+			{
+		
+			ParseMakerNoteIFD (host,
+							   stream,
+							   makerNoteCount - 12,
+				   	  		   makerNoteOffset + 12,
+				   	  		   makerNoteOffset,
+				   	  		   minOffset,
+				   	  		   maxOffset,
+				   	  		   tcOlympusMakerNote);
+				   	  		   
+			}
+			
+		return;
+		
 		}
 		
 	// Olympus MakerNote with header.
@@ -1151,8 +1293,8 @@ void dng_info::ParseMakerNote (dng_host &host,
 void dng_info::ParseSonyPrivateData (dng_host & /* host */,
 									 dng_stream & /* stream */,
 									 uint32 /* count */,
-									 uint32 /* oldOffset */,
-									 uint32 /* newOffset */)
+									 uint64 /* oldOffset */,
+									 uint64 /* newOffset */)
 	{
 	
 	// Sony private data is encrypted, sorry.
@@ -1165,22 +1307,86 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 									dng_stream &stream)
 	{
 	
-	char adobe_name [6];
-	
-	if (fShared->fDNGPrivateDataCount < sizeof (adobe_name))
+	if (fShared->fDNGPrivateDataCount < 2)
 		{
 		return;
 		}
 	
-	stream.SetReadPosition (fShared->fDNGPrivateDataOffset);
-	
-	stream.Get (adobe_name, sizeof (adobe_name));
-	
-	if (memcmp (adobe_name, "Adobe\000", sizeof (adobe_name)) != 0)
+	// DNG private data should always start with a null-terminated 
+	// company name, to define the format of the private data.
+			
+	dng_string privateName;
+			
 		{
-		return;
+			
+		char buffer [64];
+		
+		stream.SetReadPosition (fShared->fDNGPrivateDataOffset);
+	
+		uint32 readLength = Min_uint32 (fShared->fDNGPrivateDataCount,
+										sizeof (buffer) - 1);
+		
+		stream.Get (buffer, readLength);
+		
+		buffer [readLength] = 0;
+		
+		privateName.Set (buffer);
+		
 		}
 		
+	// Pentax is storing their MakerNote in the DNGPrivateData data.
+	
+	if (privateName.StartsWith ("PENTAX" ) ||
+		privateName.StartsWith ("SAMSUNG"))
+		{
+		
+		#if qDNGValidate
+		
+		if (gVerbose)
+			{
+			printf ("Parsing Pentax/Samsung DNGPrivateData\n\n");
+			}
+			
+		#endif
+
+		stream.SetReadPosition (fShared->fDNGPrivateDataOffset + 8);
+		
+		bool bigEndian = stream.BigEndian ();
+		
+		uint16 endianMark = stream.Get_uint16 ();
+		
+		if (endianMark == byteOrderMM)
+			{
+			bigEndian = true;
+			}
+			
+		else if (endianMark == byteOrderII)
+			{
+			bigEndian = false;
+			}
+			
+		TempBigEndian temp_endian (stream, bigEndian);
+	
+		ParseMakerNoteIFD (host,
+						   stream,
+						   fShared->fDNGPrivateDataCount - 10,
+						   fShared->fDNGPrivateDataOffset + 10,
+						   fShared->fDNGPrivateDataOffset,
+						   fShared->fDNGPrivateDataOffset,
+						   fShared->fDNGPrivateDataOffset + fShared->fDNGPrivateDataCount,
+						   tcPentaxMakerNote);
+						   
+		return;
+		
+		}
+				
+	// Stop parsing if this is not an Adobe format block.
+	
+	if (!privateName.Matches ("Adobe"))
+		{
+		return;
+		}
+	
 	TempBigEndian temp_order (stream);
 	
 	uint32 section_offset = 6;
@@ -1206,13 +1412,13 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 			#endif
 				
 			uint16 order_mark = stream.Get_uint16 ();
-			uint32 old_offset = stream.Get_uint32 ();
+			uint64 old_offset = stream.Get_uint32 ();
 
 			uint32 tempSize = section_count - 6;
 			
 			AutoPtr<dng_memory_block> tempBlock (host.Allocate (tempSize));
 			
-			uint32 positionInOriginalFile = stream.PositionInOriginalFile();
+			uint64 positionInOriginalFile = stream.PositionInOriginalFile();
 			
 			stream.Get (tempBlock->Buffer (), tempSize);
 			
@@ -1245,9 +1451,9 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 			#endif
 			
 			uint16 order_mark = stream.Get_uint16 ();
-			uint32 old_offset = stream.Get_uint32 ();
+			uint64 old_offset = stream.Get_uint32 ();
 
-			uint32 new_offset = fShared->fDNGPrivateDataOffset + section_offset + 14;
+			uint64 new_offset = fShared->fDNGPrivateDataOffset + section_offset + 14;
 			
 			TempBigEndian sr2_order (stream, order_mark == byteOrderMM);
 			
@@ -1275,7 +1481,7 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 			
 			uint32 tagCount = stream.Get_uint32 ();
 			
-			uint32 tagOffset = stream.Position ();
+			uint64 tagOffset = stream.Position ();
 				
 			if (tagCount)
 				{
@@ -1366,7 +1572,7 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 			
 			uint32 tagCount  = stream.Get_uint32 ();
 			
-			uint32 tagOffset = stream.Position ();
+			uint64 tagOffset = stream.Position ();
 				
 			if (tagCount)
 				{
@@ -1388,6 +1594,67 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				}
 			
 			}
+			
+		else if (section_key == DNG_CHAR4 ('C','R','W',' ') && section_count > 4)
+			{
+			
+			#if qDNGValidate
+			
+			if (gVerbose)
+				{
+				printf ("Found Canon CRW tags inside DNGPrivateData\n\n");
+				}
+				
+			#endif
+				
+			uint16 order_mark = stream.Get_uint16 ();
+			uint32 entries    = stream.Get_uint16 ();
+			
+			uint64 crwTagStart = stream.Position ();
+			
+			for (uint32 parsePass = 1; parsePass <= 2; parsePass++)
+				{
+				
+				stream.SetReadPosition (crwTagStart);
+			
+				for (uint32 index = 0; index < entries; index++)
+					{
+					
+					uint32 tagCode = stream.Get_uint16 ();
+											 
+					uint32 tagCount = stream.Get_uint32 ();
+					
+					uint64 tagOffset = stream.Position ();
+					
+					// We need to grab the model id tag first, and then all the
+					// other tags.
+					
+					if ((parsePass == 1) == (tagCode == 0x5834))
+						{
+				
+						TempBigEndian tag_order (stream, order_mark == byteOrderMM);
+					
+						ParseTag (host,
+								  stream,
+								  fExif.Get (),
+								  fShared.Get (),
+								  NULL,
+								  tcCanonCRW,
+								  tagCode,
+								  ttUndefined,
+								  tagCount,
+								  tagOffset,
+								  0);
+								  
+						}
+					
+					stream.SetReadPosition (tagOffset + tagCount);
+					
+					}
+					
+				}
+			
+			}
 
 		else if (section_count > 4)
 			{
@@ -1399,13 +1666,6 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 			
 			switch (section_key)
 				{
-				
-				case DNG_CHAR4 ('C','R','W',' '):
-					{
-					parentCode = tcCanonCRW;
-					hasType    = false;
-					break;
-					}
 				
 				case DNG_CHAR4 ('M','R','W',' '):
 					{
@@ -1473,7 +1733,7 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 					
 					uint32 tagSize = tagCount * TagTypeSize (tagType);
 					
-					uint32 tagOffset = stream.Position ();
+					uint64 tagOffset = stream.Position ();
 					
 					TempBigEndian tag_order (stream, order_mark == byteOrderMM);
 				
@@ -1515,6 +1775,8 @@ void dng_info::Parse (dng_host &host,
 	{
 	
 	fTIFFBlockOffset = stream.Position ();
+	
+	fTIFFBlockOriginalOffset = stream.PositionInOriginalFile ();
 	
 	// Check byte order indicator.
 	
@@ -1586,7 +1848,7 @@ void dng_info::Parse (dng_host &host,
 	
 	// Parse IFD 0.
 	
-	uint32 next_offset = stream.Get_uint32 ();
+	uint64 next_offset = stream.Get_uint32 ();
 	
 	fExif.Reset (host.Make_dng_exif ());
 	
@@ -1611,6 +1873,23 @@ void dng_info::Parse (dng_host &host,
 	
 	while (next_offset)
 		{
+		
+		if (next_offset >= stream.Length ())
+			{
+			
+			#if qDNGValidate
+			
+				{
+				
+				ReportWarning ("Chained IFD offset past end of stream");
+
+				}
+				
+			#endif
+			
+			break;
+			
+			}
 		
 		if (fChainedIFDCount == kMaxChainedIFDs)
 			{
@@ -1825,7 +2104,7 @@ void dng_info::Parse (dng_host &host,
 		
 		ParseMakerNote (host,
 						stream,
-						fTIFFBlockOffset + fShared->fMakerNoteCount,
+						(uint32) (fTIFFBlockOffset + fShared->fMakerNoteCount),
 						fShared->fMakerNoteOffset,
 						fTIFFBlockOffset,
 						0,
@@ -1843,6 +2122,31 @@ void dng_info::Parse (dng_host &host,
 				
 		}
 
+	#if qDNGValidate
+	
+	// If we are running dng_validate on stand-alone camera profile file,
+	// complete the validation of the profile.
+	
+	if (fMagic == magicExtendedProfile)
+		{
+		
+		dng_camera_profile_info &profileInfo = fShared->fCameraProfile;
+		
+		dng_camera_profile profile;
+		
+		profile.Parse (stream, profileInfo);
+		
+		if (profileInfo.fColorPlanes < 3 || !profile.IsValid (profileInfo.fColorPlanes))
+			{
+			
+			ReportError ("Invalid camera profile file");
+		
+			}
+			
+		}
+		
+	#endif
+		
 	}
 	
 /*****************************************************************************/
@@ -1902,6 +2206,33 @@ void dng_info::PostParse (dng_host &host)
 					
 				#endif
 						
+				}
+				
+			else if (fIFD [index]->fNewSubFileType == sfPreviewImage ||
+					 fIFD [index]->fNewSubFileType == sfAltPreviewImage)
+				{
+				
+				// Fill in default color space for DNG previews if not included.
+				
+				if (fIFD [index]->fPreviewInfo.fColorSpace == previewColorSpace_MaxEnum)
+					{
+					
+					if (fIFD [index]->fSamplesPerPixel == 1)
+						{
+						
+						fIFD [index]->fPreviewInfo.fColorSpace = previewColorSpace_GrayGamma22;
+						
+						}
+						
+					else
+						{
+						
+						fIFD [index]->fPreviewInfo.fColorSpace = previewColorSpace_sRGB;
+						
+						}
+					
+					}
+					
 				}
 				
 			}

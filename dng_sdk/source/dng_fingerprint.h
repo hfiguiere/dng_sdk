@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_fingerprint.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_fingerprint.h#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Fingerprint (cryptographic hashing) support for generating strong hashes of image data.
@@ -22,7 +22,11 @@
 
 /*****************************************************************************/
 
+#include "dng_exceptions.h"
 #include "dng_types.h"
+#include "dng_stream.h"
+
+#include <cstring>
 
 /*****************************************************************************/
 
@@ -38,7 +42,7 @@ class dng_fingerprint
 	public:
 	
 		dng_fingerprint ();
-
+		
 		/// Check if fingerprint is all zeros.
 
 		bool IsNull () const;
@@ -99,17 +103,28 @@ class dng_fingerprint
 // These notices must be retained in any copies of any part of this
 // documentation and/or software.
 
-class MD5Fingerprint
+class dng_md5_printer
 	{
 	
 	public:
 	
-		MD5Fingerprint ();
+		dng_md5_printer ();
+		
+		virtual ~dng_md5_printer ()
+			{
+			}
 		
 		void Reset ();
 		
 		void Process (const void *data,
 					  uint32 inputLen);
+					  
+		void Process (const char *text)
+			{
+			
+			Process (text, (uint32)strlen (text));
+			
+			}
 		
 		const dng_fingerprint & Result ();
 		
@@ -222,6 +237,79 @@ class MD5Fingerprint
 		
 		dng_fingerprint result;
 		
+	};
+
+/*****************************************************************************/
+
+// A dng_stream based interface to the MD5 printing logic.
+
+class dng_md5_printer_stream : public dng_stream, dng_md5_printer
+	{
+	
+	private:
+	
+		uint64 fNextOffset;
+
+	public:
+
+		dng_md5_printer_stream ()
+		
+			:	fNextOffset (0)
+			
+			{
+			}
+
+		virtual uint64 DoGetLength ()
+			{
+			
+			return fNextOffset;
+			
+			}
+	
+		virtual void DoRead (void * /* data */,
+							 uint32 /* count */,
+							 uint64 /* offset */)
+			{
+			
+			ThrowProgramError ();
+			
+			}
+							 
+		virtual void DoSetLength (uint64 length)
+			{
+			
+			if (length != fNextOffset)
+				{
+				ThrowProgramError ();
+				}
+				
+			}
+							 
+		virtual void DoWrite (const void *data,
+							  uint32 count2,
+							  uint64 offset)
+			{
+			
+			if (offset != fNextOffset)
+				{
+				ThrowProgramError ();
+				}
+				
+			Process (data, count2);
+			
+			fNextOffset += count2;
+			
+			}
+
+		const dng_fingerprint & Result ()
+			{
+			
+			Flush ();
+			
+			return dng_md5_printer::Result ();
+			
+			}
+
 	};
 
 /*****************************************************************************/

@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_linearization_info.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_linearization_info.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -28,7 +28,7 @@
 
 /*****************************************************************************/
 
-class dng_linearize_plane: public dng_area_task
+class dng_linearize_plane
 	{
 	
 	private:
@@ -68,15 +68,9 @@ class dng_linearize_plane: public dng_area_task
 							 dng_image &dstImage,
 							 uint32 plane);
 							 
-		virtual ~dng_linearize_plane ();
+		~dng_linearize_plane ();
 		
-		virtual dng_rect RepeatingTile1 () const;
-							 
-		virtual dng_rect RepeatingTile2 () const;
-		
-		virtual void Process (uint32 threadIndex,
-							  const dng_rect &tile,
-							  dng_abort_sniffer *sniffer);
+		void Process (const dng_rect &tile);
 								  
 	};
 
@@ -116,7 +110,7 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 		fSrcPixelType != ttLong)
 		{
 		
-		ASSERT (false, "Unsupported source pixel type");
+		DNG_REPORT ("Unsupported source pixel type");
 		
 		ThrowProgramError ();
 		
@@ -126,7 +120,7 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 		fDstPixelType != ttFloat)
 		{
 		
-		ASSERT (false, "Unsupported destination pixel type");
+		DNG_REPORT ("Unsupported destination pixel type");
 		
 		ThrowProgramError ();
 		
@@ -418,10 +412,6 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 		
 		}
 		
-	// Adjust maximum tile size.
-		
-	fMaxTileSize = dng_point (1024, 1024);
-		
 	}
 							 
 /*****************************************************************************/
@@ -433,27 +423,7 @@ dng_linearize_plane::~dng_linearize_plane ()
 							 
 /*****************************************************************************/
 
-dng_rect dng_linearize_plane::RepeatingTile1 () const
-	{
-	
-	return fSrcImage.RepeatingTile ();
-	
-	}
-							 
-/*****************************************************************************/
-
-dng_rect dng_linearize_plane::RepeatingTile2 () const
-	{
-	
-	return fDstImage.RepeatingTile () + fActiveArea.TL ();
-	
-	}
-							 
-/*****************************************************************************/
-
-void dng_linearize_plane::Process (uint32 /* threadIndex */,
-							  	   const dng_rect &srcTile,
-							  	   dng_abort_sniffer * /* sniffer */)
+void dng_linearize_plane::Process (const dng_rect &srcTile)
 	{
 
 	// Process tile.
@@ -881,6 +851,114 @@ void dng_linearize_plane::Process (uint32 /* threadIndex */,
 	
 /*****************************************************************************/
 
+class dng_linearize_image: public dng_area_task
+	{
+	
+	private:
+	
+		const dng_image & fSrcImage;
+		      dng_image & fDstImage;
+			  
+		dng_rect fActiveArea;
+		      
+		AutoPtr<dng_linearize_plane> fPlaneTask [kMaxColorPlanes];
+		
+	public:
+	
+		dng_linearize_image (dng_host &host,
+							 dng_linearization_info &info,
+							 const dng_image &srcImage,
+							 dng_image &dstImage);
+							 
+		virtual ~dng_linearize_image ();
+		
+		virtual dng_rect RepeatingTile1 () const;
+							 
+		virtual dng_rect RepeatingTile2 () const;
+		
+		virtual void Process (uint32 threadIndex,
+							  const dng_rect &tile,
+							  dng_abort_sniffer *sniffer);
+								  
+	};
+
+/*****************************************************************************/
+
+dng_linearize_image::dng_linearize_image (dng_host &host,
+										  dng_linearization_info &info,
+										  const dng_image &srcImage,
+										  dng_image &dstImage)
+							 
+	:	fSrcImage   (srcImage)
+	,	fDstImage   (dstImage)
+	,	fActiveArea (info.fActiveArea)
+	
+	{
+	
+	// Build linearization table for each plane.
+	
+	for (uint32 plane = 0; plane < srcImage.Planes (); plane++)
+		{
+		
+		fPlaneTask [plane].Reset (new dng_linearize_plane (host,
+														   info,
+														   srcImage,
+														   dstImage,
+														   plane));
+														   
+		}
+
+	// Adjust maximum tile size.
+		
+	fMaxTileSize = dng_point (1024, 1024);
+		
+	}
+							 
+/*****************************************************************************/
+
+dng_linearize_image::~dng_linearize_image ()
+	{
+	
+	}
+							 
+/*****************************************************************************/
+
+dng_rect dng_linearize_image::RepeatingTile1 () const
+	{
+	
+	return fSrcImage.RepeatingTile ();
+	
+	}
+							 
+/*****************************************************************************/
+
+dng_rect dng_linearize_image::RepeatingTile2 () const
+	{
+	
+	return fDstImage.RepeatingTile () + fActiveArea.TL ();
+	
+	}
+							 
+/*****************************************************************************/
+
+void dng_linearize_image::Process (uint32 /* threadIndex */,
+							  	   const dng_rect &srcTile,
+							  	   dng_abort_sniffer * /* sniffer */)
+	{
+
+	// Process each plane.
+	
+	for (uint32 plane = 0; plane < fSrcImage.Planes (); plane++)
+		{
+		
+		fPlaneTask [plane]->Process (srcTile);
+														   
+		}
+		
+	}
+	
+/*****************************************************************************/
+
 dng_linearization_info::dng_linearization_info ()
 
 	:	fActiveArea ()
@@ -1241,26 +1319,14 @@ void dng_linearization_info::Linearize (dng_host &host,
 										dng_image &dstImage)
 	{
 	
-	// Process each image plane separately.
-	
-	for (uint32 plane = 0; plane < srcImage.Planes (); plane++)
-		{
-		
-		// Build linearization table for this plane.
-		
-		dng_linearize_plane processor (host,
-									   *this,
-									   srcImage,
-									   dstImage,
-									   plane);
-									   
-		// Process plane.
-		
-		host.PerformAreaTask (processor,
-							  fActiveArea);
+	dng_linearize_image processor (host,
+								   *this,
+								   srcImage,
+								   dstImage);
+								   
+	host.PerformAreaTask (processor,
+						  fActiveArea);
 						
-		}
-	
 	}
 				
 /*****************************************************************************/

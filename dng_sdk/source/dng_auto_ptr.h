@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_auto_ptr.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_auto_ptr.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Class to implement std::auto_ptr like functionality even on platforms which do not have a full Standard C++ library.

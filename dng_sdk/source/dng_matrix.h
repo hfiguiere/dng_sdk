@@ -1,18 +1,19 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_matrix.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_matrix.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /** \file
- * Matrix and vector classes, including specialized 3x3 and 4x3 versions as well as length 3 vectors.
+ * Matrix and vector classes, including specialized 3x3 and 4x3 versions as
+ * well as length 3 vectors.
  */
 
 /*****************************************************************************/
@@ -52,6 +53,8 @@ class dng_matrix
 		
 		void Clear ();
 		
+		void SetIdentity (uint32 count);
+		
 		uint32 Rows () const
 			{
 			return fRows;
@@ -88,6 +91,8 @@ class dng_matrix
 			{
 			return !IsEmpty ();
 			}
+			
+		bool IsDiagonal () const;
 			
 		real64 MaxEntry () const;
 		
@@ -162,6 +167,8 @@ class dng_vector
 			}
 		
 		void Clear ();
+		
+		void SetIdentity (uint32 count);
 		
 		uint32 Count () const
 			{

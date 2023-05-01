@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_ifd.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_ifd.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -29,6 +29,29 @@
 
 /*****************************************************************************/
 
+dng_preview_info::dng_preview_info ()
+	
+	:	fIsPrimary          (true)
+	,	fApplicationName    ()
+	,	fApplicationVersion ()
+	,	fSettingsName       ()
+	,	fSettingsDigest     ()
+	,	fColorSpace			(previewColorSpace_MaxEnum)
+	,	fDateTime			()
+	
+	{
+	
+	}
+
+/*****************************************************************************/
+
+dng_preview_info::~dng_preview_info ()
+	{
+	
+	}
+
+/*****************************************************************************/
+
 dng_ifd::dng_ifd ()
 
 	:	fUsesNewSubFileType (false)
@@ -44,7 +67,10 @@ dng_ifd::dng_ifd ()
 
 	,	fFillOrder (1)
 
-	,	fOrientation (0)
+	,	fOrientation          (0)
+	,	fOrientationType      (0)
+	,	fOrientationOffset    (kDNGStreamInvalidOffset)
+	,	fOrientationBigEndian (false)
 
 	,	fSamplesPerPixel (1)
 
@@ -129,6 +155,13 @@ dng_ifd::dng_ifd ()
 	
 	,	fMaskedAreaCount (0)
 	
+	,	fRowInterleaveFactor (1)
+	
+	,	fSubTileBlockRows (1)
+	,	fSubTileBlockCols (1)
+	
+	,	fPreviewInfo ()
+	
 	,	fLosslessJPEGBug16 (false)
 	
 	,	fSampleBitShift (0)
@@ -209,7 +242,7 @@ bool dng_ifd::ParseTag (dng_stream &stream,
 						uint32 tagCode,
 						uint32 tagType,
 						uint32 tagCount,
-						uint32 tagOffset)
+						uint64 tagOffset)
 	{
 	
 	uint32 j;
@@ -229,6 +262,8 @@ bool dng_ifd::ParseTag (dng_stream &stream,
 			fUsesNewSubFileType = true;
 			
 			fNewSubFileType = stream.TagValue_uint32 (tagType);
+			
+			fPreviewInfo.fIsPrimary = (fNewSubFileType == sfPreviewImage);
 			
 			#if qDNGValidate
 			
@@ -508,6 +543,10 @@ bool dng_ifd::ParseTag (dng_stream &stream,
 			CheckTagType (parentCode, tagCode, tagType, ttShort);
 			
 			CheckTagCount (parentCode, tagCode, tagCount, 1);
+			
+			fOrientationType      = tagType;
+			fOrientationOffset    = stream.PositionInOriginalFile ();
+			fOrientationBigEndian = stream.BigEndian ();
 			
 			fOrientation = stream.TagValue_uint32 (tagType);
 				
@@ -1258,7 +1297,7 @@ bool dng_ifd::ParseTag (dng_stream &stream,
 				}
 			
 			if (!CheckTagCount (parentCode, tagCode, tagCount, fCFARepeatPatternRows *
-															      fCFARepeatPatternCols))
+															   fCFARepeatPatternCols))
 				{
 				return false;
 				}
@@ -1936,7 +1975,245 @@ bool dng_ifd::ParseTag (dng_stream &stream,
 			break;
 			
 			}
+			
+		case tcPreviewApplicationName:
+			{
+
+			CheckTagType (parentCode, tagCode, tagType, ttAscii, ttByte);
+			
+			ParseStringTag (stream,
+							parentCode,
+							tagCode,
+							tagCount,
+							fPreviewInfo.fApplicationName,
+							false,
+							false);
+			
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
 				
+				printf ("PreviewApplicationName: ");
+				
+				DumpString (fPreviewInfo.fApplicationName);
+				
+				printf ("\n");
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+				
+		case tcPreviewApplicationVersion:
+			{
+
+			CheckTagType (parentCode, tagCode, tagType, ttAscii, ttByte);
+			
+			ParseStringTag (stream,
+							parentCode,
+							tagCode,
+							tagCount,
+							fPreviewInfo.fApplicationVersion,
+							false,
+							false);
+			
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
+				
+				printf ("PreviewApplicationVersion: ");
+				
+				DumpString (fPreviewInfo.fApplicationVersion);
+				
+				printf ("\n");
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+				
+		case tcPreviewSettingsName:
+			{
+
+			CheckTagType (parentCode, tagCode, tagType, ttAscii, ttByte);
+			
+			ParseStringTag (stream,
+							parentCode,
+							tagCode,
+							tagCount,
+							fPreviewInfo.fSettingsName,
+							false,
+							false);
+			
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
+				
+				printf ("PreviewSettingsName: ");
+				
+				DumpString (fPreviewInfo.fSettingsName);
+				
+				printf ("\n");
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+				
+		case tcPreviewSettingsDigest:
+			{
+			
+			if (!CheckTagType (parentCode, tagCode, tagType, ttByte))
+				return false;
+				
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 16))
+				return false;
+				
+			stream.Get (fPreviewInfo.fSettingsDigest.data, 16);
+				
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+				
+				printf ("PreviewSettingsDigest: ");
+				
+				DumpFingerprint (fPreviewInfo.fSettingsDigest);
+									
+				printf ("\n");
+				
+				}
+				
+			#endif
+				
+			break;
+			
+			}
+				
+		case tcPreviewColorSpace:
+			{
+			
+			CheckTagType (parentCode, tagCode, tagType, ttLong);
+				
+			CheckTagCount (parentCode, tagCode, tagCount, 1);
+			
+			fPreviewInfo.fColorSpace = (PreviewColorSpaceEnum)
+									   stream.TagValue_uint32 (tagType);
+				
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+				
+				printf ("PreviewColorSpace: %s\n",
+						LookupPreviewColorSpace ((uint32) fPreviewInfo.fColorSpace));
+				
+				}
+				
+			#endif
+				
+			break;
+			
+			}
+				
+		case tcPreviewDateTime:
+			{
+
+			CheckTagType (parentCode, tagCode, tagType, ttAscii);
+			
+			ParseStringTag (stream,
+							parentCode,
+							tagCode,
+							tagCount,
+							fPreviewInfo.fDateTime,
+							false,
+							false);
+			
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
+				
+				printf ("PreviewDateTime: ");
+				
+				DumpString (fPreviewInfo.fDateTime);
+				
+				printf ("\n");
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+				
+		case tcRowInterleaveFactor:
+			{
+			
+			CheckTagType (parentCode, tagCode, tagType, ttShort, ttLong);
+			
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 1))
+				return false;
+			
+			fRowInterleaveFactor = stream.TagValue_uint32 (tagType);
+
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
+				
+				printf ("RowInterleaveFactor: %u\n",
+						(unsigned) fRowInterleaveFactor);
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+			
+		case tcSubTileBlockSize:
+			{
+			
+			CheckTagType (parentCode, tagCode, tagType, ttShort, ttLong);
+			
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 2))
+				return false;
+			
+			fSubTileBlockRows = stream.TagValue_uint32 (tagType);
+			fSubTileBlockCols = stream.TagValue_uint32 (tagType);
+
+			#if qDNGValidate
+						
+			if (gVerbose)
+				{
+				
+				printf ("SubTileBlockSize: rows = %u, cols = %u\n",
+						(unsigned) fSubTileBlockRows,
+						(unsigned) fSubTileBlockCols);
+				
+				}
+
+			#endif
+			
+			break;
+			
+			}
+			
 		default:
 			{
 			
@@ -2122,7 +2399,7 @@ bool dng_ifd::IsValidCFA (dng_shared &shared,
 		
 	uint32 count [kMaxColorPlanes];
 	
-	for (n = 0; n < shared.fColorPlanes; n++)
+	for (n = 0; n < shared.fCameraProfile.fColorPlanes; n++)
 		{
 		count [n] = 0;
 		}
@@ -2135,7 +2412,7 @@ bool dng_ifd::IsValidCFA (dng_shared &shared,
 			
 			bool found = false;
 			
-			for (n = 0; n < shared.fColorPlanes; n++)
+			for (n = 0; n < shared.fCameraProfile.fColorPlanes; n++)
 				{
 				
 				if (fCFAPattern [j] [k] == fCFAPlaneColor [n])
@@ -2165,7 +2442,7 @@ bool dng_ifd::IsValidCFA (dng_shared &shared,
 			
 		}
 	
-	for (n = 0; n < shared.fColorPlanes; n++)
+	for (n = 0; n < shared.fCameraProfile.fColorPlanes; n++)
 		{
 		
 		if (count [n] == 0)
@@ -2214,7 +2491,7 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 		
 	uint32 defaultWhite = (1 << fBitsPerSample [0]) - 1;
 						
-	bool isMonochrome = (shared.fColorPlanes == 1);
+	bool isMonochrome = (shared.fCameraProfile.fColorPlanes == 1);
 	bool isColor      = !isMonochrome;
 		
 	bool isMainIFD = (fNewSubFileType == sfMainImage);
@@ -2235,8 +2512,9 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 		
 		}
 		
-	if (fNewSubFileType != sfMainImage &&
-		fNewSubFileType != sfPreviewImage)
+	if (fNewSubFileType != sfMainImage    &&
+		fNewSubFileType != sfPreviewImage &&
+		fNewSubFileType != sfAltPreviewImage)
 		{
 		
 		#if qDNGValidate
@@ -2426,7 +2704,7 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 	uint32 maxSamplesPerPixel = 1;
 	
 	uint32 minBitsPerSample = 8;
-	uint32 maxBitsPerSample = 8;
+	uint32 maxBitsPerSample = 16;
 	
 	switch (fPhotometricInterpretation)
 		{
@@ -2451,8 +2729,8 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 			
 		case piLinearRaw:
 			{
-			minSamplesPerPixel = shared.fColorPlanes;
-			maxSamplesPerPixel = shared.fColorPlanes;
+			minSamplesPerPixel = shared.fCameraProfile.fColorPlanes;
+			maxSamplesPerPixel = shared.fCameraProfile.fColorPlanes;
 			maxBitsPerSample   = 32;
 			break;
 			}
@@ -2487,6 +2765,23 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 				#if qDNGValidate
 		
 				ReportError ("Missing or invalid BitsPerSample",
+							 LookupParentCode (parentCode));
+							 
+				#endif
+							 
+				return false;
+							 
+				}
+				
+			if (minBitsPerSample   ==  8 &&
+				maxBitsPerSample   == 16 &&
+				fBitsPerSample [j] !=  8 &&
+				fBitsPerSample [j] != 16)
+				{
+				
+				#if qDNGValidate
+		
+				ReportError ("Rendered previews require 8 or 16 bits per sample",
 							 LookupParentCode (parentCode));
 							 
 				#endif
@@ -3069,6 +3364,93 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 		}
 	
 	#endif
+	
+	// Check RowInterleaveFactor
+		
+	if (fRowInterleaveFactor != 1)
+		{
+		
+		if (fRowInterleaveFactor < 1 ||
+			fRowInterleaveFactor > fImageLength)
+			{
+
+			#if qDNGValidate
+
+			ReportError ("RowInterleaveFactor out of valid range",
+						 LookupParentCode (parentCode));
+						 
+			#endif
+						 
+			return false;
+			
+			}
+		
+		if (shared.fDNGBackwardVersion < 0x01020000)
+			{
+			
+			#if qDNGValidate
+
+			ReportError ("Non-default RowInterleaveFactor tag not allowed in this DNG version",
+						 LookupParentCode (parentCode));
+						 
+			#endif
+						 
+			return false;
+			
+			}
+		
+		}
+		
+	// Check SubTileBlockSize
+	
+	if (fSubTileBlockRows != 1 || fSubTileBlockCols != 1)
+		{
+		
+		if (fSubTileBlockRows < 2 || fSubTileBlockRows > fTileLength ||
+			fSubTileBlockCols < 1 || fSubTileBlockCols > fTileWidth)
+			{
+			
+			#if qDNGValidate
+
+			ReportError ("SubTileBlockSize out of valid range",
+						 LookupParentCode (parentCode));
+						 
+			#endif
+						 
+			return false;
+			
+			}
+			
+		if ((fTileLength % fSubTileBlockRows) != 0 ||
+			(fTileWidth  % fSubTileBlockCols) != 0)
+			{
+			
+			#if qDNGValidate
+
+			ReportError ("TileSize not exact multiple of SubTileBlockSize",
+						 LookupParentCode (parentCode));
+						 
+			#endif
+						 
+			return false;
+			
+			}
+		
+		if (shared.fDNGBackwardVersion < 0x01020000)
+			{
+			
+			#if qDNGValidate
+
+			ReportError ("Non-default SubTileBlockSize tag not allowed in this DNG version",
+						 LookupParentCode (parentCode));
+						 
+			#endif
+						 
+			return false;
+			
+			}
+		
+		}
 		
 	return true;
 	

@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_image.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_image.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -29,7 +29,8 @@ dng_tile_buffer::dng_tile_buffer (const dng_image &image,
 						 		  const dng_rect &tile,
 						 		  bool dirty)
 						 		  
-	:	fImage (image)
+	:	fImage   (image)
+	,	fRefData (NULL)
 	
 	{
 	
@@ -109,6 +110,24 @@ dng_image::~dng_image ()
 		
 /*****************************************************************************/
 
+void dng_image::SetPixelType (uint32 pixelType)
+	{
+	
+	if (TagTypeSize (pixelType) != PixelSize ())
+		{
+		
+		DNG_REPORT ("Cannot change pixel size for existing image");
+		
+		ThrowProgramError ();
+		
+		}
+	
+	fPixelType = pixelType;
+	
+	}
+		
+/*****************************************************************************/
+
 uint32 dng_image::PixelSize () const
 	{
 	
@@ -158,6 +177,15 @@ uint32 dng_image::PixelRange () const
 
 /*****************************************************************************/
 
+void dng_image::SetPixelRange (uint32 pixelRange)
+	{
+	
+	fPixelRange = pixelRange;
+	
+	}
+		
+/*****************************************************************************/
+
 dng_rect dng_image::RepeatingTile () const
 	{
 	
@@ -167,10 +195,9 @@ dng_rect dng_image::RepeatingTile () const
 
 /*****************************************************************************/
 
-void dng_image::AcquireTileBuffer (dng_pixel_buffer & /* buffer */,
-								   const dng_rect & /* tile */,
+void dng_image::AcquireTileBuffer (dng_tile_buffer & /* buffer */,
+								   const dng_rect & /* area */,
 								   bool /* dirty */) const
-										
 	{
 	
 	ThrowProgramError ();
@@ -179,8 +206,7 @@ void dng_image::AcquireTileBuffer (dng_pixel_buffer & /* buffer */,
 
 /*****************************************************************************/
 
-void dng_image::ReleaseTileBuffer (dng_pixel_buffer & /* buffer */) const
-										
+void dng_image::ReleaseTileBuffer (dng_tile_buffer & /* buffer */) const
 	{
 	
 	}
@@ -694,7 +720,7 @@ void dng_image::Trim (const dng_rect &r)
 	if (r != Bounds ())
 		{
 		
-		ASSERT (false, "Trim is not support by this dng_image subclass");
+		DNG_REPORT ("Trim is not support by this dng_image subclass");
 		
 		ThrowProgramError ();
 		
@@ -710,7 +736,7 @@ void dng_image::Rotate (const dng_orientation &orientation)
 	if (orientation != dng_orientation::Normal ())
 		{
 		
-		ASSERT (false, "Rotate is not support by this dng_image subclass");
+		DNG_REPORT ("Rotate is not support by this dng_image subclass");
 		
 		ThrowProgramError ();
 		
@@ -718,4 +744,102 @@ void dng_image::Rotate (const dng_orientation &orientation)
 	
 	}
 		
+/*****************************************************************************/
+
+void dng_image::CopyArea (const dng_image &src,
+						  const dng_rect &area,
+						  uint32 srcPlane,
+						  uint32 dstPlane,
+						  uint32 planes)
+	{
+
+	if (&src == this)
+		return;
+
+	dng_tile_iterator destIter(*this, area);
+	dng_rect destTileArea;
+
+	while (destIter.GetOneTile(destTileArea))
+		{
+		dng_tile_iterator srcIter(src, destTileArea);
+		dng_rect srcTileArea;
+
+		while (srcIter.GetOneTile(srcTileArea))
+			{
+
+			dng_dirty_tile_buffer destTile(*this, srcTileArea);
+			dng_const_tile_buffer srcTile(src, srcTileArea);
+
+			destTile.CopyArea (srcTile, srcTileArea, srcPlane, dstPlane, planes);
+
+			}
+
+		}
+
+	}
+
+/*****************************************************************************/
+
+bool dng_image::EqualArea (const dng_image &src,
+						   const dng_rect &area,
+						   uint32 plane,
+						   uint32 planes) const
+	{
+
+	if (&src == this)
+		return true;
+
+	dng_tile_iterator destIter (*this, area);
+	
+	dng_rect destTileArea;
+
+	while (destIter.GetOneTile (destTileArea))
+		{
+		
+		dng_tile_iterator srcIter (src, destTileArea);
+		
+		dng_rect srcTileArea;
+
+		while (srcIter.GetOneTile (srcTileArea))
+			{
+
+			dng_const_tile_buffer destTile (*this, srcTileArea);
+			dng_const_tile_buffer srcTile  (src  , srcTileArea);
+
+			if (!destTile.EqualArea (srcTile, srcTileArea, plane, planes))
+				{
+				return false;
+				}
+
+			}
+
+		}
+
+	return true;
+
+	}
+
+/*****************************************************************************/
+
+void dng_image::SetConstant (uint32 value)
+	{
+	
+	dng_tile_iterator iter (*this, Bounds ());
+							
+	dng_rect area;
+	
+	while (iter.GetOneTile (area))
+		{
+		
+		dng_dirty_tile_buffer buffer (*this, area);
+		
+		buffer.SetConstant (area,
+							0,
+							fPlanes,
+							value);
+					
+		}
+
+	}
+
 /*****************************************************************************/

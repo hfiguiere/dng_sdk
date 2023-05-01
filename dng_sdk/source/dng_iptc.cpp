@@ -1,30 +1,25 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_iptc.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_iptc.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
 
 #include "dng_iptc.h"
 
+#include "dng_assertions.h"
 #include "dng_auto_ptr.h"
 #include "dng_memory_stream.h"
 #include "dng_stream.h"
 #include "dng_utils.h"
-
-/*****************************************************************************/
-
-// Should we output the Legacy IPTC data encoded as UTF-8?
-
-#define qSpool_IPTC_UTF8 1
 
 /*****************************************************************************/
 
@@ -42,12 +37,8 @@ dng_iptc::dng_iptc ()
 		
 	,	fInstructions ()
 		
-	,	fDateCreated ()
+	,	fDateTimeCreated ()
 	
-	,	fHasTimeCreated (false)
-	
-	,	fTimeZoneMinutes (0)
-		
 	,	fAuthor          ()
 	,	fAuthorsPosition ()
 		
@@ -117,7 +108,7 @@ bool dng_iptc::IsEmpty () const
 		return false;
 		}
 		
-	if (fDateCreated.IsValid ())
+	if (fDateTimeCreated.IsValid ())
 		{
 		return false;
 		}
@@ -202,7 +193,7 @@ void dng_iptc::ParseString (dng_stream &stream,
 		
 		case kCharSetUTF8:
 			{
-			s.Set (c);
+			s.Set_UTF8 (c);
 			break;
 			}
 			
@@ -225,7 +216,7 @@ void dng_iptc::ParseString (dng_stream &stream,
 
 void dng_iptc::Parse (const void *blockData,
 					  uint32 blockSize,
-					  uint32 offsetInOriginalFile)
+					  uint64 offsetInOriginalFile)
 	{
 	
 	dng_stream stream (blockData,
@@ -236,7 +227,7 @@ void dng_iptc::Parse (const void *blockData,
 	
 	CharSet charSet = kCharSetUnknown;
 	
-	uint32 nextOffset = stream.Position ();
+	uint64 nextOffset = stream.Position ();
 	
 	while (nextOffset + 5 < stream.Length ())
 		{
@@ -384,23 +375,8 @@ void dng_iptc::Parse (const void *blockData,
 						
 						date [8] = 0;
 						
-						unsigned year   = 0;
-						unsigned month  = 0;
-						unsigned day    = 0;
-					
-						if (sscanf (date,
-									"%4u%2u%2u",
-									&year,
-									&month,
-									&day) == 3)
-							{
-
-							fDateCreated.fYear  = (uint32) year;
-							fDateCreated.fMonth = (uint32) month;
-							fDateCreated.fDay   = (uint32) day;
-							
-							}
-						
+						fDateTimeCreated.Decode_IPTC_Date (date);
+												
 						}
 						
 					break;
@@ -419,48 +395,9 @@ void dng_iptc::Parse (const void *blockData,
 						
 						stream.Get (time, 11);
 						
-						if (time [6] == '+' ||
-							time [6] == '-')
-							{
+						time [11] = 0;
 						
-							bool negTZ = (time [6] == '-');
-							
-							time [ 6] = 0;
-							time [11] = 0;
-							
-							unsigned hour   = 0;
-							unsigned minute = 0;
-							unsigned second = 0;
-							unsigned tzhour = 0;
-							unsigned tzmin  = 0;
-							
-							if (sscanf (time,
-										"%2u%2u%2u",
-										&hour,
-										&minute,
-										&second) == 3 &&
-								sscanf (time + 7,
-										"%2u%2u",
-										&tzhour,
-										&tzmin) == 2)
-								{
-								
-								fHasTimeCreated = true;
-								
-								fDateCreated.fHour   = (uint32) hour;
-								fDateCreated.fMinute = (uint32) minute;
-								fDateCreated.fSecond = (uint32) second;
-								
-								fTimeZoneMinutes = (int32) (tzhour * 60 + tzmin);
-								
-								if (negTZ)
-									{
-									fTimeZoneMinutes = -fTimeZoneMinutes;
-									}
-								
-								}
-								
-							}
+						fDateTimeCreated.Decode_IPTC_Time (time);
 						
 						}
 						
@@ -565,20 +502,6 @@ void dng_iptc::Parse (const void *blockData,
 			
 		}
 		
-	if (!fDateCreated.IsValid ())
-		{
-		fDateCreated.Clear ();
-		fHasTimeCreated  = false;
-		fTimeZoneMinutes = 0;
-		}
-		
-	if (fTimeZoneMinutes < -13 * 60 ||
-		fTimeZoneMinutes >  13 * 60)
-		{
-		fHasTimeCreated  = false;
-		fTimeZoneMinutes = 0;
-		}
-	
 	}
 					
 /*****************************************************************************/
@@ -586,7 +509,8 @@ void dng_iptc::Parse (const void *blockData,
 void dng_iptc::SpoolString (dng_stream &stream,
 							const dng_string &s,
 							uint8 dataSet,
-							uint32 maxChars)
+							uint32 maxChars,
+							CharSet charSet)
 	{
 	
 	if (s.IsEmpty ())
@@ -601,7 +525,7 @@ void dng_iptc::SpoolString (dng_stream &stream,
 	
 	ss.SetLineEndingsToReturns ();
 	
-	if (qSpool_IPTC_UTF8)
+	if (charSet == kCharSetUTF8)
 		{
 	
 		// UTF-8 encoding.
@@ -674,7 +598,141 @@ void dng_iptc::SpoolString (dng_stream &stream,
 		}
 	
 	}
-					
+
+/*****************************************************************************/
+
+bool dng_iptc::SafeForSystemEncoding (const dng_string &s)
+	{
+	
+	return s.ValidSystemEncoding ();
+	
+	}
+
+/*****************************************************************************/
+
+bool dng_iptc::SafeForSystemEncoding (const dng_string_list &list)
+	{
+	
+	for (uint32 j = 0; j < list.Count (); j++)
+		{
+		
+		if (!SafeForSystemEncoding (list [j]))
+			{
+			
+			return false;
+			
+			}
+		
+		}
+		
+	return true;
+	
+	}
+
+/*****************************************************************************/
+
+bool dng_iptc::SafeForSystemEncoding () const
+	{
+	
+	if (!SafeForSystemEncoding (fTitle))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fCategory))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fSupplementalCategories))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fKeywords))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fInstructions))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fAuthor))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fAuthorsPosition))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fCity))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fState))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fCountry))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fCountryCode))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fLocation))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fTransmissionReference))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fHeadline))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fCredit))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fSource))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fCopyrightNotice))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fDescription))
+		{
+		return false;
+		}
+	
+	if (!SafeForSystemEncoding (fDescriptionWriter))
+		{
+		return false;
+		}
+	
+	return true;
+	
+	}
+
 /*****************************************************************************/
 
 dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator)
@@ -688,11 +746,20 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator)
 	
 	stream.SetBigEndian ();
 	
-	if (qSpool_IPTC_UTF8)
+	// Figure out character set to use.  Due to bugs in Photoshop CS2 and
+	// before, we only write UTF-8 in cases where it is required to preserve
+	// all the characters.  Is is not ideal since it makes the files not
+	// portable across systems with different encodings.  Perhaps we can
+	// switch to using UTF-8 in all cases in the CS4 timeframe.
+	
+	CharSet charSet = SafeForSystemEncoding () ? kCharSetUnknown
+											   : kCharSetUTF8;
+	
+	// UTF-8 encoding marker.
+		
+	if (charSet == kCharSetUTF8)
 		{
 	
-		// UTF-8 encoding
-		
 		stream.Put_uint16 (0x1C01);
 		stream.Put_uint8  (90);
 		stream.Put_uint16 (3);
@@ -710,7 +777,8 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator)
 	SpoolString (stream,
 				 fTitle,
 				 kObjectNameSet,
-				 64);
+				 64,
+				 charSet);
 	
 	if (fUrgency >= 0)
 		{
@@ -729,7 +797,8 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator)
 	SpoolString (stream,
 				 fCategory,
 				 kCategorySet,
-				 3);
+				 3,
+				 charSet);
 				 
 	for (j = 0; j < fSupplementalCategories.Count (); j++)
 		{
@@ -737,7 +806,8 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator)
 		SpoolString (stream,
 				 	 fSupplementalCategories [j],
 				     kSupplementalCategoriesSet,
-				     32);
+				     32,
+					 charSet);
 				     
 		}
 	
@@ -747,49 +817,49 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator)
 		SpoolString (stream,
 				 	 fKeywords [j],
 				     kKeywordsSet,
-				     64);
+				     64,
+					 charSet);
 				     
 		}
 	
 	SpoolString (stream,
 				 fInstructions,
 				 kSpecialInstructionsSet,
-				 255);
+				 255,
+				 charSet);
 				 
-	if (fDateCreated.IsValid ())
+	if (fDateTimeCreated.IsValid ())
 		{
 		
-		sprintf (s,
-			     "%04u%02u%02u",
-			     fDateCreated.fYear,
-			     fDateCreated.fMonth,
-			     fDateCreated.fDay);
-			     
-		stream.Put_uint16 (0x1C02);
-		stream.Put_uint8  (kDateCreatedSet);
+		dng_string dateString = fDateTimeCreated.Encode_IPTC_Date ();
 		
-		stream.Put_uint16 (8);
-		
-		stream.Put (s, 8);
-		
-		if (fHasTimeCreated)
+		if (dateString.NotEmpty ())
 			{
 			
-			sprintf (s,
-				     "%02u%02u%02u%c%02u%02u",
-				     fDateCreated.fHour,
-				     fDateCreated.fMinute,
-				     fDateCreated.fSecond,
-				     fTimeZoneMinutes >= 0 ? '+' : '-',
-				     Abs_int32 (fTimeZoneMinutes) / 60,
-				     Abs_int32 (fTimeZoneMinutes) % 60);
-			     
+			DNG_ASSERT (dateString.Length () == 8, "Wrong length IPTC date");
+		
+			stream.Put_uint16 (0x1C02);
+			stream.Put_uint8  (kDateCreatedSet);
+			
+			stream.Put_uint16 (8);
+			
+			stream.Put (dateString.Get (), 8);
+						
+			}
+			
+		dng_string timeString = fDateTimeCreated.Encode_IPTC_Time ();
+		
+		if (timeString.NotEmpty ())
+			{
+			
+			DNG_ASSERT (timeString.Length () == 11, "Wrong length IPTC time");
+		
 			stream.Put_uint16 (0x1C02);
 			stream.Put_uint8  (kTimeCreatedSet);
 			
 			stream.Put_uint16 (11);
 			
-			stream.Put (s, 11);
+			stream.Put (timeString.Get (), 11);
 		
 			}
 		
@@ -798,27 +868,32 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator)
 	SpoolString (stream,
 				 fAuthor,
 				 kBylineSet,
-				 32);
+				 32,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fAuthorsPosition,
 				 kBylineTitleSet,
-				 32);
+				 32,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fCity,
 				 kCitySet,
-				 32);
+				 32,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fLocation,
 				 kSublocationSet,
-				 32);
+				 32,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fState,
 				 kProvinceStateSet,
-				 32);
+				 32,
+				 charSet);
 				 
 	if (fCountryCode.Length () == 3)
 		{
@@ -826,49 +901,58 @@ dng_memory_block * dng_iptc::Spool (dng_memory_allocator &allocator)
 		SpoolString (stream,
 					 fCountryCode,
 					 kCountryCodeSet,
-					 3);
+					 3,
+					 charSet);
 				 
 		}
 				 
 	SpoolString (stream,
 				 fCountry,
 				 kCountryNameSet,
-				 64);
+				 64,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fTransmissionReference,
 				 kOriginalTransmissionReferenceSet,
-				 32);
+				 32,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fHeadline,
 				 kHeadlineSet,
-				 255);
+				 255,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fCredit,
 				 kCreditSet,
-				 32);
+				 32,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fSource,
 				 kSourceSet,
-				 32);
+				 32,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fCopyrightNotice,
 				 kCopyrightNoticeSet,
-				 128);
+				 128,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fDescription,
 				 kCaptionSet,
-				 2000);
+				 2000,
+				 charSet);
 				 
 	SpoolString (stream,
 				 fDescriptionWriter,
 				 kCaptionWriterSet,
-				 32);
+				 32,
+				 charSet);
 				 
 	stream.Flush ();
 	

@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_mosaic_info.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_mosaic_info.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Support for descriptive information about color filter array patterns.
@@ -118,11 +118,16 @@ class dng_mosaic_info
 
 		virtual dng_point FullScale () const;
 
-		/// Returns integer factors by which mosaic data must be downsampled to produce an image which is as close to minSize as possible in longer dimension, but no smaller.
-		/// \param minSize Number of pixels as target for longer dimension of downsampled image.
+		/// Returns integer factors by which mosaic data must be downsampled to produce an image which is as close
+		/// to prefSize as possible in longer dimension, but no smaller than minSize.
+		/// \param minSize Number of pixels as minium for longer dimension of downsampled image.
+		/// \param prefSize Number of pixels as target for longer dimension of downsampled image.
+		/// \param cropFactor Faction of the image to be used after cropping.
 		/// \retval Point containing integer factors by which image must be downsampled.
 
-		virtual dng_point DownScale (uint32 minSize) const;
+		virtual dng_point DownScale (uint32 minSize,
+									 uint32 prefSize,
+									 real64 cropFactor) const;
 
 		/// Return size of demosaiced image for passed in downscaling factor.
 		/// \param downScale Integer downsampling factor obtained from DownScale method.
@@ -137,6 +142,7 @@ class dng_mosaic_info
 		/// \param srcPlane Which plane to interpolate.
 
 		virtual void InterpolateGeneric (dng_host &host,
+										 dng_negative &negative,
 								  		 const dng_image &srcImage,
 								  		 dng_image &dstImage,
 								  		 uint32 srcPlane = 0) const;
@@ -149,6 +155,7 @@ class dng_mosaic_info
 		/// \param srcPlane Which plane to interpolate.
 
 		virtual void InterpolateFast (dng_host &host,
+									  dng_negative &negative,
 							  	   	  const dng_image &srcImage,
 								   	  dng_image &dstImage,
 								      const dng_point &downScale,
@@ -162,6 +169,7 @@ class dng_mosaic_info
 		/// \param srcPlane Which plane to interpolate.
 
 		virtual void Interpolate (dng_host &host,
+								  dng_negative &negative,
 								  const dng_image &srcImage,
 								  dng_image &dstImage,
 								  const dng_point &downScale,
@@ -171,6 +179,8 @@ class dng_mosaic_info
 	
 		virtual bool IsSafeDownScale (const dng_point &downScale) const;
 
+		uint32 SizeForDownScale (const dng_point &downScale) const;
+		
 		virtual bool ValidSizeDownScale (const dng_point &downScale,
 									     uint32 minSize) const;
 

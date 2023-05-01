@@ -1,19 +1,20 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_validate.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_validate.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
 
 #include "dng_color_space.h"
+#include "dng_date_time.h"
 #include "dng_exceptions.h"
 #include "dng_file_stream.h"
 #include "dng_globals.h"
@@ -24,16 +25,22 @@
 #include "dng_linearization_info.h"
 #include "dng_mosaic_info.h"
 #include "dng_negative.h"
+#include "dng_preview.h"
 #include "dng_render.h"
 #include "dng_simple_image.h"
 #include "dng_tag_codes.h"
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
+#include "dng_xmp.h"
 #include "dng_xmp_sdk.h"
 
 /*****************************************************************************/
 
 #if qDNGValidateTarget
+		
+/*****************************************************************************/
+
+#define kDNGValidateVersion "1.2"
 		
 /*****************************************************************************/
 
@@ -43,7 +50,9 @@ static bool gFourColorBayer = false;
 		
 static int32 gMosaicPlane = -1;
 
-static uint32 gMinStage3Size = 0;
+static uint32 gPreferredSize = 0;
+static uint32 gMinimumSize   = 0;
+static uint32 gMaximumSize   = 0;
 
 static const dng_color_space *gFinalSpace = &dng_space_sRGB::Get ();
 
@@ -69,10 +78,17 @@ static dng_error_code dng_validate (const char *filename)
 		
 		dng_host host;
 		
-		if (gMinStage3Size)
+		host.SetPreferredSize (gPreferredSize);
+		host.SetMinimumSize   (gMinimumSize  );
+		host.SetMaximumSize   (gMaximumSize  );
+		
+		host.ValidateSizes ();
+		
+		host.SetKeepOriginalFile (true);
+			
+		if (host.MinimumSize ())
 			{
-			host.SetForPreview  (true);
-			host.SetMinimumSize (gMinStage3Size);
+			host.SetForPreview (true);
 			}
 			
 		if (gDumpDNG.NotEmpty ())
@@ -110,6 +126,8 @@ static dng_error_code dng_validate (const char *filename)
 				negative->ReadStage1Image (host, stream, info);
 				
 				}
+				
+			negative->ValidateRawImageDigest (host);
 				
 			}
 					 
@@ -211,6 +229,69 @@ static dng_error_code dng_validate (const char *filename)
 		
 		negative->RebuildIPTC ();
 		
+		// Output DNG file if requested.
+			
+		if (gDumpDNG.NotEmpty ())
+			{
+			
+			// Build thumbnail image.
+			
+			dng_image_preview thumbnail;
+			
+				{
+				
+				dng_timer timer ("Build thumbnail time");
+				
+				dng_render render (host, *negative);
+				
+				render.SetFinalSpace (negative->IsMonochrome () ? dng_space_GrayGamma22::Get ()
+																: dng_space_sRGB       ::Get ());
+				
+				render.SetFinalPixelType (ttByte);
+				
+				render.SetMaximumSize (256);
+			
+				thumbnail.fImage.Reset (render.Render ());
+				
+				thumbnail.fInfo.fApplicationName   .Set ("dng_validate");
+				thumbnail.fInfo.fApplicationVersion.Set (kDNGValidateVersion);
+				
+				thumbnail.fInfo.fSettingsName.Set ("Default");
+
+				thumbnail.fInfo.fColorSpace = thumbnail.fImage->Planes () == 1 ?
+											  previewColorSpace_GrayGamma22 :
+											  previewColorSpace_sRGB;
+											
+				dng_date_time_info dateTimeInfo;
+				
+				CurrentDateTimeAndZone (dateTimeInfo);
+											  
+				thumbnail.fInfo.fDateTime = dateTimeInfo.Encode_ISO_8601 ();
+				
+				}
+				
+			// Write DNG file.
+			
+			dng_file_stream stream2 (gDumpDNG.Get (), true);
+			
+			dng_image_writer writer;
+			
+				{
+				
+				dng_timer timer ("Write DNG time");
+			
+				writer.WriteDNG (host,
+								 stream2,
+								 *negative.Get (),
+								 thumbnail,
+								 ccJPEG);
+
+				}
+				
+			gDumpDNG.Clear ();
+			
+			}
+					
 		// Output TIF file if requested.
 			
 		if (gDumpTIF.NotEmpty ())
@@ -223,7 +304,7 @@ static dng_error_code dng_validate (const char *filename)
 			render.SetFinalSpace     (*gFinalSpace   );
 			render.SetFinalPixelType (gFinalPixelType);
 			
-			if (gMinStage3Size)
+			if (host.MinimumSize ())
 				{
 				
 				dng_point stage3Size = negative->Stage3Image ()->Size ();
@@ -244,6 +325,18 @@ static dng_error_code dng_validate (const char *filename)
 				}
 				
 			finalImage->Rotate (negative->Orientation ());
+			
+			// Now that Camera Raw supports non-raw formats, we should
+			// not keep any Camera Raw settings in the XMP around when
+			// writing rendered files.
+			
+			if (negative->GetXMP ())
+				{
+
+				negative->GetXMP ()->RemoveProperties (XMP_NS_CRS);
+				negative->GetXMP ()->RemoveProperties (XMP_NS_CRSS);
+				
+				}
 			
 			// Write TIF file.
 			
@@ -267,54 +360,6 @@ static dng_error_code dng_validate (const char *filename)
 				}
 				
 			gDumpTIF.Clear ();
-			
-			}
-					
-		// Output DNG file if requested.
-			
-		if (gDumpDNG.NotEmpty ())
-			{
-			
-			// Build thumbnail image.
-			
-			AutoPtr<dng_image> thumbnail;
-			
-				{
-				
-				dng_timer timer ("Build thumbnail time");
-				
-				dng_render render (host, *negative);
-				
-				render.SetFinalSpace (negative->IsMonochrome () ? dng_space_GrayGamma22::Get ()
-																: dng_space_sRGB       ::Get ());
-				
-				render.SetFinalPixelType (ttByte);
-				
-				render.SetMaximumSize (256);
-			
-				thumbnail.Reset (render.Render ());
-				
-				}
-				
-			// Write DNG file.
-			
-			dng_file_stream stream2 (gDumpDNG.Get (), true);
-			
-			dng_image_writer writer;
-			
-				{
-				
-				dng_timer timer ("Write DNG time");
-			
-				writer.WriteDNG (host,
-								 stream2,
-								 *negative.Get (),
-								 *thumbnail.Get (),
-								 ccJPEG);
-								  
-				}
-				
-			gDumpDNG.Clear ();
 			
 			}
 					
@@ -353,8 +398,14 @@ int main (int argc, char *argv [])
 
 			fprintf (stderr,
 					 "\n"
-					 "DNG Validate, Version 1.1\n"
-					 "Copyright 2005-2006 Adobe Systems, Inc.\n"
+					 "dng_validate, version " kDNGValidateVersion " "
+					 #if qDNG64Bit
+					 "(64-bit)"
+					 #else
+					 "(32-bit)"
+					 #endif
+					 "\n"
+					 "Copyright 2005-2008 Adobe Systems, Inc.\n"
 					 "\n"
 					 "Usage:  %s [options] file1 file2 ...\n"
 					 "\n"
@@ -364,7 +415,9 @@ int main (int argc, char *argv [])
 					 "-f            Use floating point math\n"
 					 "-b4           Use four-color Bayer interpolation\n"
 					 "-s <num>      Use this sample of multi-sample CFAs\n"
-					 "-q <num>      Minimum interpolated image size\n"
+					 "-size <num>   Preferred preview image size\n"
+					 "-min <num>    Minimum preview image size\n"
+					 "-max <num>    Maximum preview image size\n" 
 					 "-cs1          Color space: \"sRGB\" (default)\n"
 					 "-cs2          Color space: \"Adobe RGB\"\n"
 					 "-cs3          Color space: \"ProPhoto RGB\"\n"
@@ -444,17 +497,49 @@ int main (int argc, char *argv [])
 				gFourColorBayer = true;
 				}
 					
-			else if (option.Matches ("q", true))
+			else if (option.Matches ("size", true))
 				{
 				
 				if (index + 1 < argc)
 					{
-					gMinStage3Size = (uint32) atoi (argv [++index]);
+					gPreferredSize = (uint32) atoi (argv [++index]);
 					}
 					
 				else
 					{
-					fprintf (stderr, "*** Missing number after -q\n");
+					fprintf (stderr, "*** Missing number after -size\n");
+					return 1;
+					}
+					
+				}
+					
+			else if (option.Matches ("min", true))
+				{
+				
+				if (index + 1 < argc)
+					{
+					gMinimumSize = (uint32) atoi (argv [++index]);
+					}
+					
+				else
+					{
+					fprintf (stderr, "*** Missing number after -min\n");
+					return 1;
+					}
+					
+				}
+					
+			else if (option.Matches ("max", true))
+				{
+				
+				if (index + 1 < argc)
+					{
+					gMaximumSize = (uint32) atoi (argv [++index]);
+					}
+					
+				else
+					{
+					fprintf (stderr, "*** Missing number after -max\n");
 					return 1;
 					}
 					

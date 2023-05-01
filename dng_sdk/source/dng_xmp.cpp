@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_xmp.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_xmp.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -19,6 +19,7 @@
 #include "dng_date_time.h"
 #include "dng_exceptions.h"
 #include "dng_exif.h"
+#include "dng_image_writer.h"
 #include "dng_iptc.h"
 #include "dng_negative.h"
 #include "dng_string.h"
@@ -106,311 +107,6 @@ void dng_xmp::TrimDecimal (char *s)
 
 	}
 	
-/*****************************************************************************/
-
-dng_string dng_xmp::EncodeDateTime (const dng_date_time &dt,
-									bool hasTime,
-								    const char *subSec,
-								    int32 tzHour,
-								    int32 tzMinute)
-	{
-	
-	char s [256];
-	
-	dng_string result;
-	
-	if (dt.IsValid ())
-		{
-		
-		sprintf (s,
-				 "%04u-%02u-%02u",
-				 (unsigned) dt.fYear,
-				 (unsigned) dt.fMonth,
-				 (unsigned) dt.fDay);
-				 
-		result.Set (s);
-		
-		if (hasTime)
-			{
-			
-			sprintf (s,
-					 "T%02u:%02u:%02u",
-					 (unsigned) dt.fHour,
-					 (unsigned) dt.fMinute,
-					 (unsigned) dt.fSecond);
-					 
-			result.Append (s);
-			
-			if (subSec)
-				{
-				
-				uint32 len = (uint32) strlen (subSec);
-				
-				for (uint32 index = 0; index < len; index++)
-					{
-					
-					if (subSec [index] < '0' ||
-						subSec [index] > '9')
-						{
-						subSec = NULL;
-						break;
-						}
-						
-					}
-			
-				if (subSec && len > 0)
-					{
-					result.Append (".");
-					result.Append (subSec);
-					}
-				
-				}
-				
-			// Kludge: Early versions of the XMP toolkit assume Zulu time
-			// if the time zone is missing.  It is safer for fill in the
-			// local time zone. 
-				
-			if (tzHour < -13 ||
-				tzHour >  13)
-				{
-				tzHour   = LocalTimeZone (dt);
-				tzMinute = 0; 
-				}
-				
-			if (tzHour >= -13 &&
-				tzHour <=  13)
-				{
-				
-				int32 tzMinutes = tzHour * 60 + tzMinute;
-				
-				if (tzMinutes >= -13 * 60 &&
-					tzMinutes <=  13 * 60)
-					{
-					
-					if (tzMinutes == 0)
-						{
-						
-						result.Append ("Z");
-						
-						}
-						
-					else
-						{
-						
-						result.Append (tzMinutes > 0 ? "+" : "-");
-						
-						uint32 x = Abs_int32 (tzMinutes);
-						
-						sprintf (s,
-								 "%02u:%02u",
-								 (unsigned) (x / 60),
-								 (unsigned) (x % 60));
-								 
-						result.Append (s);
-						
-						}
-					
-					}
-				
-				}
-
-			}
-		
-		}
-		
-	return result;
-		
-	}
-		
-/*****************************************************************************/
-
-void dng_xmp::DecodeDateTime (const char *s,
-							  dng_date_time &dt,
-							  bool *hasTime,
-							  dng_string *subSec,
-							  int32 *tzHour,
-							  int32 *tzMinute)
-	{
-	
-	dt.Clear ();
-		
-	if (hasTime)
-		{
-		*hasTime = false;
-		}
-		
-	if (subSec)
-		{
-		subSec->Clear ();
-		}
-		
-	if (tzHour)
-		{
-		*tzHour = 0x7FFFFFF;
-		}
-		
-	if (tzMinute)
-		{
-		*tzMinute = 0;
-		}
-		
-	uint32 len = (uint32) strlen (s);
-	
-	if (!len)
-		{
-		return;
-		}
-		
-	unsigned year  = 0;
-	unsigned month = 0;
-	unsigned day   = 0;
-	
-	if (sscanf (s,
-				"%u-%u-%u",
-				&year,
-				&month,
-				&day) != 3)
-		{
-		return;
-		}
-		
-	dt.fYear  = (uint32) year;
-	dt.fMonth = (uint32) month;
-	dt.fDay   = (uint32) day;
-	
-	if (dt.NotValid ())
-		{
-		dt.Clear ();
-		return;
-		}
-		
-	for (uint32 j = 0; j < len; j++)
-		{
-		
-		if (s [j] == 'T')
-			{
-			
-			unsigned hour   = 0;
-			unsigned minute = 0;
-			unsigned second = 0;
-
-			if (sscanf (s + j + 1,
-						"%u:%u:%u",
-						&hour,
-						&minute,
-						&second) == 3)
-				{
-				
-				dt.fHour   = (uint32) hour;
-				dt.fMinute = (uint32) minute;
-				dt.fSecond = (uint32) second;
-				
-				if (dt.NotValid ())
-					{
-					dt.Clear ();
-					return;
-					}
-					
-				if (hasTime)
-					{
-					*hasTime = true;
-					}
-					
-				if (subSec)
-					{
-					
-					for (uint32 k = j + 1; k < len; k++)
-						{
-						
-						if (s [k] == '.')
-							{
-							
-							while (++k < len && s [k] >= '0' && s [k] <= '9')
-								{
-								
-								char ss [2];
-								
-								ss [0] = s [k];
-								ss [1] = 0;
-								
-								subSec->Append (ss);
-								
-								}
-							
-							break;
-							
-							}
-						
-						}
-					
-					}
-					
-				if (tzHour || tzMinute)
-					{
-					
-					for (uint32 k = j + 1; k < len; k++)
-						{
-						
-						if (s [k] == 'Z')
-							{
-							
-							if (tzHour)
-								{
-								*tzHour = 0;
-								}
-							
-							break;
-							
-							}
-							
-						if (s [k] == '+' || s [k] == '-')
-							{
-							
-							int32 sign = (s [k] == '-' ? -1 : 1);
-							
-							unsigned tzhour = 0;
-							unsigned tzmin  = 0;
-							
-							if (sscanf (s + k + 1,
-										"%u:%u",
-										&tzhour,
-										&tzmin) > 0)
-								{
-								
-								if (tzHour)
-									{
-									*tzHour = sign * tzhour;
-									}
-								else
-									{
-									tzmin += 60 * tzhour;
-									}
-								
-								if (tzMinute)
-									{
-									*tzMinute = sign * tzmin;
-									}
-								
-								}
-							
-							break;
-							
-							}
-						
-						}
-					
-					}
-					
-				}
-			
-			break;
-			
-			}
-			
-		}
-	
-	}
-
 /*****************************************************************************/
 
 dng_string dng_xmp::EncodeFingerprint (const dng_fingerprint &f)
@@ -562,36 +258,52 @@ dng_string dng_xmp::EncodeGPSCoordinate (const dng_string &ref,
 			
 			char s [256];
 			
-			if (coord [2].n && coord [2].d)
+			// Use the seconds case if all three values are
+			// integers.
+			
+			if (coord [0].d == 1 &&
+				coord [1].d == 1 &&
+				coord [2].d == 1)
 				{
-				
-				char sec [32];
-				
-				sprintf (sec, "%.2f", coord [2].As_real64 ());
-				
-				TrimDecimal (sec);
-				
+								
 				sprintf (s,
-						 "%u,%u,%s%c",
-						 Round_uint32 (coord [0].As_real64 ()),
-						 Round_uint32 (coord [1].As_real64 ()),
-						 sec,
+						 "%u,%u,%u%c",
+						 coord [0].n,
+						 coord [1].n,
+						 coord [2].n,
 						 refChar);
 			
 				}
 				
+			// Else we need to use the fractional minutes case.
+				
 			else
 				{
 				
+				// Find value minutes.
+				
+				real64 x = coord [0].As_real64 () * 60.0 +
+						   coord [1].As_real64 () +
+						   coord [2].As_real64 () * (1.0 / 60.0);
+						   
+				// Round to fractional four decimal places.
+				
+				uint32 y = Round_uint32 (x * 10000.0);
+				
+				// Split into degrees and minutes.
+				
+				uint32 d = y / (60 * 10000);
+				uint32 m = y % (60 * 10000);
+				
 				char min [32];
 				
-				sprintf (min, "%.4f", coord [1].As_real64 ());
+				sprintf (min, "%.4f", m * (1.0 / 10000.0));
 
 				TrimDecimal (min);
 				
 				sprintf (s,
 						 "%u,%s%c",
-						 Round_uint32 (coord [0].As_real64 ()),
+						 d,
 						 min,
 						 refChar);
 
@@ -825,34 +537,6 @@ void dng_xmp::DecodeGPSDateTime (const dng_string &s,
 		
 /*****************************************************************************/
 
-dng_string dng_xmp::EncodeIPTCDateTime (const dng_iptc &iptc)
-	{
-	
-	return EncodeDateTime (iptc.fDateCreated,
-						   iptc.fHasTimeCreated,
-						   NULL,
-						   0,
-						   iptc.fTimeZoneMinutes);
-	
-	}
-
-/*****************************************************************************/
-
-void dng_xmp::DecodeIPTCDateTime (const dng_string &s,
-								  dng_iptc &iptc)
-	{
-	
-	DecodeDateTime (s.Get (),
-					iptc.fDateCreated,
-					&iptc.fHasTimeCreated,
-					NULL,
-					NULL,
-					&iptc.fTimeZoneMinutes);
-	
-	}
-		
-/*****************************************************************************/
-
 void dng_xmp::Parse (dng_host &host,
 					 const void *buffer,
 				     uint32 count)
@@ -868,13 +552,15 @@ void dng_xmp::Parse (dng_host &host,
 
 dng_memory_block * dng_xmp::Serialize (bool asPacket,
 									   uint32 targetBytes,
-									   uint32 padBytes) const
+									   uint32 padBytes,
+									   bool forJPEG) const
 	{
 	
 	return fSDK->Serialize (fAllocator,
 							asPacket,
 							targetBytes,
-							padBytes);
+							padBytes,
+							forJPEG);
 	
 	}
 
@@ -897,6 +583,27 @@ bool dng_xmp::Exists (const char *ns,
  
 	}
 
+/*****************************************************************************/
+
+bool dng_xmp::HasNameSpace (const char *ns) const
+	{
+ 
+	return fSDK->HasNameSpace (ns);
+ 
+	}
+
+/*****************************************************************************/
+
+bool dng_xmp::IteratePaths (IteratePathsCallback *callback,
+						    void *callbackData,
+							const char *ns,
+							const char *path)
+	{
+	
+	return fSDK->IteratePaths (callback, callbackData, ns, path);
+	
+	}
+						   
 /*****************************************************************************/
 
 void dng_xmp::Remove (const char *ns,
@@ -1163,11 +870,36 @@ void dng_xmp::SetStructField (const char *ns,
 
 /*****************************************************************************/
 
+void dng_xmp::SetStructField (const char *ns,
+							  const char *path,
+							  const char *fieldNS,
+							  const char *fieldName,
+							  const char *s)
+	{
+
+	fSDK->SetStructField (ns, path, fieldNS, fieldName, s);
+
+	}
+
+/*****************************************************************************/
+
+void dng_xmp::DeleteStructField (const char *ns,
+								 const char *path,
+								 const char *fieldNS,
+								 const char *fieldName)
+	{
+	
+	fSDK->DeleteStructField (ns, path, fieldNS, fieldName);
+	
+	}
+								
+/*****************************************************************************/
+
 bool dng_xmp::GetStructField (const char *ns,
 							  const char *path,
 							  const char *fieldNS,
 							  const char *fieldName,
-							  dng_string &s)
+							  dng_string &s) const
 	{
 		
 	return fSDK->GetStructField (ns, path, fieldNS, fieldName, s);
@@ -1189,11 +921,111 @@ void dng_xmp::SetAltLangDefault (const char *ns,
 
 bool dng_xmp::GetAltLangDefault (const char *ns,
 								 const char *path,
-								 dng_string &s)
+								 dng_string &s) const
 	{
 			
 	return fSDK->GetAltLangDefault (ns, path, s);
 
+	}
+
+/*****************************************************************************/
+
+bool dng_xmp::SyncAltLangDefault (const char *ns,
+								  const char *path,
+								  dng_string &s,
+								  uint32 options)
+	{
+	
+	bool isDefault = s.IsEmpty ();
+	
+	// Sync 1: Force XMP to match non-XMP.
+	
+	if (options & ignoreXMP)
+		{
+		
+		if (isDefault)
+			{
+			
+			Remove (ns, path);
+			
+			}
+			
+		else
+			{
+			
+			SetAltLangDefault (ns, path, s);
+			
+			}
+		
+		return false;
+		
+		}
+	
+	// Sync 2: From non-XMP to XMP if non-XMP is prefered.
+	
+	if ((options & preferNonXMP) && !isDefault)
+		{
+		
+		SetAltLangDefault (ns, path, s);
+				   
+		return false;
+		
+		}
+		
+	// Sync 3: From XMP to non-XMP if XMP is prefered or default non-XMP.
+		
+	if ((options & preferXMP) || isDefault)
+		{
+		
+		if (GetAltLangDefault (ns, path, s))
+			{
+			
+			if (options & requireASCII)
+				{
+				
+				if (options & preferNonXMP)
+					{
+					
+					if (!s.IsASCII ())
+						{
+						
+						// We prefer non-XMP, but we also require
+						// ASCII and the XMP contains non-ASCII
+						// charactors.  So keep the non-XMP as a
+						// null string.
+					
+						s.Clear ();
+						
+						}
+					
+					}
+					
+				else
+					{
+					
+					s.ForceASCII ();
+					
+					}
+				
+				}
+				
+			return true;
+						
+			}
+		
+		}
+		
+	// Sync 4: From non-XMP to XMP.
+	
+	if (!isDefault)
+		{
+		
+		SetAltLangDefault (ns, path, s);
+		
+		}
+		
+	return false;
+	
 	}
 
 /*****************************************************************************/
@@ -1243,6 +1075,63 @@ void dng_xmp::SetBoolean (const char *ns,
 	
 	}
 	
+/*****************************************************************************/
+
+bool dng_xmp::Get_int32 (const char *ns,
+						 const char *path,
+						 int32 &x) const
+	{
+	
+	dng_string s;
+	
+	if (GetString (ns, path, s))
+		{
+	
+		if (s.NotEmpty ())
+			{
+			
+			int y = 0;
+			
+			if (sscanf (s.Get (), "%d", &y) == 1)
+				{
+				
+				x = y;
+				
+				return true;
+				
+				}
+
+			}
+			
+		}
+		
+	return false;
+	
+	}
+	
+/*****************************************************************************/
+
+void dng_xmp::Set_int32 (const char *ns,
+						 const char *path,
+						 int32 x,
+						 bool usePlus)
+	{
+	
+	char s [64];
+	
+	if (x > 0 && usePlus)
+		{
+		sprintf (s, "+%d", (int) x);
+		}
+	else
+		{
+		sprintf (s, "%d", (int) x);
+		}
+
+	Set (ns, path, s);
+	
+	}
+						 
 /*****************************************************************************/
 
 bool dng_xmp::Get_uint32 (const char *ns,
@@ -1417,6 +1306,80 @@ void dng_xmp::Sync_uint32_array (const char *ns,
 			}
 		
 		}
+	
+	}
+
+/*****************************************************************************/
+
+bool dng_xmp::Get_real64 (const char *ns,
+					  	  const char *path,
+					  	  real64 &x) const
+	{
+	
+	dng_string s;
+	
+	if (GetString (ns, path, s))
+		{
+	
+		if (s.NotEmpty ())
+			{
+			
+			double y = 0;
+			
+			if (sscanf (s.Get (), "%lf", &y) == 1)
+				{
+				
+				x = y;
+				
+				return true;
+				
+				}
+
+			}
+			
+		}
+		
+	return false;
+	
+	}
+	
+/*****************************************************************************/
+
+void dng_xmp::Set_real64 (const char *ns,
+					  	  const char *path,
+					  	  real64 x,
+					      uint32 places,
+					      bool trim,
+					      bool usePlus)
+	{
+	
+	char s [64];
+	
+	if (x > 0.0 && usePlus)
+		{
+		sprintf (s, "+%0.*f", (unsigned) places, (double) x);
+		}
+	else
+		{
+		sprintf (s, "%0.*f", (unsigned) places, (double) x);
+		}
+	
+	if (trim)
+		{
+		
+		while (s [strlen (s) - 1] == '0')
+			{
+			s [strlen (s) - 1] = 0;
+			}
+			
+		if (s [strlen (s) - 1] == '.')
+			{
+			s [strlen (s) - 1] = 0;
+			}
+			
+		}
+	
+	Set (ns, path, s);
 	
 	}
 
@@ -1765,11 +1728,11 @@ void dng_xmp::SyncIPTC (dng_iptc &iptc,
 					    uint32 options)
 	{
 	
-	SyncString (XMP_NS_PHOTOSHOP,
-				"Title",
-				iptc.fTitle,
-				options);
-				
+	SyncAltLangDefault (XMP_NS_DC,
+						"title",
+						iptc.fTitle,
+						options);
+
 	SyncString (XMP_NS_PHOTOSHOP,
 				"Category",
 				iptc.fCategory,
@@ -1820,7 +1783,7 @@ void dng_xmp::SyncIPTC (dng_iptc &iptc,
 			    
 		{
 		
-		dng_string s = EncodeIPTCDateTime (iptc);
+		dng_string s = iptc.fDateTimeCreated.Encode_ISO_8601 ();
 		
 		if (SyncString (XMP_NS_PHOTOSHOP,
 						"DateCreated",
@@ -1828,7 +1791,7 @@ void dng_xmp::SyncIPTC (dng_iptc &iptc,
 						options))
 			{
 			
-			DecodeIPTCDateTime (s, iptc);
+			iptc.fDateTimeCreated.Decode_ISO_8601 (s.Get ());
 			
 			}
 		
@@ -1889,15 +1852,15 @@ void dng_xmp::SyncIPTC (dng_iptc &iptc,
 			    iptc.fSource,
 			    options);
 
-	SyncString (XMP_NS_PHOTOSHOP,
-			    "Copyright",
-			    iptc.fCopyrightNotice,
-			    options);
+	SyncAltLangDefault (XMP_NS_DC,
+						"rights",
+						iptc.fCopyrightNotice,
+						options);
 				
-	SyncString (XMP_NS_PHOTOSHOP,
-			    "Caption",
-			    iptc.fDescription,
-			    options);
+	SyncAltLangDefault (XMP_NS_DC,
+						"description",
+						iptc.fDescription,
+						options);
 				
 	SyncString (XMP_NS_PHOTOSHOP,
 			    "CaptionWriter",
@@ -1997,7 +1960,7 @@ void dng_xmp::RebuildIPTC (dng_negative &negative)
 		
 		AutoPtr<dng_memory_block> block (iptc.Spool (negative.Allocator ()));
 		
-		negative.SetIPTC (block, dng_stream::kInvalidOffset);
+		negative.SetIPTC (block);
 		
 		}
 
@@ -2181,13 +2144,17 @@ void dng_xmp::SyncFlash (uint32 &flashState,
 /*****************************************************************************/
 
 void dng_xmp::SyncExif (dng_exif &exif,
-						bool overrideXMP)
+						const dng_exif *originalExif,
+						bool doingUpdateFromXMP)
 	{
 	
-	// Default synchronization options for the read-only fields.
+	DNG_ASSERT (!doingUpdateFromXMP || originalExif,
+				"Must have original EXIF if doingUpdateFromXMP");
 	
-	uint32 options = overrideXMP ? ignoreXMP
-								 : preferNonXMP;
+	// Default synchronization options for the read-only fields.
+			
+	uint32 options = doingUpdateFromXMP ? ignoreXMP
+								        : preferNonXMP;
 	
 	// Make:
 	
@@ -2413,30 +2380,27 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				    exif.fExposureIndex,
 				    options);
 				    
+	// For the following three date/time fields, we always prefer XMP to
+	// the EXIF values.  This is to allow the user to correct the date/times
+	// via changes in a sidecar XMP file, without modifying the original
+	// raw file.
+				    
 	// DateTime:
 	
 		{
 		
-		dng_string s = EncodeDateTime (exif.fDateTime,
-									   true,
-									   exif.fSubsecTime.Get (),
-									   exif.fTimeZoneOffset);
+		dng_string s = exif.fDateTime.Encode_ISO_8601 ();
 									   
 		SyncString (XMP_NS_TIFF,
 					"DateTime",
 					s,
-					options);
+					preferXMP);
 					
-		if (exif.fDateTime.NotValid () && s.NotEmpty ())
+		if (s.NotEmpty ())
 			{
 			
-			DecodeDateTime (s.Get (),
-							exif.fDateTime,
-							NULL,
-							&exif.fSubsecTime,
-							&exif.fTimeZoneOffset,
-							NULL);
-			
+			exif.fDateTime.Decode_ISO_8601 (s.Get ());
+						
 			}
 		
 		}
@@ -2445,25 +2409,17 @@ void dng_xmp::SyncExif (dng_exif &exif,
 	
 		{
 		
-		dng_string s = EncodeDateTime (exif.fDateTimeOriginal,
-									   true,
-									   exif.fSubsecTimeOriginal.Get (),
-									   exif.fTimeZoneOffsetOriginal);
+		dng_string s = exif.fDateTimeOriginal.Encode_ISO_8601 ();
 									   
 		SyncString (XMP_NS_EXIF,
 					"DateTimeOriginal",
 					s,
-					options);
+					preferXMP);
 		
-		if (exif.fDateTimeOriginal.NotValid () && s.NotEmpty ())
+		if (s.NotEmpty ())
 			{
 			
-			DecodeDateTime (s.Get (),
-							exif.fDateTimeOriginal,
-							NULL,
-							&exif.fSubsecTimeOriginal,
-							&exif.fTimeZoneOffsetOriginal,
-							NULL);
+			exif.fDateTimeOriginal.Decode_ISO_8601 (s.Get ());
 							
 			}
 		
@@ -2473,29 +2429,18 @@ void dng_xmp::SyncExif (dng_exif &exif,
 	
 		{
 		
-		// Not that there is no "TimeZoneOffsetDigitized" field, so
-		// we assume the same tone zone as the original.
-				
-		dng_string s = EncodeDateTime (exif.fDateTimeDigitized,
-									   true,
-									   exif.fSubsecTimeDigitized.Get (),
-									   exif.fTimeZoneOffsetOriginal);
-									   
+		dng_string s = exif.fDateTimeDigitized.Encode_ISO_8601 ();
+									   				
 		SyncString (XMP_NS_EXIF,
 					"DateTimeDigitized",
 					s,
-					options);
+					preferXMP);
 		
-		if (exif.fDateTimeDigitized.NotValid () && s.NotEmpty ())
+		if (s.NotEmpty ())
 			{
 			
-			DecodeDateTime (s.Get (),
-							exif.fDateTimeDigitized,
-							NULL,
-							&exif.fSubsecTimeDigitized,
-							NULL,
-							NULL);
-			
+			exif.fDateTimeDigitized.Decode_ISO_8601 (s.Get ());
+
 			}
 		
 		}
@@ -2712,6 +2657,22 @@ void dng_xmp::SyncExif (dng_exif &exif,
 			}
 			
 		}
+		
+	else if (doingUpdateFromXMP)
+		{
+		
+		exif.fImageDescription.Clear ();
+		
+		if (originalExif->fImageDescription.NotEmpty ())
+			{
+			
+			fSDK->SetAltLangDefault (XMP_NS_DC,
+									 "description",
+									 dng_string ());
+									 
+			}
+		
+		}
 	
 	else if (exif.fImageDescription.NotEmpty ())
 		{
@@ -2719,51 +2680,115 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		fSDK->SetAltLangDefault (XMP_NS_DC,
 								 "description",
 								 exif.fImageDescription);
-				
+									 
 		}
-	
+		
 	// Artist:  (XMP is is always preferred)
 	
 		{
 		
-		dng_string_list list;
+		dng_string_list xmpList;
 		
-		if (exif.fArtist.NotEmpty ())
+		if (fSDK->GetStringList (XMP_NS_DC,
+								 "creator",
+								 xmpList))
 			{
 			
-			list.Append (exif.fArtist);
-			
-			}
-			
-		SyncStringList (XMP_NS_DC,
-					    "creator",
-					    list,
-					    false,
-					    preferXMP);
-					    
-		exif.fArtist.Clear ();
-					    
-		if (list.Count () > 0)
-			{
-			
-			if (list [0].IsASCII ())
+			exif.fArtist.Clear ();
+							
+			if (xmpList.Count () > 0)
 				{
 				
-				exif.fArtist = list [0];
+				if (xmpList [0].IsASCII ())
+					{
+					
+					exif.fArtist = xmpList [0];
+					
+					}
 				
+				}
+
+			}
+			
+		else if (doingUpdateFromXMP)
+			{
+			
+			exif.fArtist.Clear ();
+			
+			if (originalExif->fArtist.NotEmpty ())
+				{
+				
+				dng_string_list fakeList;
+				
+				fakeList.Append (dng_string ());
+				
+				SetStringList (XMP_NS_DC,
+							   "creator",
+							   fakeList,
+							   false);
+										 
 				}
 			
 			}
-					    
-		}		    
-
+			
+		else if (exif.fArtist.NotEmpty ())
+			{
+			
+			dng_string_list newList;
+			
+			newList.Append (exif.fArtist);
+			
+			SetStringList (XMP_NS_DC,
+						   "creator",
+						   newList,
+						   false);
+										 
+			}
+			
+		}
+		
 	// Software:  (XMP is is always preferred)
 	
-	SyncString (XMP_NS_XAP,
-				"CreatorTool",
-				exif.fSoftware,
-				preferXMP | requireASCII);
-				
+	if (fSDK->GetString (XMP_NS_XAP,
+						 "CreatorTool",
+						 exif.fSoftware))
+		
+		{
+		
+		if (!exif.fSoftware.IsASCII ())
+			{
+			
+			exif.fSoftware.Clear ();
+			
+			}
+			
+		}
+		
+	else if (doingUpdateFromXMP)
+		{
+		
+		exif.fSoftware.Clear ();
+		
+		if (originalExif->fSoftware.NotEmpty ())
+			{
+			
+			fSDK->SetString (XMP_NS_XAP,
+							 "CreatorTool",
+							 dng_string ());
+									 
+			}
+		
+		}
+	
+	else if (exif.fSoftware.NotEmpty ())
+		{
+		
+		fSDK->SetString (XMP_NS_XAP,
+						 "CreatorTool",
+						 exif.fSoftware);
+									 
+		}
+
 	// Copyright:  (XMP is is always preferred)
 	
 	if (fSDK->GetAltLangDefault (XMP_NS_DC,
@@ -2779,6 +2804,22 @@ void dng_xmp::SyncExif (dng_exif &exif,
 			
 			}
 			
+		}
+	
+	else if (doingUpdateFromXMP)
+		{
+		
+		exif.fCopyright.Clear ();
+		
+		if (originalExif->fCopyright.NotEmpty ())
+			{
+			
+			fSDK->SetAltLangDefault (XMP_NS_DC,
+									 "rights",
+									 dng_string ());
+									 
+			}
+		
 		}
 	
 	else if (exif.fCopyright.NotEmpty ())
@@ -2864,10 +2905,13 @@ void dng_xmp::SyncExif (dng_exif &exif,
 	
 		{
 		
+		// Since lens names are sometimes missing or wrong, allow user to edit the
+		// XMP and have the value stick.  So prefer the XMP value if in conflict.
+		
 		SyncString (XMP_NS_AUX,
 					"Lens",
 					exif.fLensName,
-					options);
+					preferXMP);
 					
 		// Generate default lens name from lens info if required.
 		
@@ -3261,19 +3305,22 @@ void dng_xmp::SyncExif (dng_exif &exif,
 				 exif.fGPSDifferential,
 				 exif.fGPSDifferential == 0xFFFFFFFF,
 				 options);
+				 
+	// We are syncing EXIF and XMP, but we are not updating the
+	// NativeDigest tags.  It is better to just delete them than leave
+	// the stale values around.
+	
+	Remove (XMP_NS_EXIF, "NativeDigest");
+	Remove (XMP_NS_TIFF, "NativeDigest");
 	
 	}
 		
 /******************************************************************************/
 
-void dng_xmp::UpdateDateTime (const dng_date_time &dt,
-							  int32 tzHour)
+void dng_xmp::UpdateDateTime (const dng_date_time_info &dt)
 	{
 	
-	dng_string s = EncodeDateTime (dt,
-								   true,
-								   NULL,
-								   tzHour);
+	dng_string s = dt.Encode_ISO_8601 ();
 								   
 	SetString (XMP_NS_TIFF,
 			   "DateTime",
@@ -3376,4 +3423,143 @@ void dng_xmp::SyncOrientation (dng_negative &negative,
 
 	}
 	
+/******************************************************************************/
+
+void dng_xmp::ClearImageInfo ()
+	{
+	
+	Remove (XMP_NS_TIFF, "ImageWidth" );
+	Remove (XMP_NS_TIFF, "ImageLength");
+		
+	Remove (XMP_NS_TIFF, "BitsPerSample");
+	
+	Remove (XMP_NS_TIFF, "Compression");
+		
+	Remove (XMP_NS_TIFF, "PhotometricInterpretation");
+	
+	// "Orientation" is handled separately.
+	
+	Remove (XMP_NS_TIFF, "SamplesPerPixel");
+	
+	Remove (XMP_NS_TIFF, "PlanarConfiguration");
+	
+	Remove (XMP_NS_TIFF, "XResolution");
+	Remove (XMP_NS_TIFF, "YResolution");
+		
+	Remove (XMP_NS_TIFF, "ResolutionUnit");
+	
+	Remove (XMP_NS_PHOTOSHOP, "ColorMode" );
+	Remove (XMP_NS_PHOTOSHOP, "ICCProfile");
+	
+	}
+	
+/******************************************************************************/
+
+void dng_xmp::SetImageSize (const dng_point &size)
+	{
+	
+	Set_uint32 (XMP_NS_TIFF, "ImageWidth" , size.h);
+	Set_uint32 (XMP_NS_TIFF, "ImageLength", size.v);
+
+	}
+	
+/******************************************************************************/
+
+void dng_xmp::SetSampleInfo (uint32 samplesPerPixel,
+							 uint32 bitsPerSample)
+	{
+	
+	Set_uint32 (XMP_NS_TIFF, "SamplesPerPixel", samplesPerPixel);
+	
+	char s [32];
+	
+	sprintf (s, "%u", bitsPerSample);
+	
+	dng_string ss;
+	
+	ss.Set (s);
+	
+	dng_string_list list;
+	
+	for (uint32 j = 0; j < samplesPerPixel; j++)
+		{
+		list.Append (ss);
+		}
+	
+	SetStringList (XMP_NS_TIFF, "BitsPerSample", list, false);
+	
+	}
+	
+/******************************************************************************/
+
+void dng_xmp::SetPhotometricInterpretation (uint32 pi)
+	{
+	
+	Set_uint32 (XMP_NS_TIFF, "PhotometricInterpretation", pi);
+	
+	}
+		
+/******************************************************************************/
+
+void dng_xmp::SetResolution (const dng_resolution &res)
+	{
+	
+ 	Set_urational (XMP_NS_TIFF, "XResolution", res.fXResolution);
+	Set_urational (XMP_NS_TIFF, "YResolution", res.fYResolution);
+		
+    Set_uint32 (XMP_NS_TIFF, "ResolutionUnit", res.fResolutionUnit);
+	
+	}
+
+/*****************************************************************************/
+
+void dng_xmp::ComposeArrayItemPath (const char *ns,
+									const char *arrayName,
+									int32 itemNumber,
+									dng_string &s) const
+	{
+	
+	fSDK->ComposeArrayItemPath (ns, arrayName, itemNumber, s);
+
+	}
+		
+/*****************************************************************************/
+
+void dng_xmp::ComposeStructFieldPath (const char *ns,
+									  const char *structName,
+									  const char *fieldNS,
+									  const char *fieldName,
+									  dng_string &s) const
+	{
+	
+	fSDK->ComposeStructFieldPath (ns, structName, fieldNS, fieldName, s);
+
+	}
+
+/*****************************************************************************/
+
+int32 dng_xmp::CountArrayItems (const char *ns,
+							    const char *path) const
+	{
+	
+	return fSDK->CountArrayItems (ns, path);
+
+	}
+
+/*****************************************************************************/
+
+void dng_xmp::AppendArrayItem (const char *ns,
+							   const char *arrayName,
+							   const char *itemValue,
+							   bool isBag,
+							   bool propIsStruct)
+	{
+
+	fSDK->AppendArrayItem (ns,
+						   arrayName,
+						   itemValue,
+						   isBag,
+						   propIsStruct);
+	}
+
 /*****************************************************************************/

@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_matrix.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_matrix.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -89,6 +89,22 @@ void dng_matrix::Clear ()
 	
 	}
 				
+/*****************************************************************************/
+				
+void dng_matrix::SetIdentity (uint32 count)	
+	{
+	
+	*this = dng_matrix (count, count);
+	
+	for (uint32 j = 0; j < count; j++)
+		{
+		
+		fData [j] [j] = 1.0;
+		
+		}
+	
+	}
+				
 /******************************************************************************/
 
 bool dng_matrix::operator== (const dng_matrix &m) const
@@ -110,6 +126,41 @@ bool dng_matrix::operator== (const dng_matrix &m) const
 				{
 				
 				return false;
+				
+				}
+			
+			}
+			
+	return true;
+	
+	}
+
+/******************************************************************************/
+
+bool dng_matrix::IsDiagonal () const
+	{
+	
+	if (IsEmpty ())
+		{
+		return false;
+		}
+	
+	if (Rows () != Cols ())
+		{
+		return false;
+		}
+	
+	for (uint32 j = 0; j < Rows (); j++)
+		for (uint32 k = 0; k < Cols (); k++)
+			{
+			
+			if (j != k)
+				{
+				
+				if (fData [j] [k] != 0.0)
+					{
+					return false;
+					}
 				
 				}
 			
@@ -418,6 +469,22 @@ void dng_vector::Clear ()
 	{
 	
 	fCount = 0;
+	
+	}
+				
+/*****************************************************************************/
+				
+void dng_vector::SetIdentity (uint32 count)	
+	{
+	
+	*this = dng_vector (count);
+	
+	for (uint32 j = 0; j < count; j++)
+		{
+		
+		fData [j] = 1.0;
+		
+		}
 	
 	}
 				
@@ -744,6 +811,12 @@ const real64 kNearZero = 1.0E-10;
 
 /******************************************************************************/
 
+// Work around bug #1294195, which may be a hardware problem on a specific machine.
+// This pragma turns on "improved" floating-point consistency.
+#ifdef _MSC_VER
+#pragma optimize ("p", on)
+#endif
+
 static dng_matrix Invert3by3 (const dng_matrix &A)
 	{
 	
@@ -794,6 +867,11 @@ static dng_matrix Invert3by3 (const dng_matrix &A)
 
 	}
 		
+// Reset floating-point optimization. See comment above.
+#ifdef _MSC_VER
+#pragma optimize ("p", off)
+#endif
+
 /******************************************************************************/
 
 static dng_matrix InvertNbyN (const dng_matrix &A)

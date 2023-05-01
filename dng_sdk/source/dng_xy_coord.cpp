@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_xy_coord.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_xy_coord.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -52,12 +52,12 @@ dng_vector_3 XYtoXYZ (const dng_xy_coord &coord)
 	// This prevents math from doing strange things when users specify
 	// extreme temperature/tint coordinates.
 	
-	temp.x = Pin_real64 (0.01, temp.x, 0.99);
-	temp.y = Pin_real64 (0.01, temp.y, 0.99);
+	temp.x = Pin_real64 (0.000001, temp.x, 0.999999);
+	temp.y = Pin_real64 (0.000001, temp.y, 0.999999);
 	
-	if (temp.x + temp.y > 0.99)
+	if (temp.x + temp.y > 0.999999)
 		{
-		real64 scale = 0.99 / (temp.x + temp.y);
+		real64 scale = 0.999999 / (temp.x + temp.y);
 		temp.x *= scale;
 		temp.y *= scale;
 		}

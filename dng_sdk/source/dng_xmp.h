@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_xmp.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_xmp.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -20,6 +20,7 @@
 
 #include "dng_classes.h"
 #include "dng_types.h"
+#include "dng_xmp_sdk.h"
 
 /*****************************************************************************/
 
@@ -54,15 +55,23 @@ class dng_xmp
 					const void *buffer,
 				    uint32 count);
 
-		dng_memory_block * Serialize (bool asPacket = false,
-									  uint32 targetBytes = 0,
-									  uint32 padBytes = 4096) const;
+		virtual dng_memory_block * Serialize (bool asPacket = false,
+											  uint32 targetBytes = 0,
+											  uint32 padBytes = 4096,
+											  bool forJPEG = false) const;
 									  
 		bool HasMeta () const;
 									  
 		bool Exists (const char *ns,
 					 const char *path) const;
 		
+		bool HasNameSpace (const char *ns) const;
+
+		bool IteratePaths (IteratePathsCallback *callback,
+						   void *callbackData,
+						   const char *ns = 0,
+						   const char *path = 0);
+
 		void Remove (const char *ns,
 				     const char *path);
 
@@ -94,12 +103,23 @@ class dng_xmp
 						     const char *fieldNS,
 							 const char *fieldName,
 							 const dng_string &s);
-						 	 
+
+		void SetStructField (const char *ns,
+							 const char *path,
+						     const char *fieldNS,
+							 const char *fieldName,
+							 const char *s);
+		
+		void DeleteStructField (const char *ns,
+								const char *path,
+								const char *fieldNS,
+								const char *fieldName);								
+												 				 	 
 		bool GetStructField (const char *ns,
 							 const char *path,
 							 const char *fieldNS,
 							 const char *fieldName,
-							 dng_string &s);
+							 dng_string &s) const;
 
 		void SetAltLangDefault (const char *ns,
 								const char *path,
@@ -107,7 +127,7 @@ class dng_xmp
 
 		bool GetAltLangDefault (const char *ns,
 								const char *path,
-								dng_string &s);
+								dng_string &s) const;
 								
 		bool GetBoolean (const char *ns,
 						 const char *path,
@@ -117,6 +137,15 @@ class dng_xmp
 						 const char *path,
 						 bool x);
 						 
+		bool Get_int32 (const char *ns,
+						const char *path,
+						int32 &x) const;
+						 
+		void Set_int32 (const char *ns,
+						const char *path,
+						int32 x,
+						bool usePlus = false);
+						 
 		bool Get_uint32 (const char *ns,
 						 const char *path,
 						 uint32 &x) const;
@@ -125,6 +154,17 @@ class dng_xmp
 						 const char *path,
 						 uint32 x);
 						 
+		bool Get_real64 (const char *ns,
+					     const char *path,
+					     real64 &x) const;
+	
+		void Set_real64 (const char *ns,
+					     const char *path,
+					     real64 x,
+				         uint32 places = 6,
+					     bool trim = true,
+					     bool usePlus = false);
+
 		bool Get_urational (const char *ns,
 							const char *path,
 							dng_urational &r) const;
@@ -159,10 +199,10 @@ class dng_xmp
 		void RebuildIPTC (dng_negative &negative);
 		
 		virtual void SyncExif (dng_exif &exif,
-							   bool overrideXMP = false);
+							   const dng_exif *originalExif = NULL,
+							   bool doingUpdateFromXMP = false);
 		
-		void UpdateDateTime (const dng_date_time &dt,
-							 int32 tzHour = 0x7FFFFFFF);
+		void UpdateDateTime (const dng_date_time_info &dt);
 							 
 		bool HasOrientation () const;
 						   
@@ -174,28 +214,46 @@ class dng_xmp
 		
 		void SyncOrientation (dng_negative &negative,
 					   		  bool xmpIsMaster);
-
-	protected:
-	
-		static void TrimDecimal (char *s);
-
-		static dng_string EncodeDateTime (const dng_date_time &dt,
-								   		  bool hasTime = true,
-								   		  const char *subSec = NULL,
-								   		  int32 tzHour = 0,
-								   		  int32 tzMinute = 0);
+					   		  
+		void ClearImageInfo ();
 		
-		static void DecodeDateTime (const char *s,
-							 		dng_date_time &dt,
-							 		bool *hasTime = NULL,
-							 		dng_string *subSec = NULL,
-							 		int32 *tzHour = NULL,
-							 		int32 *tzMinute = NULL);
-							 
+		void SetImageSize (const dng_point &size);
+		
+		void SetSampleInfo (uint32 samplesPerPixel,
+							uint32 bitsPerSample);
+		
+		void SetPhotometricInterpretation (uint32 pi);
+		
+		void SetResolution (const dng_resolution &res);
+
+		void ComposeArrayItemPath (const char *ns,
+								   const char *arrayName,
+								   int32 itemNumber,
+								   dng_string &s) const;
+		
+		void ComposeStructFieldPath (const char *ns,
+								     const char *structName,
+								     const char *fieldNS,
+									 const char *fieldName,
+								     dng_string &s) const;
+
+		int32 CountArrayItems (const char *ns,
+		                       const char *path) const;
+
+		void AppendArrayItem (const char *ns,
+							  const char *arrayName,
+							  const char *itemValue,
+							  bool isBag = true,
+							  bool propIsStruct = false);
+
 		static dng_string EncodeFingerprint (const dng_fingerprint &f);
 		
 		static dng_fingerprint DecodeFingerprint (const dng_string &s);
 							 
+	protected:
+	
+		static void TrimDecimal (char *s);
+
 		static dng_string EncodeGPSVersion (uint32 version);
 		
 		static uint32 DecodeGPSVersion (const dng_string &s);
@@ -214,11 +272,6 @@ class dng_xmp
 									   dng_string &dateStamp,
 									   dng_urational *timeStamp);
 									   
-		static dng_string EncodeIPTCDateTime (const dng_iptc &iptc);
-		
-		static void DecodeIPTCDateTime (const dng_string &s,
-										dng_iptc &iptc);
-		
 		bool SyncString (const char *ns,
 						 const char *path,
 						 dng_string &s,
@@ -230,6 +283,11 @@ class dng_xmp
 						 	 bool isBag = false,
 						 	 uint32 options = 0);
 
+		bool SyncAltLangDefault (const char *ns,
+								 const char *path,
+								 dng_string &s,
+								 uint32 options = 0);
+						 
 		void Sync_uint32 (const char *ns,
 						  const char *path,
 						  uint32 &x,

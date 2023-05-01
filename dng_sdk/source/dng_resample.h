@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_resample.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_resample.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -148,7 +148,7 @@ class dng_resample_weights
 		const real32 *Weights32 (uint32 fract) const
 			{
 			
-			ASSERT (fWeights32->Buffer (), "Weights32 is NULL");
+			DNG_ASSERT (fWeights32->Buffer (), "Weights32 is NULL");
 			
 			return fWeights32->Buffer_real32 () + fract * fWeightStep;
 			
@@ -157,7 +157,7 @@ class dng_resample_weights
 		const int16 *Weights16 (uint32 fract) const
 			{
 			
-			ASSERT (fWeights16->Buffer (), "Weights16 is NULL");
+			DNG_ASSERT (fWeights16->Buffer (), "Weights16 is NULL");
 			
 			return fWeights16->Buffer_int16 () + fract * fWeightStep;
 			

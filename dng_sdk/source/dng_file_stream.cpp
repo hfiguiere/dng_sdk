@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_file_stream.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_file_stream.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -20,9 +20,13 @@
 /*****************************************************************************/
 
 dng_file_stream::dng_file_stream (const char *filename,
-								  bool output)
+								  bool output,
+								  uint32 bufferSize)
 
-	:	dng_stream ((dng_abort_sniffer *) NULL, kDefaultBufferSize, 0)
+	:	dng_stream ((dng_abort_sniffer *) NULL,
+					bufferSize,
+					0)
+	
 	,	fFile (NULL)
 	
 	{
@@ -64,7 +68,7 @@ dng_file_stream::~dng_file_stream ()
 		
 /*****************************************************************************/
 
-uint32 dng_file_stream::DoGetLength ()
+uint64 dng_file_stream::DoGetLength ()
 	{
 	
 	if (fseek (fFile, 0, SEEK_END) != 0)
@@ -82,10 +86,10 @@ uint32 dng_file_stream::DoGetLength ()
 
 void dng_file_stream::DoRead (void *data,
 							  uint32 count,
-							  uint32 offset)
+							  uint64 offset)
 	{
 	
-	if (fseek (fFile, offset, SEEK_SET) != 0)
+	if (fseek (fFile, (uint32) offset, SEEK_SET) != 0)
 		{
 		
 		ThrowReadFile ();
@@ -107,10 +111,10 @@ void dng_file_stream::DoRead (void *data,
 
 void dng_file_stream::DoWrite (const void *data,
 							   uint32 count,
-							   uint32 offset)
+							   uint64 offset)
 	{
 	
-	if (fseek (fFile, offset, SEEK_SET) != 0)
+	if (fseek (fFile, (uint32) offset, SEEK_SET) != 0)
 		{
 		
 		ThrowWriteFile ();

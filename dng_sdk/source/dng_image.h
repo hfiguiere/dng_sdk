@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_image.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_image.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  *  Support for working with image data in DNG SDK.
@@ -22,15 +22,18 @@
 
 /*****************************************************************************/
 
+#include "dng_assertions.h"
 #include "dng_classes.h"
 #include "dng_pixel_buffer.h"
 #include "dng_point.h"
 #include "dng_rect.h"
+#include "dng_tag_types.h"
 #include "dng_types.h"
 
 /*****************************************************************************/
 
-/// \brief Class to get resource acquisition is instantiation behavior for tile buffers. Can be dirty or constant tile access.
+/// \brief Class to get resource acquisition is instantiation behavior for tile
+/// buffers. Can be dirty or constant tile access.
 
 class dng_tile_buffer: public dng_pixel_buffer
 	{
@@ -38,6 +41,8 @@ class dng_tile_buffer: public dng_pixel_buffer
 	protected:
 	
 		const dng_image &fImage;
+		
+		void *fRefData;
 	
 	protected:
 	
@@ -51,12 +56,33 @@ class dng_tile_buffer: public dng_pixel_buffer
 						 bool dirty);
 						 
 		virtual ~dng_tile_buffer ();
+		
+	public:
+	
+		void SetRefData (void *refData)
+			{
+			fRefData = refData;
+			}
+			
+		void * GetRefData () const
+			{
+			return fRefData;
+			}
+			
+	private:
+
+		// Hidden copy constructor and assignment operator.
+	
+		dng_tile_buffer (const dng_tile_buffer &buffer);
+		
+		dng_tile_buffer & operator= (const dng_tile_buffer &buffer);
 	
 	};
 
 /*****************************************************************************/
 
-/// \brief Class to get resource acquisition is instantiation behavior for constant (read-only) tile buffers.
+/// \brief Class to get resource acquisition is instantiation behavior for
+/// constant (read-only) tile buffers.
 
 class dng_const_tile_buffer: public dng_tile_buffer
 	{
@@ -76,7 +102,8 @@ class dng_const_tile_buffer: public dng_tile_buffer
 	
 /*****************************************************************************/
 
-/// \brief Class to get resource acquisition is instantiation behavior for dirty (writable) tile buffers.
+/// \brief Class to get resource acquisition is instantiation behavior for
+/// dirty (writable) tile buffers.
 
 class dng_dirty_tile_buffer: public dng_tile_buffer
 	{
@@ -96,7 +123,8 @@ class dng_dirty_tile_buffer: public dng_tile_buffer
 	
 /*****************************************************************************/
 
-/// \brief Base class for holding image data in DNG SDK. See dng_simple_image for derived class most often used in DNG SDK.
+/// \brief Base class for holding image data in DNG SDK. See dng_simple_image
+/// for derived class most often used in DNG SDK.
 
 class dng_image
 	{
@@ -195,12 +223,18 @@ class dng_image
 			}
 			
 		/// Getter for pixel type.
-		/// \retval See dng_tagtypes.h . Valid values are ttByte, ttShort, ttSShort, ttLong, ttFloat .
+		/// \retval See dng_tagtypes.h . Valid values are ttByte, ttShort, ttSShort,
+		/// ttLong, ttFloat .
 
 		uint32 PixelType () const
 			{
 			return fPixelType;
 			}
+			
+		/// Setter for pixel type.
+		/// \param pixelType The new pixel type .
+		
+		virtual void SetPixelType (uint32 pixelType);
 		
 		/// Getter for pixel size.
 		/// \retval Size, in bytes, of pixel type for this image .
@@ -214,6 +248,11 @@ class dng_image
 
 		uint32 PixelRange () const;
 
+		/// Setter for pixel range.
+		/// \param pixelType The new pixel range .
+		
+		virtual void SetPixelRange (uint32 pixelRange);
+		
 		/// Getter for best "tile stride" for accessing image.
 
 		virtual dng_rect RepeatingTile () const;
@@ -221,8 +260,10 @@ class dng_image
 		/// Get a pixel buffer of data on image with proper edge padding.
 		/// \param buffer Receives resulting pixel buffer.
 		/// \param edgeOption edge_option describing how to pad edges.
-		/// \param repeatV Amount of repeated padding needed in vertical for edge_repeat and edge_repeat_zero_last edgeOption cases.
-		/// \param repeatH Amount of repeated padding needed in horizontal for edge_repeat and edge_repeat_zero_last edgeOption cases.
+		/// \param repeatV Amount of repeated padding needed in vertical for
+		/// edge_repeat and edge_repeat_zero_last edgeOption cases.
+		/// \param repeatH Amount of repeated padding needed in horizontal for 
+		/// edge_repeat and edge_repeat_zero_last edgeOption cases.
 
 		void Get (dng_pixel_buffer &buffer,
 				  edge_option edgeOption = edge_none,
@@ -244,26 +285,123 @@ class dng_image
 
 		virtual void Rotate (const dng_orientation &orientation);
 		
+		/// Copy image data from an area of one image to same area of another.
+		/// \param src Image to copy from.
+		/// \param area Rectangle of images to copy.
+		/// \param srcPlane Plane to start copying in src.
+		/// \param dstPlane Plane to start copying in this.
+		/// \param planes Number of planes to copy.
+
+		void CopyArea (const dng_image &src,
+					   const dng_rect &area,
+					   uint32 srcPlane,
+					   uint32 dstPlane,
+					   uint32 planes);
+
+		/// Copy image data from an area of one image to same area of another.
+		/// \param src Image to copy from.
+		/// \param area Rectangle of images to copy.
+		/// \param plane Plane to start copying in src and this.
+		/// \param planes Number of planes to copy.
+
+		void CopyArea (const dng_image &src,
+					   const dng_rect &area,
+					   uint32 plane,
+					   uint32 planes)
+			{
+			
+			CopyArea (src, area, plane, plane, planes);
+			
+			}
+
+		/// Return true if the contents of an area of the image are the same as those of another.
+		/// \param rhs Image to compare against.
+		/// \param area Rectangle of image to test.
+		/// \param plane Plane to start comparing.
+		/// \param planes Number of planes to compare.
+
+		bool EqualArea (const dng_image &rhs,
+						const dng_rect &area,
+						uint32 plane,
+						uint32 planes) const;
+						
+		// Routines to set the entire image to a constant value.
+		
+		void SetConstant_uint8 (uint8 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttByte, "Mismatched pixel type");
+			
+			SetConstant ((uint32) value);
+			
+			}
+		
+		void SetConstant_uint16 (uint16 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttShort, "Mismatched pixel type");
+			
+			SetConstant ((uint32) value);
+			
+			}
+		
+		void SetConstant_int16 (int16 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttSShort, "Mismatched pixel type");
+			
+			SetConstant ((uint32) (uint16) value);
+			
+			}
+		
+		void SetConstant_uint32 (uint32 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttLong, "Mismatched pixel type");
+			
+			SetConstant (value);
+			
+			}
+		
+		void SetConstant_real32 (real32 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttFloat, "Mismatched pixel type");
+			
+			union
+				{
+				uint32 i;
+				real32 f;
+				} x;
+				
+			x.f = value;
+			
+			SetConstant (x.i);
+			
+			}
+
+		virtual void GetRepeat (dng_pixel_buffer &buffer,
+								const dng_rect &srcArea,
+								const dng_rect &dstArea) const;
+	
 	protected:
 	
-		virtual void AcquireTileBuffer (dng_pixel_buffer &buffer,
-										const dng_rect &tile,
+		virtual void AcquireTileBuffer (dng_tile_buffer &buffer,
+										const dng_rect &area,
 										bool dirty) const;
 	
-		virtual void ReleaseTileBuffer (dng_pixel_buffer &buffer) const;
+		virtual void ReleaseTileBuffer (dng_tile_buffer &buffer) const;
 	
 		virtual void DoGet (dng_pixel_buffer &buffer) const;
 		
 		virtual void DoPut (const dng_pixel_buffer &buffer);
-		
-		void GetRepeat (dng_pixel_buffer &buffer,
-						const dng_rect &srcArea,
-						const dng_rect &dstArea) const;
-	
+
 		void GetEdge (dng_pixel_buffer &buffer,
 					  edge_option edgeOption,
 					  const dng_rect &srcArea,
 					  const dng_rect &dstArea) const;
+					  
+		virtual void SetConstant (uint32 value);
 
 	};
 

@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_sdk_limits.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_sdk_limits.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Collection of constants detailing maximum values used in processing in the DNG SDK.
@@ -26,9 +26,14 @@
 
 /*****************************************************************************/
 
+/// The maximum number of previews (in addition to the main IFD's thumbnail)
+/// that we support embedded in a DNG.
+
+const uint32 kMaxDNGPreviews = 20;
+
 /// The maximum number of SubIFDs that will be parsed.
 
-const uint32 kMaxSubIFDs = 10;
+const uint32 kMaxSubIFDs = kMaxDNGPreviews + 1;
 
 /// The maximum number of chained IFDs that will be parsed.
 
@@ -56,11 +61,11 @@ const uint32 kMaxMaskedAreas = 4;
 
 /// The maximum image size supported (pixels per side).
 
-const uint32 kMaxImageSide = 30000;
+const uint32 kMaxImageSide = 65000;
 
 /// Maximum number of MP threads for dng_area_task operations.
 
-const uint32 kMaxMPThreads = 4;
+const uint32 kMaxMPThreads = 8;
 
 /*****************************************************************************/
 

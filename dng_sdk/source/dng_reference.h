@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_reference.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_reference.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -341,6 +341,17 @@ void RefBaselineABCDtoRGB (const real32 *sPtrA,
 
 /*****************************************************************************/
 
+void RefBaselineHueSatMap (const real32 *sPtrR,
+						   const real32 *sPtrG,
+						   const real32 *sPtrB,
+						   real32 *dPtrR,
+						   real32 *dPtrG,
+						   real32 *dPtrB,
+						   uint32 count,
+						   const dng_hue_sat_map &lut);
+
+/*****************************************************************************/
+
 void RefBaselineRGBtoGray (const real32 *sPtrR,
 						   const real32 *sPtrG,
 						   const real32 *sPtrB,
@@ -410,6 +421,48 @@ void RefResampleAcross32 (const real32 *sPtr,
 						  const real32 *wPtr,
 						  uint32 wCount,
 						  uint32 wStep);
+
+/*****************************************************************************/
+
+bool RefEqualBytes (const void *sPtr,
+					const void *dPtr,
+					uint32 count);
+
+bool RefEqualArea8 (const uint8 *sPtr,
+					const uint8 *dPtr,
+					uint32 rows,
+					uint32 cols,
+					uint32 planes,
+					int32 sRowStep,
+					int32 sColStep,
+					int32 sPlaneStep,
+					int32 dRowStep,
+					int32 dColStep,
+					int32 dPlaneStep);
+
+bool RefEqualArea16 (const uint16 *sPtr,
+					 const uint16 *dPtr,
+					 uint32 rows,
+					 uint32 cols,
+					 uint32 planes,
+					 int32 sRowStep,
+					 int32 sColStep,
+					 int32 sPlaneStep,
+					 int32 dRowStep,
+					 int32 dColStep,
+					 int32 dPlaneStep);
+
+bool RefEqualArea32 (const uint32 *sPtr,
+					 const uint32 *dPtr,
+					 uint32 rows,
+					 uint32 cols,
+					 uint32 planes,
+					 int32 sRowStep,
+					 int32 sColStep,
+					 int32 sPlaneStep,
+					 int32 dRowStep,
+					 int32 dColStep,
+					 int32 dPlaneStep);
 
 /*****************************************************************************/
 

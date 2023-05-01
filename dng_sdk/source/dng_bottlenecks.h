@@ -1,18 +1,19 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_bottlenecks.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_bottlenecks.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
- * Indirection mechanism for performance-critical routines that might be replaced with hand-optimized or hardware-specific implementations.
+ * Indirection mechanism for performance-critical routines that might be replaced
+ * with hand-optimized or hardware-specific implementations.
  */
 
 /*****************************************************************************/
@@ -375,6 +376,18 @@ typedef void (BaselineABCDtoRGBProc)
 
 /*****************************************************************************/
 
+typedef void (BaselineHueSatMapProc)
+			 (const real32 *sPtrR,
+			  const real32 *sPtrG,
+			  const real32 *sPtrB,
+			  real32 *dPtrR,
+			  real32 *dPtrG,
+			  real32 *dPtrB,
+			  uint32 count,
+			  const dng_hue_sat_map &lut);
+			 
+/*****************************************************************************/
+
 typedef void (BaselineGrayToRGBProc)
 			 (const real32 *sPtrR,
 			  const real32 *sPtrG,
@@ -455,6 +468,52 @@ typedef void (ResampleAcross32Proc)
 
 /*****************************************************************************/
 
+typedef bool (EqualBytesProc)
+			 (const void *sPtr,
+			  const void *dPtr,
+			  uint32 count);
+
+typedef bool (EqualArea8Proc)
+			 (const uint8 *sPtr,
+			  const uint8 *dPtr,
+			  uint32 rows,
+			  uint32 cols,
+			  uint32 planes,
+			  int32 sRowStep,
+			  int32 sColStep,
+			  int32 sPlaneStep,
+			  int32 dRowStep,
+			  int32 dColStep,
+			  int32 dPlaneStep);
+
+typedef bool (EqualArea16Proc)
+			 (const uint16 *sPtr,
+			  const uint16 *dPtr,
+			  uint32 rows,
+			  uint32 cols,
+			  uint32 planes,
+			  int32 sRowStep,
+			  int32 sColStep,
+			  int32 sPlaneStep,
+			  int32 dRowStep,
+			  int32 dColStep,
+			  int32 dPlaneStep);
+
+typedef bool (EqualArea32Proc)
+			 (const uint32 *sPtr,
+			  const uint32 *dPtr,
+			  uint32 rows,
+			  uint32 cols,
+			  uint32 planes,
+			  int32 sRowStep,
+			  int32 sColStep,
+			  int32 sPlaneStep,
+			  int32 dRowStep,
+			  int32 dColStep,
+			  int32 dPlaneStep);
+
+/*****************************************************************************/
+
 struct dng_suite	
 	{
 	ZeroBytesProc			*ZeroBytes;
@@ -486,6 +545,7 @@ struct dng_suite
 	BilinearRow32Proc		*BilinearRow32;
 	BaselineABCtoRGBProc	*BaselineABCtoRGB;
 	BaselineABCDtoRGBProc	*BaselineABCDtoRGB;
+	BaselineHueSatMapProc	*BaselineHueSatMap;
 	BaselineGrayToRGBProc	*BaselineRGBtoGray;
 	BaselineRGBtoRGBProc	*BaselineRGBtoRGB;
 	Baseline1DTableProc		*Baseline1DTable;
@@ -494,6 +554,10 @@ struct dng_suite
 	ResampleDown32Proc		*ResampleDown32;
 	ResampleAcross16Proc	*ResampleAcross16;
 	ResampleAcross32Proc	*ResampleAcross32;
+	EqualBytesProc			*EqualBytes;
+	EqualArea8Proc			*EqualArea8;
+	EqualArea16Proc			*EqualArea16;
+	EqualArea32Proc			*EqualArea32;
 	};
 
 /*****************************************************************************/
@@ -1211,6 +1275,29 @@ inline void DoBaselineABCDtoRGB (const real32 *sPtrA,
 
 /*****************************************************************************/
 
+inline void DoBaselineHueSatMap (const real32 *sPtrR,
+								 const real32 *sPtrG,
+								 const real32 *sPtrB,
+								 real32 *dPtrR,
+								 real32 *dPtrG,
+								 real32 *dPtrB,
+								 uint32 count,
+								 const dng_hue_sat_map &lut)
+	{
+	
+	(gDNGSuite.BaselineHueSatMap) (sPtrR,
+								   sPtrG,
+								   sPtrB,
+								   dPtrR,
+								   dPtrG,
+								   dPtrB,
+								   count,
+								   lut);
+	
+	}
+
+/*****************************************************************************/
+
 inline void DoBaselineRGBtoGray (const real32 *sPtrR,
 								 const real32 *sPtrG,
 								 const real32 *sPtrB,
@@ -1364,6 +1451,100 @@ inline void DoResampleAcross32 (const real32 *sPtr,
 								  wPtr,
 								  wCount,
 								  wStep);
+	
+	}
+
+/*****************************************************************************/
+
+inline bool DoEqualBytes (const void *sPtr,
+						  const void *dPtr,
+						  uint32 count)
+	{
+	
+	return (gDNGSuite.EqualBytes) (sPtr,
+								   dPtr,
+								   count);
+	
+	}
+
+inline bool DoEqualArea8 (const uint8 *sPtr,
+						  const uint8 *dPtr,
+						  uint32 rows,
+						  uint32 cols,
+						  uint32 planes,
+						  int32 sRowStep,
+						  int32 sColStep,
+						  int32 sPlaneStep,
+						  int32 dRowStep,
+						  int32 dColStep,
+						  int32 dPlaneStep)
+	{
+	
+	return (gDNGSuite.EqualArea8) (sPtr,
+								   dPtr,
+								   rows,
+								   cols,
+								   planes,
+								   sRowStep,
+								   sColStep,
+								   sPlaneStep,
+								   dRowStep,
+								   dColStep,
+								   dPlaneStep);
+	
+	}
+
+inline bool DoEqualArea16 (const uint16 *sPtr,
+						   const uint16 *dPtr,
+						   uint32 rows,
+						   uint32 cols,
+						   uint32 planes,
+						   int32 sRowStep,
+						   int32 sColStep,
+						   int32 sPlaneStep,
+						   int32 dRowStep,
+						   int32 dColStep,
+						   int32 dPlaneStep)
+	{
+	
+	return (gDNGSuite.EqualArea16) (sPtr,
+									dPtr,
+									rows,
+									cols,
+									planes,
+									sRowStep,
+									sColStep,
+									sPlaneStep,
+									dRowStep,
+									dColStep,
+									dPlaneStep);
+	
+	}
+
+inline bool DoEqualArea32 (const uint32 *sPtr,
+						   const uint32 *dPtr,
+						   uint32 rows,
+						   uint32 cols,
+						   uint32 planes,
+						   int32 sRowStep,
+						   int32 sColStep,
+						   int32 sPlaneStep,
+						   int32 dRowStep,
+						   int32 dColStep,
+						   int32 dPlaneStep)
+	{
+	
+	return (gDNGSuite.EqualArea32) (sPtr,
+									dPtr,
+									rows,
+									cols,
+									planes,
+									sRowStep,
+									sColStep,
+									sPlaneStep,
+									dRowStep,
+									dColStep,
+									dPlaneStep);
 	
 	}
 

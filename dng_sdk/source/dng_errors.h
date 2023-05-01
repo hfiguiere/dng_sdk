@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_errors.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_errors.h#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /** \file
@@ -44,7 +44,8 @@ enum
 	dng_error_open_file,						//< Could not open file.
 	dng_error_read_file,						//< Error reading file.
 	dng_error_write_file,						//< Error writing file.
-	dng_error_end_of_file						//< Unexpected end of file.
+	dng_error_end_of_file,						//< Unexpected end of file.
+	dng_error_file_is_damaged					//< File is damaged in some way.
 	};
 	
 /*****************************************************************************/

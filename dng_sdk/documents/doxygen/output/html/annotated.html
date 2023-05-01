@@ -1,141 +1,151 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <!--
-/*
-    Copyright 2005-2006 Adobe Systems Incorporated
+    Copyright 2005-2007 Adobe Systems Incorporated
     Distributed under the MIT License (see accompanying file LICENSE_1_0_0.txt
-    or a copy at http://opensource.adobe.com/licenses.html)
-*/
-Some files are held under additional license. Please see "licenses.html" for more information.
+    or a copy at http://stlab.adobe.com/licenses.html)
+
+    Some files are held under additional license.
+    Please see "http://stlab.adobe.com/licenses.html" for more information.
 -->
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-    <TITLE>DNG SDK: Class List</TITLE>
+    <TITLE>DNG SDK 1.2: Class List</TITLE>
     <META HTTP-EQUIV="content-type" CONTENT="text/html;charset=ISO-8859-1"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/basic.css"/>
-    <STYLE TYPE="text/css" MEDIA="all"><!--
-        @import url("http://www.adobe.com/ssi/css/modern.css");
-    --></STYLE>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/print.css" MEDIA="print"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/mainnav.css"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="stlab.css"/>
-    <LINK REL="alternate" TITLE="opensource.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
-</HEAD>
-
-<body bgcolor="white">
-
-<div id="mainnav" width="100%">
-<table width="100%" border="0"><tr><td width="50%">
-<a title="Adobe Systems home page" href="http://www.adobe.com/" tabindex="2"><img src="http://www.adobe.com/images/logo.gif" alt="Adobe Systems, Inc." height="80" width="150"/></a>
-</td><td align="right" valign="top">
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="+2" color="black">Adobe Open Source</font></a><br/>
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="-2" color="black">opensource.adobe.com</font></a>
-</td></tr></table>
-</div>
-<br/>
-<table border="0" cellspacing="0" cellpadding="0" width="100%">
-<tr><td width="10" nowrap="1"> </td>
+    <LINK TYPE="text/css" REL="stylesheet" HREF="adobe_source.css"/>
+    <LINK REL="alternate" TITLE="stlab.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+</head>
+<body>
+<div id='content'>
+<table><tr>
+<td colspan='5'>
+    <div id='opensource_banner'>
+    <table style='width: 100%; padding: 5px;'><tr>
+    <td>
+        <span style='font-size: 30px'><a href='index.html' style='color: black; border: none'>stlab.adobe.com</a></span>
+    </td>
+    <td align='right'>
+        <a href='http://www.adobe.com' style='border: none'><img src='adobe_hlogo.gif' alt="Adobe Systems Incorporated"/></a>
+    </td>
+    </tr></table>
+    </div>
+</td></tr><tr>
 <td valign="top">
-    <table border="0" cellpadding="5">
-    <tr><td nowrap="1">
-        <h3 class="navbar">Information</h3>
-        <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="group__asl__overview.html">Overview</a></li>
-            <li><a href="asl_toc.html">Documentation</a></li>
-            <li><a href="asl_readme.html">Getting Started</a></li>
-            <li><a href="asl_release_notes.html">Release Notes</a></li>
-            <li><a href="http://opensource.adobe.com/twiki/bin/view/AdobeSource">ASL Wiki</a></li>
-            <li><a href="licenses.html">License</a></li>
-            <li><a href="asl_indices.html">Indices</a></li>
-        </ul>
-        <h3 class="navbar">Media</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a></li>
-            <li><a href="asl_download_cvs.html">ASL CVS Repository</a></li>
-            <li><a href="http://cvs.sourceforge.net/viewcvs.py/adobe-source/">View CVS Repository</a></li>
-        </ul>
-        <h3 class="navbar">Support</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a></li>
-            <li><a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a></li>
-            <li><a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a></li>
-            <li><a href="asl_contributing.html">Contributing to ASL</a></li>
-        </ul>
-        <h3 class="navbar">RSS</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a></li>
-        </ul>
-        <h3 class="navbar">Other Resources</h3>
-        <ul>
-            <li><a href="http://boost.org">Boost</a></li>
-            <li><a href="http://www.sgi.com/tech/stl">SGI STL</a></li>
-        </ul>
-        <h3 class="navbar">Other Adobe Projects</h3>
-        <ul>
-            <li><a href="http://www.adobe.com/products/xmp/">Adobe XMP</a></li>
-        </ul>
-    </td></tr>
-    </table>
+    <div id='navtable' height='100%'>
+    <div style='margin: 5px'>
+        <h4>Documentation</h4>
+
+        <a href="group__asl__overview.html">Overview</a><br/>
+        <a href="asl_readme.html">Building ASL</a><br/>
+        <a href="asl_toc.html">Documentation</a><br/>
+        <a href="http://stlab.adobe.com/wiki/index.php/Supplementary_ASL_Documentation">Library Wiki Docs</a><br/>
+        <a href="asl_indices.html">Indices</a><br/>
+        <a href="http://stlab.adobe.com/perforce/">Browse Perforce</a><br/>
+
+        <h4>More Info</h4>
+
+        <a href="asl_release_notes.html">Release Notes</a><br/>
+        <a href="http://stlab.adobe.com/wiki/">Wiki</a><br/>
+        <a href="asl_search.html">Site Search</a><br/>
+        <a href="licenses.html">License</a><br/>
+        <a href="success_stories.html">Success Stories</a><br/>
+        <a href="asl_contributors.html">Contributors</a><br/>
+
+        <h4>Media</h4>
+
+        <a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a><br/>
+        <a href="asl_download_perforce.html">Perforce Depots</a><br/>
+
+        <h4>Support</h4>
+
+        <a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a><br/>
+        <a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a><br/>
+        <a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a><br/>
+        <a href="asl_contributing.html">Contribute to ASL</a><br/>
+
+        <h4>RSS</h4>
+
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a><br/>
+
+        <h4>Other Adobe Projects</h4>
+
+        <a href="adobe_apollo.html">Adobe Air</a><br/>
+        <a href="http://stlab.adobe.com/gil/">Adobe GIL</a><br/>
+        <a href="http://labs.adobe.com">Adobe Labs</a><br/>
+        <a href="http://stlab.adobe.com/amg/">Adobe Media Gallery</a><br/>
+        <a href="http://www.adobe.com/products/xmp/">Adobe XMP</a><br/>
+        <a href="http://www.mozilla.org/projects/tamarin">Tamarin project<br/>(Mozilla Foundation)</a><br/>
+
+        <h4>Other Resources</h4>
+
+        <a href="http://boost.org">Boost</a><br/>
+        <a href="http://www.riaforge.com/">RIAForge</a><br/>
+        <a href="http://www.sgi.com/tech/stl">SGI STL</a><br/>
+    </div>
+    </div>
 </td>
-<td width="10" nowrap="1"> </td>
-<td width="100%" valign="top">
+<td id='maintable' width="100%" valign="top">
 
 <!-- End Header -->
-
-<!-- Generated by Doxygen 1.4.6-NO -->
-<div class="tabs">
-  <ul>
-    <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-    <li id="current"><a href="annotated.html"><span>Classes</span></a></li>
-    <li><a href="files.html"><span>Files</span></a></li>
-    <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
-  </ul></div>
-<div class="tabs">
-  <ul>
-    <li id="current"><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
-    <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
-    <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
-  </ul></div>
-<h1>DNG SDK Class List</h1>Here are the classes, structs, unions and interfaces with brief descriptions:<table>
-  <tr><td class="indexkey"><a class="el" href="class_auto_ptr.html">AutoPtr&lt; T &gt;</a></td><td class="indexvalue">A class intended to be used in stack scope to hold a pointer from new. The held pointer will be deleted automatically if the scope is left without calling Release on the <a class="el" href="class_auto_ptr.html">AutoPtr</a> first </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__1d__concatenate.html">dng_1d_concatenate</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html">dng_1d_function</a> that represents the composition (curry) of two other dng_1d_functions </td></tr>
+<!-- Generated by Doxygen 1.5.5 -->
+<div class="navigation" id="top">
+  <div class="tabs">
+    <ul>
+      <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
+      <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="files.html"><span>Files</span></a></li>
+    </ul>
+  </div>
+  <div class="tabs">
+    <ul>
+      <li class="current"><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
+      <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
+      <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
+    </ul>
+  </div>
+</div>
+<div class="contents">
+<h1>Class List</h1>Here are the classes, structs, unions and interfaces with brief descriptions:<table>
+  <tr><td class="indexkey"><a class="el" href="class_auto_ptr.html">AutoPtr&lt; T &gt;</a></td><td class="indexvalue">A class intended to be used in stack scope to hold a pointer from new. The held pointer will be deleted automatically if the scope is left without calling Release on the <a class="el" href="class_auto_ptr.html" title="A class intended to be used in stack scope to hold a pointer from new. The held pointer...">AutoPtr</a> first </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__1d__concatenate.html">dng_1d_concatenate</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html" title="A 1D floating-point function.">dng_1d_function</a> that represents the composition (curry) of two other dng_1d_functions </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__1d__function.html">dng_1d_function</a></td><td class="indexvalue">A 1D floating-point function </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__1d__identity.html">dng_1d_identity</a></td><td class="indexvalue">An identity (x -&gt; y such that x == y for all x) mapping function </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__1d__inverse.html">dng_1d_inverse</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html" title="A 1D floating-point function.">dng_1d_function</a> that represents the inverse of another <a class="el" href="classdng__1d__function.html" title="A 1D floating-point function.">dng_1d_function</a> </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__1d__table.html">dng_1d_table</a></td><td class="indexvalue">A 1D floating-point lookup table using linear interpolation </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__abort__sniffer.html">dng_abort_sniffer</a></td><td class="indexvalue">Class for signaling user cancellation and receiving progress updates </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__area__task.html">dng_area_task</a></td><td class="indexvalue">Abstract class for rectangular processing operations with support for partitioning across multiple processing resources and observing memory constraints </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__camera__profile.html">dng_camera_profile</a></td><td class="indexvalue">Container for DNG camera color profile and calibration data </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__color__space.html">dng_color_space</a></td><td class="indexvalue">An abstract color space </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__color__spec.html">dng_color_spec</a></td><td class="indexvalue">Color transform taking into account white point and camera calibration and individual calibration from DNG negative </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__color__spec.html">dng_color_spec</a></td><td class="indexvalue"></td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__const__tile__buffer.html">dng_const_tile_buffer</a></td><td class="indexvalue">Class to get resource acquisition is instantiation behavior for constant (read-only) tile buffers </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__date__time.html">dng_date_time</a></td><td class="indexvalue">Class for holding a date/time and converting to and from relevant date/time formats </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__date__time__info.html">dng_date_time_info</a></td><td class="indexvalue">Class for holding complete data/time/zone information </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__date__time__storage__info.html">dng_date_time_storage_info</a></td><td class="indexvalue">Store file offset from which date was read </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__dirty__tile__buffer.html">dng_dirty_tile_buffer</a></td><td class="indexvalue">Class to get resource acquisition is instantiation behavior for dirty (writable) tile buffers </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__exception.html">dng_exception</a></td><td class="indexvalue">All exceptions thrown by the DNG SDK use this exception class </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__exif.html">dng_exif</a></td><td class="indexvalue">Container class for parsing and holding EXIF tags </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__file__stream.html">dng_file_stream</a></td><td class="indexvalue">A stream to/from a disk file. See <a class="el" href="classdng__stream.html">dng_stream</a> for read/write interface </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__filter__task.html">dng_filter_task</a></td><td class="indexvalue">Represents a task which filters an area of a source <a class="el" href="classdng__image.html">dng_image</a> to an area of a destination <a class="el" href="classdng__image.html">dng_image</a> </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__filter__task.html">dng_filter_task</a></td><td class="indexvalue">Represents a task which filters an area of a source <a class="el" href="classdng__image.html" title="Base class for holding image data in DNG SDK. See dng_simple_image for derived class...">dng_image</a> to an area of a destination <a class="el" href="classdng__image.html" title="Base class for holding image data in DNG SDK. See dng_simple_image for derived class...">dng_image</a> </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__fingerprint.html">dng_fingerprint</a></td><td class="indexvalue">Container fingerprint (MD5 only at present) </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__function__exposure__ramp.html">dng_function_exposure_ramp</a></td><td class="indexvalue">Curve for pre-exposure-compensation adjustment based on noise floor, shadows, and highlight level </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__function__exposure__tone.html">dng_function_exposure_tone</a></td><td class="indexvalue">Exposure compensation curve for a given compensation amount in stops using quadric for roll-off </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__function__gamma__encode.html">dng_function_gamma_encode</a></td><td class="indexvalue">Encoding gamma curve for a given color space </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__function___gamma_encode__1__8.html">dng_function_GammaEncode_1_8</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html">dng_1d_function</a> for gamma encoding with 1.8 gamma </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__function___gamma_encode__2__2.html">dng_function_GammaEncode_2_2</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html">dng_1d_function</a> for gamma encoding with 2.2 gamma </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__function___gamma_encode__s_r_g_b.html">dng_function_GammaEncode_sRGB</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html">dng_1d_function</a> for gamma encoding in sRGB color space </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__function___gamma_encode__1__8.html">dng_function_GammaEncode_1_8</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html" title="A 1D floating-point function.">dng_1d_function</a> for gamma encoding with 1.8 gamma </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__function___gamma_encode__2__2.html">dng_function_GammaEncode_2_2</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html" title="A 1D floating-point function.">dng_1d_function</a> for gamma encoding with 2.2 gamma </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__function___gamma_encode__s_r_g_b.html">dng_function_GammaEncode_sRGB</a></td><td class="indexvalue">A <a class="el" href="classdng__1d__function.html" title="A 1D floating-point function.">dng_1d_function</a> for gamma encoding in sRGB color space </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__host.html">dng_host</a></td><td class="indexvalue">The main class for communication between the application and the DNG SDK. Used to customize memory allocation and other behaviors </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__ifd.html">dng_ifd</a></td><td class="indexvalue">Container for a single image file directory of a digital negative </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__image.html">dng_image</a></td><td class="indexvalue">Base class for holding image data in DNG SDK. See <a class="el" href="classdng__simple__image.html">dng_simple_image</a> for derived class most often used in DNG SDK </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__image__writer.html">dng_image_writer</a></td><td class="indexvalue">Support for writing <a class="el" href="classdng__image.html">dng_image</a> or <a class="el" href="classdng__negative.html">dng_negative</a> instances to a <a class="el" href="classdng__stream.html">dng_stream</a> in TIFF or DNG format </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__image.html">dng_image</a></td><td class="indexvalue">Base class for holding image data in DNG SDK. See <a class="el" href="classdng__simple__image.html" title="dng_image derived class with simple Trim and Rotate functionality.">dng_simple_image</a> for derived class most often used in DNG SDK </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__image__writer.html">dng_image_writer</a></td><td class="indexvalue">Support for writing <a class="el" href="classdng__image.html" title="Base class for holding image data in DNG SDK. See dng_simple_image for derived class...">dng_image</a> or <a class="el" href="classdng__negative.html" title="Main class for holding DNG image data and associated metadata.">dng_negative</a> instances to a <a class="el" href="classdng__stream.html">dng_stream</a> in TIFF or DNG format </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__info.html">dng_info</a></td><td class="indexvalue">Top-level structure of DNG file with access to metadata </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__iptc.html">dng_iptc</a></td><td class="indexvalue">Class for reading and holding IPTC metadata associated with a DNG file </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__linearization__info.html">dng_linearization_info</a></td><td class="indexvalue">Class for managing data values related to DNG linearization </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__memory__allocator.html">dng_memory_allocator</a></td><td class="indexvalue">Interface for <a class="el" href="classdng__memory__block.html">dng_memory_block</a> allocator </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__memory__allocator.html">dng_memory_allocator</a></td><td class="indexvalue">Interface for <a class="el" href="classdng__memory__block.html" title="Class to provide resource acquisition is instantiation discipline for image buffers...">dng_memory_block</a> allocator </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__memory__block.html">dng_memory_block</a></td><td class="indexvalue">Class to provide resource acquisition is instantiation discipline for image buffers and other larger memory allocations </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__memory__data.html">dng_memory_data</a></td><td class="indexvalue">Class to provide resource acquisition is instantiation discipline for small memory allocations </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__memory__stream.html">dng_memory_stream</a></td><td class="indexvalue">A <a class="el" href="classdng__stream.html">dng_stream</a> which can be read from or written to memory </td></tr>
@@ -151,17 +161,42 @@ Some files are held under additional license. Please see "licenses.html" for mor
   <tr><td class="indexkey"><a class="el" href="classdng__space___gray_gamma22.html">dng_space_GrayGamma22</a></td><td class="indexvalue">Singleton class for gamma 2.2 grayscale color space </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__space___pro_photo.html">dng_space_ProPhoto</a></td><td class="indexvalue">Singleton class for ProPhoto RGB color space </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__space__s_r_g_b.html">dng_space_sRGB</a></td><td class="indexvalue">Singleton class for sRGB color space </td></tr>
-  <tr><td class="indexkey"><a class="el" href="classdng__stream.html">dng_stream</a></td><td class="indexvalue">Base stream abstraction. Has support for going between stream and pointer abstraction </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__stream.html">dng_stream</a></td><td class="indexvalue"></td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__tile__buffer.html">dng_tile_buffer</a></td><td class="indexvalue">Class to get resource acquisition is instantiation behavior for tile buffers. Can be dirty or constant tile access </td></tr>
+  <tr><td class="indexkey"><a class="el" href="classdng__time__zone.html">dng_time_zone</a></td><td class="indexvalue">Class for holding a time zone </td></tr>
   <tr><td class="indexkey"><a class="el" href="classdng__tone__curve__acr3__default.html">dng_tone_curve_acr3_default</a></td><td class="indexvalue">Default ACR3 tone curve </td></tr>
 </table>
+</div>
 
 <!-- Begin Footer -->
-</td>
-<td width="20">&nbsp;&nbsp;</td>
+</td></tr>
 </table>
-
-<div id="footerrow"><!--give footer 25px of white above--></div><div id="footer" title="footer: links to copyright and other legal information"><p><a href="licenses.html" class="el">Copyright &copy; 2005 Adobe Systems Incorporated</a></p><ul id="list1"><!-- due to a rendering error in IE, these links should all be on one line without returns --><li id="terms"><a title="Terms of Use" href="http://www.adobe.com/misc/copyright.html">Terms of Use</a></li><li><a title="Privacy Policy" href="http://www.adobe.com/misc/privacy.html">Privacy Policy</a></li><li><a href="http://access.adobe.com">Accessibility</a></li><li><a title="Avoid software piracy" href="http://www.adobe.com/aboutadobe/antipiracy/main.html">Avoid software piracy</a></li></ul><!--two lists because of quirks mode--><ul id="list2"><li id="tms"><a title="Permissions and trademarks" href="http://www.adobe.com/misc/agreement.html">Permissions and trademarks</a></li><li><a title="Product License Agreements" href="http://www.adobe.com/products/eulas/main.html">Product License Agreements</a></li></ul><a title="Reviewed by TRUSTe: site privacy statement" href="http://www.adobe.com/misc/privacy.html"><img id="privacyicon" src="http://www.adobe.com/images/finalmark.gif" alt="Reviewed by TRUSTe: site privacy statement" height="31" width="116" border="0"/></a></div>
-
+</div> <!-- content -->
+<div class='footerdiv'>
+    <div id='footersub'>
+        <ul>
+            <li><a href="http://www.adobe.com/go/gftray_foot_aboutadobe">Company</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_contact_adobe">Contact Us</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_accessibility">Accessibility</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_report_piracy">Report Piracy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_permissions_trademarks">Permissions &amp; Trademarks</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_product_license_agreements">Product License Agreements</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_feedback">Send Feedback</a></li>
+        </ul>
+        <div>
+            <p>Copyright &#169; 2006-2008 Adobe Systems Incorporated.</p>
+            <p>Use of this website signifies your agreement to the <a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a> and <a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>.</p>
+            <p>Search powered by <a href="http://www.google.com/" target="new">Google</a></p>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+_uacct = "UA-396569-1";
+urchinTracker();
+</script>
 </body>
 </html>

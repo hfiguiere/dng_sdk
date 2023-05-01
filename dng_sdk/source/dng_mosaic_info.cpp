@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_mosaic_info.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_mosaic_info.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -104,7 +104,7 @@ void dng_bilinear_kernel::Add (const dng_point &delta,
 		
 	// Add element to list.
 		
-	ASSERT (fCount < kMaxCount, "Too many kernel entries")
+	DNG_ASSERT (fCount < kMaxCount, "Too many kernel entries")
 	
 	fDelta    [fCount] = delta;
 	fWeight32 [fCount] = weight;
@@ -1022,6 +1022,9 @@ dng_fast_interpolator::dng_fast_interpolator (const dng_mosaic_info &info,
 	
 	fMaxTileSize = dng_point (256 / fDownScale.v,
 					  		  256 / fDownScale.h);
+							  
+	fMaxTileSize.h = Max_int32 (fMaxTileSize.h, fUnitCell.h);
+	fMaxTileSize.v = Max_int32 (fMaxTileSize.v, fUnitCell.v);
 					  		  
 	// Find color map.
 	
@@ -1243,7 +1246,7 @@ void dng_mosaic_info::Parse (dng_host & /* host */,
 		
 	// Copy CFA plane information.
 	
-	fColorPlanes = info.fShared->fColorPlanes;
+	fColorPlanes = info.fShared->fCameraProfile.fColorPlanes;
 	
 	for (uint32 n = 0; n < fColorPlanes; n++)
 		{
@@ -1477,6 +1480,18 @@ bool dng_mosaic_info::IsSafeDownScale (const dng_point &downScale) const
 	
 /*****************************************************************************/
 
+uint32 dng_mosaic_info::SizeForDownScale (const dng_point &downScale) const
+	{
+	
+	uint32 sizeV = Max_uint32 (1, (fCroppedSize.v + (downScale.v >> 1)) / downScale.v);
+	uint32 sizeH = Max_uint32 (1, (fCroppedSize.h + (downScale.h >> 1)) / downScale.h);
+	
+	return Max_int32 (sizeV, sizeH);
+	
+	}
+	
+/*****************************************************************************/
+
 bool dng_mosaic_info::ValidSizeDownScale (const dng_point &downScale,
 										  uint32 minSize) const
 	{
@@ -1491,23 +1506,32 @@ bool dng_mosaic_info::ValidSizeDownScale (const dng_point &downScale,
 		
 		}
 		
-	uint32 sizeV = Max_uint32 (1, (fCroppedSize.v + (downScale.v >> 1)) / downScale.v);
-	uint32 sizeH = Max_uint32 (1, (fCroppedSize.h + (downScale.h >> 1)) / downScale.h);
-	
-	return sizeV >= minSize ||
-		   sizeH >= minSize;
+	return SizeForDownScale (downScale) >= minSize;
 			
 	}
 
 /*****************************************************************************/
 
-dng_point dng_mosaic_info::DownScale (uint32 minSize) const
+dng_point dng_mosaic_info::DownScale (uint32 minSize,
+									  uint32 prefSize,
+									  real64 cropFactor) const
 	{
 	
-	dng_point result (1, 1);
+	dng_point bestScale (1, 1);
 	
-	if (minSize && IsColorFilterArray ())
+	if (prefSize && IsColorFilterArray ())
 		{
+		
+		// Adjust sizes for crop factor.
+		
+		minSize  = Round_uint32 (minSize  / cropFactor);
+		prefSize = Round_uint32 (prefSize / cropFactor);
+		
+		prefSize = Max_uint32 (prefSize, minSize);
+		
+		// Start by assuming we need the full size image.
+		
+		int32 bestSize = SizeForDownScale (bestScale);
 		
 		// Find size of nearly square cell.
 		
@@ -1544,11 +1568,27 @@ dng_point dng_mosaic_info::DownScale (uint32 minSize) const
 		if (!ValidSizeDownScale (testScale, minSize))
 			{
 			
-			return result;
+			// We cannot downsample at all...
+			
+			return bestScale;
 			
 			}
 			
-		result = testScale;
+		// See if this is closer to the preferred size.
+		
+		int32 testSize = SizeForDownScale (testScale);
+		
+		if (Abs_int32 (testSize - (int32) prefSize) <=
+		    Abs_int32 (bestSize - (int32) prefSize))
+			{
+			bestScale = testScale;
+			bestSize  = testSize;
+			}
+			
+		else
+			{
+			return bestScale;
+			}
 		
 		// Now keep adding square cells as long as possible.
 		
@@ -1563,12 +1603,24 @@ dng_point dng_mosaic_info::DownScale (uint32 minSize) const
 				
 				if (!ValidSizeDownScale (testScale, minSize))
 					{
-					
-					return result;
-					
+					return bestScale;
 					}
 				
-				result = testScale;
+				// See if this is closer to the preferred size.
+				
+				testSize = SizeForDownScale (testScale);
+				
+				if (Abs_int32 (testSize - (int32) prefSize) <=
+					Abs_int32 (bestSize - (int32) prefSize))
+					{
+					bestScale = testScale;
+					bestSize  = testSize;
+					}
+					
+				else
+					{
+					return bestScale;
+					}
 						
 				}
 				
@@ -1576,7 +1628,7 @@ dng_point dng_mosaic_info::DownScale (uint32 minSize) const
 		
 		}
 	
-	return result;
+	return bestScale;
 	
 	}
 
@@ -1617,6 +1669,7 @@ dng_point dng_mosaic_info::DstSize (const dng_point &downScale) const
 /*****************************************************************************/
 
 void dng_mosaic_info::InterpolateGeneric (dng_host &host,
+										  dng_negative & /* negative */,
 								   		  const dng_image &srcImage,
 								   		  dng_image &dstImage,
 								   		  uint32 srcPlane) const
@@ -1758,6 +1811,7 @@ void dng_mosaic_info::InterpolateGeneric (dng_host &host,
 /*****************************************************************************/
 
 void dng_mosaic_info::InterpolateFast (dng_host &host,
+									   dng_negative & /* negative */,
 							  	   	   const dng_image &srcImage,
 								   	   dng_image &dstImage,
 								       const dng_point &downScale,
@@ -1786,6 +1840,7 @@ void dng_mosaic_info::InterpolateFast (dng_host &host,
 /*****************************************************************************/
 
 void dng_mosaic_info::Interpolate (dng_host &host,
+								   dng_negative &negative,
 							  	   const dng_image &srcImage,
 								   dng_image &dstImage,
 								   const dng_point &downScale,
@@ -1796,6 +1851,7 @@ void dng_mosaic_info::Interpolate (dng_host &host,
 		{
 	
 		InterpolateGeneric (host,
+							negative,
 							srcImage,
 							dstImage,
 							srcPlane);
@@ -1806,6 +1862,7 @@ void dng_mosaic_info::Interpolate (dng_host &host,
 		{
 		
 		InterpolateFast (host,
+						 negative,
 						 srcImage,
 						 dstImage,
 						 downScale,

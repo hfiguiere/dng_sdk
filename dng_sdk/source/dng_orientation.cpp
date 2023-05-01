@@ -6,9 +6,9 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_orientation.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_orientation.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 #include "dng_orientation.h"
@@ -69,6 +69,12 @@ void dng_orientation::SetTIFF (uint32 tiff)
 			break;
 			}
 			
+		case 9:
+			{
+			fAdobeOrientation = kUnknown;
+			break;
+			}
+			
 		default:
 			{
 			fAdobeOrientation = kNormal;
@@ -124,6 +130,11 @@ uint32 dng_orientation::GetTIFF () const
 		case kRotate90CCW:
 			{
 			return 8;
+			}
+			
+		case kUnknown:
+			{
+			return 9;
 			}
 			
 		default:

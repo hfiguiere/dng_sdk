@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_xmp_sdk.cpp#3 $ */ 
-/* $DateTime: 2006/04/08 01:21:31 $ */
-/* $Change: 215647 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_xmp_sdk.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /*****************************************************************************/
 
@@ -22,6 +22,7 @@
 #include "dng_memory.h"
 #include "dng_string.h"
 #include "dng_string_list.h"
+#include "dng_utils.h"
 
 /*****************************************************************************/
 
@@ -57,9 +58,12 @@ const char *XMP_NS_XAP        = "http://ns.adobe.com/xap/1.0/";
 const char *XMP_NS_DC		  = "http://purl.org/dc/elements/1.1/";
 
 const char *XMP_NS_CRS		  = "http://ns.adobe.com/camera-raw-settings/1.0/";
+const char *XMP_NS_CRSS		  = "http://ns.adobe.com/camera-raw-saved-settings/1.0/";
 const char *XMP_NS_AUX		  = "http://ns.adobe.com/exif/1.0/aux/";
 
 const char *XMP_NS_IPTC		  = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
+
+const char *XMP_NS_CRX 		  = "http://ns.adobe.com/lightroom-settings-experimental/1.0/";
 
 /******************************************************************************/
 
@@ -67,7 +71,7 @@ const char *XMP_NS_IPTC		  = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
 	\
 	catch (std::bad_alloc &)\
 		{\
-		ASSERT (false, "Info: XMP " routine " threw memory exception");\
+		DNG_REPORT ("Info: XMP " routine " threw memory exception");\
 		ThrowMemoryFull ();\
 		}\
 	\
@@ -78,18 +82,18 @@ const char *XMP_NS_IPTC		  = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
 			{\
 			char errBuffer [256];\
 			sprintf (errBuffer, "Info: XMP " routine " threw '%s' exception", errMessage);\
-			ASSERT (false, errBuffer);\
+			DNG_REPORT ( errBuffer);\
 			}\
 		else\
 			{\
-			ASSERT (false, "Info: XMP " routine " threw unnamed exception");\
+			DNG_REPORT ("Info: XMP " routine " threw unnamed exception");\
 			}\
 		if (fatal) ThrowProgramError ();\
 		}\
 	\
 	catch (...)\
 		{\
-		ASSERT (false, "Info: XMP " routine " threw unknown exception");\
+		DNG_REPORT ("Info: XMP " routine " threw unknown exception");\
 		if (fatal) ThrowProgramError ();\
 		}
 		
@@ -212,6 +216,32 @@ void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces)
 				{
 				ThrowProgramError ();
 				}
+				
+			// Register Lightroom beta settings namespace.
+			// We no longer read this but I don't want to cut it out this close
+			// to a release. [bruzenak]
+			
+				{
+		
+				TXMP_STRING_TYPE ss;
+				
+				SXMPMeta::RegisterNamespace (XMP_NS_CRX,
+											 "crx",
+											 &ss);
+											 
+				}
+			
+			// Register CRSS snapshots namespace
+			
+				{
+				
+				TXMP_STRING_TYPE ss;
+				
+				SXMPMeta::RegisterNamespace (XMP_NS_CRSS,
+											 "crss",
+											 &ss);
+				
+				}
 			
 			// Register extra namespaces.
 			
@@ -234,7 +264,7 @@ void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces)
 			}
 			
 		CATCH_XMP ("Initialization", true)
-	    
+		
 	    gInitializedXMP = true;
 		
 		}
@@ -360,7 +390,7 @@ void dng_xmp_sdk::Parse (dng_host &host,
 			}
 		
 	    CATCH_XMP ("ParseFromBuffer", true)
-		
+	
 	    }
 	    
 	catch (dng_exception &except)
@@ -383,8 +413,59 @@ void dng_xmp_sdk::Parse (dng_host &host,
 
 /*****************************************************************************/
 
+void dng_xmp_sdk::AppendArrayItem (const char *ns,
+								   const char *arrayName,
+								   const char *itemValue,
+								   bool isBag,
+								   bool propIsStruct)
+	{
+		
+	NeedMeta();
+		
+	try
+		{
+	
+		fPrivate->fMeta->AppendArrayItem (ns,
+										  arrayName,
+										  isBag ? kXMP_PropValueIsArray
+												: kXMP_PropArrayIsOrdered,
+										  itemValue,
+										  propIsStruct ? kXMP_PropValueIsStruct
+													   : 0);
+					
+		}
+	CATCH_XMP ("AppendArrayItem", true )
+	
+	}
+							  
+/*****************************************************************************/
+
+int32 dng_xmp_sdk::CountArrayItems (const char *ns,
+								    const char *path) const
+	{
+	
+	if (HasMeta ())
+		{
+		
+		try
+			{
+			
+			return fPrivate->fMeta->CountArrayItems (ns, path);
+			
+			}
+		
+		CATCH_XMP ("CountArrayItems", false)
+		
+		}
+	
+	return 0;
+	
+	}
+
+/*****************************************************************************/
+
 bool dng_xmp_sdk::Exists (const char *ns,
-					 	  const char *path)
+					 	  const char *path) const
 	{
 	
 	if (HasMeta ())
@@ -410,6 +491,44 @@ bool dng_xmp_sdk::Exists (const char *ns,
 	
 	}
 
+/*****************************************************************************/
+
+bool dng_xmp_sdk::HasNameSpace (const char *ns) const
+	{
+	
+	bool result = false;
+	
+	if (HasMeta ())
+		{
+		
+		try
+			{
+			
+			SXMPIterator iter (*fPrivate->fMeta, ns);
+			
+			TXMP_STRING_TYPE ns;
+			TXMP_STRING_TYPE prop;
+			
+			if (iter.Next (&ns,
+						   &prop,
+						   NULL,
+						   NULL))
+				{
+				
+				result = true;
+								
+				}
+			
+			}
+			
+		CATCH_XMP ("HasNameSpace", true)
+	    
+		}
+		
+	return result;
+	
+	}
+		
 /*****************************************************************************/
 
 void dng_xmp_sdk::Remove (const char *ns,
@@ -461,9 +580,96 @@ void dng_xmp_sdk::RemoveProperties (const char *ns)
 
 /*****************************************************************************/
 
+void dng_xmp_sdk::ComposeArrayItemPath (const char *ns,
+										const char *arrayName,
+										int32 index,
+										dng_string &s) const
+	{
+	
+	try
+		{
+
+		std::string ss;
+			
+		SXMPUtils::ComposeArrayItemPath (ns, arrayName, index, &ss);
+			
+		s.Set (ss.c_str ());
+		
+		return;
+			
+		}
+		
+	CATCH_XMP ("ComposeArrayItemPath", true)
+	
+	}
+
+/*****************************************************************************/	
+
+void dng_xmp_sdk::ComposeStructFieldPath (const char *ns,
+										  const char *structName,
+										  const char *fieldNS,
+										  const char *fieldName,
+										  dng_string &s) const
+	{
+	
+	try
+		{
+
+		std::string ss;
+			
+		SXMPUtils::ComposeStructFieldPath (ns, 
+										   structName, 
+										   fieldNS, 
+										   fieldName, 
+										   &ss);
+			
+		s.Set (ss.c_str ());
+			
+		return;
+
+		}
+		
+	CATCH_XMP ("ComposeStructFieldPath", true)
+	
+	}
+
+/*****************************************************************************/
+
+bool dng_xmp_sdk::GetNamespacePrefix (const char *uri,
+									  dng_string &s) const
+	{
+
+	bool result = false;
+
+	if (HasMeta ())
+		{
+		
+		try
+			{
+
+			std::string ss;
+				
+			fPrivate->fMeta->GetNamespacePrefix (uri, &ss);
+				
+			s.Set (ss.c_str ());
+				
+			result = true;
+
+			}
+			
+		CATCH_XMP ("GetNamespacePrefix", false)
+		
+		}
+		
+	return result;
+		
+	}
+	
+/*****************************************************************************/
+
 bool dng_xmp_sdk::GetString (const char *ns,
 				   		     const char *path,
-				   		     dng_string &s)
+				   		     dng_string &s) const
 	{
 	
 	bool result = false;
@@ -499,7 +705,7 @@ bool dng_xmp_sdk::GetString (const char *ns,
 
 bool dng_xmp_sdk::GetStringList (const char *ns,
 								 const char *path,
-								 dng_string_list &list)
+								 dng_string_list &list) const
 	{
 	
 	bool result = false;
@@ -545,7 +751,7 @@ bool dng_xmp_sdk::GetStringList (const char *ns,
 
 bool dng_xmp_sdk::GetAltLangDefault (const char *ns,
 									 const char *path,
-									 dng_string &s)
+									 dng_string &s) const
 	{
 	
 	bool result = false;
@@ -589,7 +795,7 @@ bool dng_xmp_sdk::GetStructField (const char *ns,
 								  const char *path,
 								  const char *fieldNS,
 								  const char *fieldName,
-								  dng_string &s)
+								  dng_string &s) const
 	{
 	
 	bool result = false;
@@ -787,22 +993,56 @@ void dng_xmp_sdk::SetStructField (const char *ns,
 	CATCH_XMP ("SetStructField", true)
 		
 	}
+
+/*****************************************************************************/
+	
+void dng_xmp_sdk::DeleteStructField (const char *ns,
+									 const char *structName,
+									 const char *fieldNS,
+						             const char *fieldName)
+	{
+	
+	if (HasMeta ())
+		{
+		
+		try
+			{
+			
+			fPrivate->fMeta->DeleteStructField (ns, structName, fieldNS, fieldName);
+			
+			}
+		
+		catch (...)
+			{
+			
+			}
+			
+		}
+	
+	}
 						   		   
 /*****************************************************************************/
 
 dng_memory_block * dng_xmp_sdk::Serialize (dng_memory_allocator &allocator,
 									       bool asPacket,
 									       uint32 targetBytes,
-									       uint32 padBytes) const
+									       uint32 padBytes,
+									       bool forJPEG) const
 	{
 	
+	// The largest XMP packet you can embed in JPEG using normal methods: 
+	
+	const uint32 kJPEG_XMP_Limit = 65504;
+				
 	if (HasMeta ())
 		{
 		
 		TXMP_STRING_TYPE s;
 		
 		bool havePacket = false;
-	    		
+		
+		uint32 formatOption = forJPEG ? kXMP_UseCompactFormat : 0;
+		
 	    if (asPacket && targetBytes)
 	    	{
 	    	
@@ -810,7 +1050,7 @@ dng_memory_block * dng_xmp_sdk::Serialize (dng_memory_allocator &allocator,
 	    		{
 	    		
 	    		fPrivate->fMeta->SerializeToBuffer (&s,
-	    											kXMP_ExactPacketLength,
+	    											formatOption | kXMP_ExactPacketLength,
 	    											targetBytes,
 	    											"",
 													" ");
@@ -836,10 +1076,11 @@ dng_memory_block * dng_xmp_sdk::Serialize (dng_memory_allocator &allocator,
 				{
 				
 				fPrivate->fMeta->SerializeToBuffer (&s,
-													asPacket ? 0
-															 : kXMP_OmitPacketWrapper,
-													asPacket ? padBytes
-															 : 0,
+													formatOption |
+													(asPacket ? 0
+															  : kXMP_OmitPacketWrapper),
+													(asPacket ? padBytes
+															  : 0),
 													"",
 													" ");
 				
@@ -850,6 +1091,38 @@ dng_memory_block * dng_xmp_sdk::Serialize (dng_memory_allocator &allocator,
 			}
 		
 		uint32 packetLen = (uint32) s.size ();
+		
+		if (forJPEG && asPacket && padBytes > 0 && targetBytes <= kJPEG_XMP_Limit &&
+												   packetLen   >  kJPEG_XMP_Limit)
+			{
+			
+			uint32 overLimitCount = packetLen - kJPEG_XMP_Limit;
+			
+			if (overLimitCount > padBytes)
+				{
+				padBytes = 0;
+				}
+			else
+				{
+				padBytes -= overLimitCount;
+				}
+						
+			try
+				{
+				
+				fPrivate->fMeta->SerializeToBuffer (&s,
+													formatOption,
+													padBytes,
+													"",
+													" ");
+				
+				}
+	    	
+			CATCH_XMP ("SerializeToBuffer", true)
+			
+			packetLen = (uint32) s.size ();
+			
+			}
 	    		
 		if (packetLen)
 			{
@@ -861,7 +1134,7 @@ dng_memory_block * dng_xmp_sdk::Serialize (dng_memory_allocator &allocator,
 			return buffer.Release ();
 			
 			}
-			
+		
 		}
 		
 	return NULL;
@@ -915,7 +1188,9 @@ void dng_xmp_sdk::ReplaceXMP (dng_xmp_sdk *xmp)
 /*****************************************************************************/
 
 bool dng_xmp_sdk::IteratePaths (IteratePathsCallback *callback,
-						        void *callbackData)
+						        void *callbackData,
+								const char* startingNS,
+								const char* startingPath)
 	{
 	
 	if (HasMeta ())
@@ -923,8 +1198,8 @@ bool dng_xmp_sdk::IteratePaths (IteratePathsCallback *callback,
 		
 		try
 			{
-			
-			SXMPIterator iter (*fPrivate->fMeta);
+
+			SXMPIterator iter (*fPrivate->fMeta, startingNS, startingPath);
 			
 			TXMP_STRING_TYPE ns;
 			TXMP_STRING_TYPE prop;

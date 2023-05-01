@@ -6,9 +6,9 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_types.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_types.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -81,6 +81,20 @@ typedef double real64;
 #include <string.h>
 #include <math.h>
 #include <time.h>
+
+/*****************************************************************************/
+
+// Visual Studio now prefers _hypot to hypot
+
+#ifdef _MSC_VER
+
+#ifdef hypot
+#undef hypot
+#endif
+
+#define hypot _hypot
+
+#endif
 
 /*****************************************************************************/
 

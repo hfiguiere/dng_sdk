@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_mutex.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_mutex.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /******************************************************************************/
@@ -23,18 +23,9 @@
 /******************************************************************************/
 
 #if qDNGThreadSafe
-	
-#if qMacOS
-#ifdef __MWERKS__
-#include <Multiprocessing.h>
-#else
-#include <CoreServices/CoreServices.h>
-#endif
-#endif
 
-#if qWinOS
-#include <windows.h>
-#endif
+#include "dng_types.h"
+#include "dng_pthread.h"
 
 #endif
 
@@ -44,30 +35,38 @@ class dng_mutex
 	{
 	
 	public:
+	
+		enum
+			{
+			kDNGMutexLevelLeaf = 0xffffffffu
+			};
 
-		dng_mutex ();
+		dng_mutex (const char *mutexName,
+				   uint32 mutexLevel = kDNGMutexLevelLeaf);
 
-		~dng_mutex ();
+		virtual ~dng_mutex ();
 
 		void Lock ();
 
 		void Unlock ();
+		
+		const char *MutexName () const;
 
-	private:
+	protected:
 	
 		#if qDNGThreadSafe
 	
-		#if qMacOS
-		
-		MPCriticalRegionID fCritSec;
-		
-		#endif
+		pthread_mutex_t fPthreadMutex;
+	
+		const uint32 fMutexLevel;
 
-		#if qWinOS
+		uint32 fRecursiveLockCount;
 
-		CRITICAL_SECTION fCritSec;
-		
-		#endif
+		dng_mutex *fPrevHeldMutex;
+
+		const char * const fMutexName;
+
+		friend class dng_condition;
 		
 		#endif
 
@@ -106,6 +105,45 @@ class dng_lock_mutex
 		
 	};
 	
+/*****************************************************************************/
+
+#if qDNGThreadSafe
+
+/*****************************************************************************/
+
+class dng_condition
+	{
+	
+	public:
+
+		dng_condition ();
+
+		~dng_condition ();
+
+		bool Wait (dng_mutex &mutex, double timeoutSecs = -1.0);
+
+		void Signal ();
+		
+		void Broadcast ();
+
+	protected:
+	
+		pthread_cond_t fPthreadCondition;
+
+	private:
+	
+		// Hidden copy constructor and assignment operator.
+	
+		dng_condition (const dng_condition &condition);
+		
+		dng_condition & operator= (const dng_condition &condition);
+
+	};
+
+/*****************************************************************************/
+
+#endif // qDNGThreadSafe
+
 /*****************************************************************************/
 
 #endif

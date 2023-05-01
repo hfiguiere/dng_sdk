@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_tag_values.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_tag_values.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -23,8 +23,17 @@
 enum
 	{
 	
+	// The main image data.
+	
 	sfMainImage					= 0,
-	sfPreviewImage				= 1
+	
+	// Preview image for the primary settings.
+	
+	sfPreviewImage				= 1,
+	
+	// Preview image for non-primary settings.
+	
+	sfAltPreviewImage			= 0x10001
 	
 	};
 
@@ -42,8 +51,8 @@ enum
 	piTransparencyMask			= 4,
 	piCMYK						= 5,
 	piYCbCr						= 6,
-	piCIELab					= 7,
-	piICCLab					= 8,
+	piCIELab					= 8,
+	piICCLab					= 9,
 
 	piCFA						= 32803,		// TIFF-EP spec
 
@@ -213,15 +222,15 @@ enum
 enum ColorKeyCode
 	{
 	
-	colorKeyRed     = 0,
-	colorKeyGreen   = 1,
-	colorKeyBlue    = 2,
-	colorKeyCyan    = 3,
-	colorKeyMagenta = 4,
-	colorKeyYellow  = 5,
-	colorKeyWhite   = 6,
+	colorKeyRed					= 0,
+	colorKeyGreen				= 1,
+	colorKeyBlue				= 2,
+	colorKeyCyan				= 3,
+	colorKeyMagenta				= 4,
+	colorKeyYellow				= 5,
+	colorKeyWhite				= 6,
 	
-	colorKeyMaxEnum = 0xFF
+	colorKeyMaxEnum				= 0xFF
 	
 	};
 	
@@ -231,18 +240,65 @@ enum ColorKeyCode
 // reference used for images with PhotometricInterpretation values of CFA
 // or LinearRaw.
 
-// This tag will be documented in the next version of the DNG specification.
-
 enum
 	{
 	
 	// Scene referred (default):
 	
-	crSceneReferred			= 0,
+	crSceneReferred				= 0,
 	
 	// Output referred using the parameters of the ICC profile PCS.
 	
-	crICCProfilePCS			= 1
+	crICCProfilePCS				= 1
+	
+	};
+
+/*****************************************************************************/
+
+// Values for the ProfileEmbedPolicy tag.
+
+enum
+	{
+	
+	// Freely embedable and copyable into installations that encounter this
+	// profile, so long as the profile is only used to process DNG files.
+	
+	pepAllowCopying				= 0,
+	
+	// Can be embeded in a DNG for portable processing, but cannot be used
+	// to process other files that the profile is not embedded in.
+	
+	pepEmbedIfUsed				= 1,
+	
+	// Can only be used if installed on the machine processing the file. 
+	// Note that this only applies to stand-alone profiles.  Profiles that
+	// are already embedded inside a DNG file allowed to remain embedded 
+	// in that DNG, even if the DNG is resaved.
+	
+	pepEmbedNever				= 2,
+	
+	// No restricts on profile use or embedding.
+	
+	pepNoRestrictions			= 3
+
+	};
+
+/*****************************************************************************/
+
+// Values for the PreviewColorSpace tag.
+
+enum PreviewColorSpaceEnum
+	{
+	
+	previewColorSpace_Unknown		= 0,
+	previewColorSpace_GrayGamma22	= 1,
+	previewColorSpace_sRGB			= 2,
+	previewColorSpace_AdobeRGB      = 3,
+	previewColorSpace_ProPhotoRGB	= 4,
+	
+	previewColorSpace_LastValid		= previewColorSpace_ProPhotoRGB,
+
+	previewColorSpace_MaxEnum		= 0xFFFFFFFF
 	
 	};
 
@@ -253,11 +309,31 @@ enum
 enum
 	{
 	
-	byteOrderII		= 0x4949,		// 'II'
-	byteOrderMM		= 0x4D4D		// 'MM'
+	byteOrderII					= 0x4949,		// 'II'
+	byteOrderMM					= 0x4D4D		// 'MM'
 	
 	};
 
+/*****************************************************************************/
+
+// "Magic" numbers.
+
+enum
+	{
+	
+	// DNG related.
+	
+	magicTIFF					= 42,			// TIFF (and DNG)
+	magicExtendedProfile		= 0x4352,		// 'CR'
+	
+	// Other raw formats - included here so the DNG SDK can parse them.
+	
+	magicPanasonic				= 85,
+	magicOlympusA				= 0x4F52,
+	magicOlympusB				= 0x5352
+	
+	};
+	
 /*****************************************************************************/
 
 #endif

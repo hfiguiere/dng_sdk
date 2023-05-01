@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_spline.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_spline.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -22,9 +22,30 @@
 
 dng_spline_solver::dng_spline_solver ()
 
-	:	count (0)
+	:	X ()
+	,	Y ()
+	,	S ()
 	
 	{
+	
+	}
+
+/******************************************************************************/
+
+dng_spline_solver::~dng_spline_solver ()
+	{
+	
+	}
+
+/******************************************************************************/
+
+void dng_spline_solver::Reset ()
+	{
+	
+	X.clear ();
+	Y.clear ();
+	
+	S.clear ();
 	
 	}
 
@@ -33,19 +54,8 @@ dng_spline_solver::dng_spline_solver ()
 void dng_spline_solver::Add (real64 x, real64 y)
 	{
 
-	if (count >= kMaxPoints)
-		{
-		
-		REPORT ("FATAL - Too many points");
-	
-		ThrowProgramError ();
-		
-		}
-
-	X [count] = x;
-	Y [count] = y;
-	
-	count++;
+	X.push_back (x);
+	Y.push_back (y);
 
 	}
 
@@ -58,13 +68,17 @@ void dng_spline_solver::Solve ()
 	//		It is C0, C1, and C2 continuous
 	//		The second derivative is zero at the end points
 	
-	ASSERT (count >= 2, "Too few points");
+	int32 count = (int32) X.size ();
+	
+	DNG_ASSERT (count >= 2, "Too few points");
 	
 	int32 start = 0;
 	int32 end   = count;
 	
 	real64 A =  X [start+1] - X [start];
 	real64 B = (Y [start+1] - Y [start]) / A;
+	
+	S.resize (count);
 
 	S [start] = B;
 	
@@ -92,9 +106,13 @@ void dng_spline_solver::Solve ()
 	if ((end - start) > 2)
 		{
 
-		real64 E [kMaxPoints];
-		real64 F [kMaxPoints];
-		real64 G [kMaxPoints];
+		std::vector<real64> E;
+		std::vector<real64> F;
+		std::vector<real64> G;
+		
+		E.resize (count);
+		F.resize (count);
+		G.resize (count);
 
 		F [start] = 0.5;
 		E [end-1] = 0.5;
@@ -135,24 +153,62 @@ void dng_spline_solver::Solve ()
 
 /******************************************************************************/
 
+bool dng_spline_solver::IsIdentity () const
+	{
+	
+	int32 count = (int32) X.size ();
+	
+	if (count != 2)
+		return false;
+		
+	if (X [0] != 0.0 || X [1] != 1.0 ||
+		Y [0] != 0.0 || Y [1] != 1.0)
+		return false;
+		
+	return true;
+	
+	}
+
+/******************************************************************************/
+
 real64 dng_spline_solver::Evaluate (real64 x) const
 	{
 
+	int32 count = (int32) X.size ();
+	
+	// Check for off each end of point list.
+	
 	if (x <= X [0])
 		return Y [0];
 
 	if (x >= X [count-1])
 		return Y [count-1];
 
-	// OPTIMIZATION: Binary search for the index?
+	// Binary search for the index.
+	
+	int32 lower = 1;
+	int32 upper = count - 1;
+	
+	while (upper > lower)
+		{
+		
+		int32 mid = (lower + upper) >> 1;
+		
+		if (x == X [mid])
+			{
+			return Y [mid];
+			}
+			
+		if (x > X [mid])
+			lower = mid + 1;
+		else
+			upper = mid;
+		
+		}
+		
+	DNG_ASSERT (upper == lower, "Binary search error in point list");
 
-	int16 j = 1;
-
-	while (x > X [j])
-		j++;
-
-	if (x == X [j]) 
-		return Y [j];
+	int32 j = lower;
 		
 	// X [j - 1] < x <= X [j]
 	// A is the distance between the X [j] and X [j - 1]

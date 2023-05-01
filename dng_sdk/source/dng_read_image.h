@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_read_image.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_read_image.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /** \file
@@ -24,8 +24,35 @@
 
 #include "dng_auto_ptr.h"
 #include "dng_classes.h"
+#include "dng_image.h"
 #include "dng_memory.h"
 #include "dng_types.h"
+
+/*****************************************************************************/
+
+class dng_row_interleaved_image: public dng_image
+	{
+	
+	private:
+	
+		dng_image &fImage;
+		
+		uint32 fFactor;
+		
+	public:
+	
+		dng_row_interleaved_image (dng_image &image,
+								   uint32 factor);
+					  
+		virtual void DoGet (dng_pixel_buffer &buffer) const;
+			
+		virtual void DoPut (const dng_pixel_buffer &buffer);
+		
+	private:
+	
+		int32 MapRow (int32 row) const;
+	
+	};
 
 /*****************************************************************************/
 
@@ -50,6 +77,8 @@ class dng_read_image
 		AutoPtr<dng_memory_block> fCompressedBuffer;
 	
 		AutoPtr<dng_memory_block> fUncompressedBuffer;
+		
+		AutoPtr<dng_memory_block> fSubTileBlockBuffer;
 	
 	public:
 	
@@ -74,7 +103,7 @@ class dng_read_image
 						   dng_image &image);
 						   
 	protected:
-	
+							    
 		virtual bool ReadUncompressed (dng_host &host,
 									   const dng_ifd &ifd,
 									   dng_stream &stream,

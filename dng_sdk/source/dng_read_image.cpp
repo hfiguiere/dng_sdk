@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_read_image.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_read_image.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -26,6 +26,183 @@
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
 #include "dng_utils.h"
+	
+/*****************************************************************************/
+
+dng_row_interleaved_image::dng_row_interleaved_image (dng_image &image,
+													  uint32 factor)
+													  
+	:	dng_image (image.Bounds     (),
+				   image.Planes     (),
+				   image.PixelType  (),
+				   image.PixelRange ())
+													  
+	,	fImage  (image )
+	,	fFactor (factor)
+	
+	{
+	
+	}
+	
+/*****************************************************************************/
+
+int32 dng_row_interleaved_image::MapRow (int32 row) const
+	{
+
+	uint32 rows = Height ();
+	
+	int32 top = Bounds ().t;
+	
+	uint32 fieldRow = row - top;
+	
+	for (uint32 field = 0; true; field++)
+		{
+		
+		uint32 fieldRows = (rows - field + fFactor - 1) / fFactor;
+		
+		if (fieldRow < fieldRows)
+			{
+			
+			return fieldRow * fFactor + field + top;
+			
+			}
+			
+		fieldRow -= fieldRows;
+		
+		}
+		
+	ThrowProgramError ();
+		
+	return 0;
+	
+	}
+	
+/*****************************************************************************/
+
+void dng_row_interleaved_image::DoGet (dng_pixel_buffer &buffer) const
+	{
+	
+	dng_pixel_buffer tempBuffer (buffer);
+	
+	for (int32 row = buffer.fArea.t; row < buffer.fArea.b; row++)
+		{
+				
+		tempBuffer.fArea.t = MapRow (row);
+		
+		tempBuffer.fArea.b = tempBuffer.fArea.t + 1;
+		
+		tempBuffer.fData = (void *) buffer.DirtyPixel (row,
+										 			   buffer.fArea.l,
+										 			   buffer.fPlane);
+										 
+		fImage.Get (tempBuffer);
+		
+		}
+		
+	}
+	
+/*****************************************************************************/
+
+void dng_row_interleaved_image::DoPut (const dng_pixel_buffer &buffer)
+	{
+	
+	dng_pixel_buffer tempBuffer (buffer);
+	
+	for (int32 row = buffer.fArea.t; row < buffer.fArea.b; row++)
+		{
+				
+		tempBuffer.fArea.t = MapRow (row);
+		
+		tempBuffer.fArea.b = tempBuffer.fArea.t + 1;
+		
+		tempBuffer.fData = (void *) buffer.ConstPixel (row,
+										 			   buffer.fArea.l,
+										 			   buffer.fPlane);
+										 
+		fImage.Put (tempBuffer);
+		
+		}
+		
+	}
+	
+/*****************************************************************************/
+
+static void ReorderSubTileBlocks (dng_host &host,
+								  const dng_ifd &ifd,
+								  dng_pixel_buffer &buffer,
+								  AutoPtr<dng_memory_block> &tempBuffer)
+	{
+	
+	uint32 tempBufferSize = buffer.fArea.W () *
+							buffer.fArea.H () *
+							buffer.fPlanes *
+							buffer.fPixelSize;
+							
+	if (!tempBuffer.Get () || tempBuffer->LogicalSize () < tempBufferSize)
+		{
+		
+		tempBuffer.Reset (host.Allocate (tempBufferSize));
+		
+		}
+	
+	uint32 blockRows = ifd.fSubTileBlockRows;
+	uint32 blockCols = ifd.fSubTileBlockCols;
+	
+	uint32 rowBlocks = buffer.fArea.H () / blockRows;
+	uint32 colBlocks = buffer.fArea.W () / blockCols;
+	
+	int32 rowStep = buffer.fRowStep * buffer.fPixelSize;
+	int32 colStep = buffer.fColStep * buffer.fPixelSize;
+	
+	int32 rowBlockStep = rowStep * blockRows;
+	int32 colBlockStep = colStep * blockCols;
+	
+	uint32 blockColBytes = blockCols * buffer.fPlanes * buffer.fPixelSize;
+	
+	const uint8 *s0 = (const uint8 *) buffer.fData;
+	      uint8 *d0 = tempBuffer->Buffer_uint8 ();
+	
+	for (uint32 rowBlock = 0; rowBlock < rowBlocks; rowBlock++)
+		{
+		
+		uint8 *d1 = d0;
+		
+		for (uint32 colBlock = 0; colBlock < colBlocks; colBlock++)
+			{
+			
+			uint8 *d2 = d1;
+			
+			for (uint32 blockRow = 0; blockRow < blockRows; blockRow++)
+				{
+				
+				for (uint32 j = 0; j < blockColBytes; j++)
+					{
+					
+					d2 [j] = s0 [j];
+					
+					}
+					
+				s0 += blockColBytes;
+				
+				d2 += rowStep;
+				
+				}
+			
+			d1 += colBlockStep;
+			
+			}
+			
+		d0 += rowBlockStep;
+		
+		}
+		
+	// Copy back reordered pixels.
+		
+	DoCopyBytes (tempBuffer->Buffer (),
+				 buffer.fData,
+				 tempBufferSize);
+	
+	}
 
 /*****************************************************************************/
 
@@ -35,6 +212,8 @@ class dng_image_spooler: public dng_spooler
 	private:
 	
 		dng_host &fHost;
+		
+		const dng_ifd &fIFD;
 	
 		dng_image &fImage;
 	
@@ -44,6 +223,8 @@ class dng_image_spooler: public dng_spooler
 		uint32 fPlanes;
 		
 		dng_memory_block &fBlock;
+		
+		AutoPtr<dng_memory_block> &fSubTileBuffer;
 		
 		dng_rect fTileStrip;
 		
@@ -55,11 +236,13 @@ class dng_image_spooler: public dng_spooler
 	public:
 	
 		dng_image_spooler (dng_host &host,
+						   const dng_ifd &ifd,
 						   dng_image &image,
 						   const dng_rect &tileArea,
 						   uint32 plane,
 						   uint32 planes,
-						   dng_memory_block &block);
+						   dng_memory_block &block,
+						   AutoPtr<dng_memory_block> &subTileBuffer);
 		
 		virtual ~dng_image_spooler ();
 			
@@ -79,18 +262,22 @@ class dng_image_spooler: public dng_spooler
 /*****************************************************************************/
 
 dng_image_spooler::dng_image_spooler (dng_host &host,
+									  const dng_ifd &ifd,
 									  dng_image &image,
 									  const dng_rect &tileArea,
 									  uint32 plane,
 									  uint32 planes,
-									  dng_memory_block &block)
+									  dng_memory_block &block,
+									  AutoPtr<dng_memory_block> &subTileBuffer)
 
 	:	fHost (host)
+	,	fIFD (ifd)
 	,	fImage (image)
 	,	fTileArea (tileArea)
 	,	fPlane (plane)
 	,	fPlanes (planes)
 	,	fBlock (block)
+	,	fSubTileBuffer (subTileBuffer)
 	
 	,	fTileStrip ()
 	,	fBuffer (NULL)
@@ -101,8 +288,12 @@ dng_image_spooler::dng_image_spooler (dng_host &host,
 	
 	uint32 bytesPerRow = fTileArea.W () * fPlanes * sizeof (uint16);
 	
-	uint32 stripLength = Min_int32 (fTileArea.H (),
-									fBlock.LogicalSize () / bytesPerRow);
+	uint32 stripLength = Pin_uint32 (ifd.fSubTileBlockRows,
+									 fBlock.LogicalSize () / bytesPerRow,
+									 fTileArea.H ());
+									
+	stripLength = stripLength / ifd.fSubTileBlockRows
+							  * ifd.fSubTileBlockRows;
 	
 	fTileStrip   = fTileArea;
 	fTileStrip.b = fTileArea.t + stripLength;
@@ -168,6 +359,16 @@ void dng_image_spooler::Spool (const void *data,
 			buffer.fPixelType = ttShort;
 			buffer.fPixelSize = 2;
 			
+			if (fIFD.fSubTileBlockRows > 1)
+				{
+			
+				ReorderSubTileBlocks (fHost,
+									  fIFD,
+									  buffer,
+									  fSubTileBuffer);
+									  
+				}
+
 			fImage.Put (buffer);
 			
 			uint32 stripLength = fTileStrip.H ();
@@ -195,6 +396,7 @@ dng_read_image::dng_read_image ()
 
 	:	fCompressedBuffer   ()
 	,	fUncompressedBuffer ()
+	,	fSubTileBlockBuffer ()
 	
 	{
 	
@@ -206,10 +408,10 @@ dng_read_image::~dng_read_image ()
 	{
 	
 	}
-	
+
 /*****************************************************************************/
 
-bool dng_read_image::ReadUncompressed (dng_host & /* host */,
+bool dng_read_image::ReadUncompressed (dng_host &host,
 									   const dng_ifd &ifd,
 									   dng_stream &stream,
 									   dng_image &image,
@@ -440,6 +642,16 @@ bool dng_read_image::ReadUncompressed (dng_host & /* host */,
 		
 		}
 		
+	if (ifd.fSubTileBlockRows > 1)
+		{
+		
+		ReorderSubTileBlocks (host,
+							  ifd,
+							  buffer,
+							  fSubTileBlockBuffer);
+		
+		}
+		
 	image.Put (buffer);
 	
 	return true;
@@ -482,9 +694,12 @@ bool dng_read_image::ReadLosslessJPEG (dng_host &host,
 		
 		uint32 bytesPerRow = tileArea.W () * planes * sizeof (uint16);
 		
-		uint32 rowsPerStrip = Pin_uint32 (1,
+		uint32 rowsPerStrip = Pin_uint32 (ifd.fSubTileBlockRows,
 										  kImageBufferSize / bytesPerRow,
 										  tileArea.H ());
+										  
+		rowsPerStrip = rowsPerStrip / ifd.fSubTileBlockRows
+									* ifd.fSubTileBlockRows;
 										  
 		uint32 bufferSize = bytesPerRow * rowsPerStrip;
 		
@@ -493,11 +708,13 @@ bool dng_read_image::ReadLosslessJPEG (dng_host &host,
 		}
 	
 	dng_image_spooler spooler (host,
+							   ifd,
 							   image,
 							   tileArea,
 							   plane,
 							   planes,
-							   *fUncompressedBuffer.Get ());
+							   *fUncompressedBuffer.Get (),
+							   fSubTileBlockBuffer);
 							   
 	uint32 decodedSize = tileArea.W () *
 						 tileArea.H () *
@@ -505,7 +722,7 @@ bool dng_read_image::ReadLosslessJPEG (dng_host &host,
 							
 	bool bug16 = ifd.fLosslessJPEGBug16;
 	
-	uint32 tileOffset = stream.Position ();
+	uint64 tileOffset = stream.Position ();
 	
 	DecodeLosslessJPEG (stream,
 					    spooler,
@@ -796,6 +1013,28 @@ void dng_read_image::Read (dng_host &host,
 	
 	uint32 tileIndex;
 	
+	// Deal with row interleaved images.
+	
+	if (ifd.fRowInterleaveFactor > 1 &&
+		ifd.fRowInterleaveFactor < ifd.fImageLength)
+		{
+		
+		dng_ifd tempIFD (ifd);
+		
+		tempIFD.fRowInterleaveFactor = 1;
+		
+		dng_row_interleaved_image tempImage (image,
+											 ifd.fRowInterleaveFactor);
+		
+		Read (host,
+			  tempIFD,
+			  stream,
+			  tempImage);
+			  
+		return;
+		
+		}
+	
 	// Figure out inner and outer samples.
 	
 	uint32 innerSamples = 1;
@@ -819,9 +1058,9 @@ void dng_read_image::Read (dng_host &host,
 	
 	// Find the tile offsets.
 		
-	dng_memory_data tileOffsetData (tileCount * sizeof (uint32));
+	dng_memory_data tileOffsetData (tileCount * sizeof (uint64));
 	
-	uint32 *tileOffset = tileOffsetData.Buffer_uint32 ();
+	uint64 *tileOffset = tileOffsetData.Buffer_uint64 ();
 	
 	if (tileCount <= dng_ifd::kMaxTileInfo)
 		{
@@ -867,9 +1106,12 @@ void dng_read_image::Read (dng_host &host,
 		
 		uint32 bytesPerRow = ifd.fTileWidth * innerSamples * bytesPerPixel;
 				
-		subTileLength = Pin_uint32 (1,
+		subTileLength = Pin_uint32 (ifd.fSubTileBlockRows,
 									kImageBufferSize / bytesPerRow, 
 									ifd.fTileLength);
+									
+		subTileLength = subTileLength / ifd.fSubTileBlockRows
+									  * ifd.fSubTileBlockRows;
 									
 		fUncompressedBuffer.Reset (host.Allocate (subTileLength * bytesPerRow));
 									
@@ -939,7 +1181,7 @@ void dng_read_image::Read (dng_host &host,
 			}
 		
 		}
-	
+		
 	// Now read in each tile.
 		
 	tileIndex = 0;
@@ -996,7 +1238,7 @@ void dng_read_image::Read (dng_host &host,
 							  plane,
 							  innerSamples,
 							  subByteCount);
-					
+							  
 					}
 				
 				tileIndex++;

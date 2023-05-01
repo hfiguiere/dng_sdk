@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_fast_module.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_fast_module.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Include file to set optimization to highest level for performance-critical routines.
@@ -23,12 +23,6 @@
 // as possible, even at the expense of slight code size increases.
 
 /*****************************************************************************/
-
-#ifdef __MWERKS__
-#pragma optimize_for_size off
-#pragma inline_max_size (2048)
-#pragma inline_depth (16)
-#endif
 
 #ifdef _MSC_VER
 #pragma optimize ("t", on)

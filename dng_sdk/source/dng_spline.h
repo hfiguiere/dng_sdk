@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_spline.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_spline.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -18,7 +18,9 @@
 
 /*****************************************************************************/
 
-#include "dng_types.h"
+#include "dng_1d_function.h"
+
+#include <vector>
 
 /*****************************************************************************/
 
@@ -46,43 +48,31 @@ inline real64 EvaluateSplineSegment (real64 x,
 
 /*****************************************************************************/
 
-class dng_spline_solver
+class dng_spline_solver: public dng_1d_function
 	{
-	
-	public:
-	
-		enum
-			{
-			kMaxPoints = 33
-			};
 	
 	protected:
 	
-		int32 count;
-
-		real64 X [kMaxPoints];
-		real64 Y [kMaxPoints];
+		std::vector<real64> X;
+		std::vector<real64> Y;
 		
-		real64 S [kMaxPoints];
+		std::vector<real64> S;
 		
 	public:
 	
 		dng_spline_solver ();
 		
-		virtual ~dng_spline_solver ()	
-			{
-			}
+		virtual ~dng_spline_solver ();
 			
-		void Reset ()
-			{
-			count = 0;
-			}
+		void Reset ();
 
 		void Add (real64 x, real64 y);
 
 		void Solve ();
 
-		real64 Evaluate (real64 x) const;
+		virtual bool IsIdentity () const;
+
+		virtual real64 Evaluate (real64 x) const;
 
 	private:
 	

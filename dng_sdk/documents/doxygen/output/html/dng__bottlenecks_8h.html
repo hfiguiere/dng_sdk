@@ -1,107 +1,109 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <!--
-/*
-    Copyright 2005-2006 Adobe Systems Incorporated
+    Copyright 2005-2007 Adobe Systems Incorporated
     Distributed under the MIT License (see accompanying file LICENSE_1_0_0.txt
-    or a copy at http://opensource.adobe.com/licenses.html)
-*/
-Some files are held under additional license. Please see "licenses.html" for more information.
+    or a copy at http://stlab.adobe.com/licenses.html)
+
+    Some files are held under additional license.
+    Please see "http://stlab.adobe.com/licenses.html" for more information.
 -->
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-    <TITLE>DNG SDK: C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/dng_bottlenecks.h File Reference</TITLE>
+    <TITLE>DNG SDK 1.2: dng_bottlenecks.h File Reference</TITLE>
     <META HTTP-EQUIV="content-type" CONTENT="text/html;charset=ISO-8859-1"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/basic.css"/>
-    <STYLE TYPE="text/css" MEDIA="all"><!--
-        @import url("http://www.adobe.com/ssi/css/modern.css");
-    --></STYLE>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/print.css" MEDIA="print"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/mainnav.css"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="stlab.css"/>
-    <LINK REL="alternate" TITLE="opensource.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
-</HEAD>
-
-<body bgcolor="white">
-
-<div id="mainnav" width="100%">
-<table width="100%" border="0"><tr><td width="50%">
-<a title="Adobe Systems home page" href="http://www.adobe.com/" tabindex="2"><img src="http://www.adobe.com/images/logo.gif" alt="Adobe Systems, Inc." height="80" width="150"/></a>
-</td><td align="right" valign="top">
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="+2" color="black">Adobe Open Source</font></a><br/>
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="-2" color="black">opensource.adobe.com</font></a>
-</td></tr></table>
-</div>
-<br/>
-<table border="0" cellspacing="0" cellpadding="0" width="100%">
-<tr><td width="10" nowrap="1"> </td>
+    <LINK TYPE="text/css" REL="stylesheet" HREF="adobe_source.css"/>
+    <LINK REL="alternate" TITLE="stlab.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+</head>
+<body>
+<div id='content'>
+<table><tr>
+<td colspan='5'>
+    <div id='opensource_banner'>
+    <table style='width: 100%; padding: 5px;'><tr>
+    <td>
+        <span style='font-size: 30px'><a href='index.html' style='color: black; border: none'>stlab.adobe.com</a></span>
+    </td>
+    <td align='right'>
+        <a href='http://www.adobe.com' style='border: none'><img src='adobe_hlogo.gif' alt="Adobe Systems Incorporated"/></a>
+    </td>
+    </tr></table>
+    </div>
+</td></tr><tr>
 <td valign="top">
-    <table border="0" cellpadding="5">
-    <tr><td nowrap="1">
-        <h3 class="navbar">Information</h3>
-        <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="group__asl__overview.html">Overview</a></li>
-            <li><a href="asl_toc.html">Documentation</a></li>
-            <li><a href="asl_readme.html">Getting Started</a></li>
-            <li><a href="asl_release_notes.html">Release Notes</a></li>
-            <li><a href="http://opensource.adobe.com/twiki/bin/view/AdobeSource">ASL Wiki</a></li>
-            <li><a href="licenses.html">License</a></li>
-            <li><a href="asl_indices.html">Indices</a></li>
-        </ul>
-        <h3 class="navbar">Media</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a></li>
-            <li><a href="asl_download_cvs.html">ASL CVS Repository</a></li>
-            <li><a href="http://cvs.sourceforge.net/viewcvs.py/adobe-source/">View CVS Repository</a></li>
-        </ul>
-        <h3 class="navbar">Support</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a></li>
-            <li><a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a></li>
-            <li><a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a></li>
-            <li><a href="asl_contributing.html">Contributing to ASL</a></li>
-        </ul>
-        <h3 class="navbar">RSS</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a></li>
-        </ul>
-        <h3 class="navbar">Other Resources</h3>
-        <ul>
-            <li><a href="http://boost.org">Boost</a></li>
-            <li><a href="http://www.sgi.com/tech/stl">SGI STL</a></li>
-        </ul>
-        <h3 class="navbar">Other Adobe Projects</h3>
-        <ul>
-            <li><a href="http://www.adobe.com/products/xmp/">Adobe XMP</a></li>
-        </ul>
-    </td></tr>
-    </table>
+    <div id='navtable' height='100%'>
+    <div style='margin: 5px'>
+        <h4>Documentation</h4>
+
+        <a href="group__asl__overview.html">Overview</a><br/>
+        <a href="asl_readme.html">Building ASL</a><br/>
+        <a href="asl_toc.html">Documentation</a><br/>
+        <a href="http://stlab.adobe.com/wiki/index.php/Supplementary_ASL_Documentation">Library Wiki Docs</a><br/>
+        <a href="asl_indices.html">Indices</a><br/>
+        <a href="http://stlab.adobe.com/perforce/">Browse Perforce</a><br/>
+
+        <h4>More Info</h4>
+
+        <a href="asl_release_notes.html">Release Notes</a><br/>
+        <a href="http://stlab.adobe.com/wiki/">Wiki</a><br/>
+        <a href="asl_search.html">Site Search</a><br/>
+        <a href="licenses.html">License</a><br/>
+        <a href="success_stories.html">Success Stories</a><br/>
+        <a href="asl_contributors.html">Contributors</a><br/>
+
+        <h4>Media</h4>
+
+        <a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a><br/>
+        <a href="asl_download_perforce.html">Perforce Depots</a><br/>
+
+        <h4>Support</h4>
+
+        <a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a><br/>
+        <a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a><br/>
+        <a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a><br/>
+        <a href="asl_contributing.html">Contribute to ASL</a><br/>
+
+        <h4>RSS</h4>
+
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a><br/>
+
+        <h4>Other Adobe Projects</h4>
+
+        <a href="adobe_apollo.html">Adobe Air</a><br/>
+        <a href="http://stlab.adobe.com/gil/">Adobe GIL</a><br/>
+        <a href="http://labs.adobe.com">Adobe Labs</a><br/>
+        <a href="http://stlab.adobe.com/amg/">Adobe Media Gallery</a><br/>
+        <a href="http://www.adobe.com/products/xmp/">Adobe XMP</a><br/>
+        <a href="http://www.mozilla.org/projects/tamarin">Tamarin project<br/>(Mozilla Foundation)</a><br/>
+
+        <h4>Other Resources</h4>
+
+        <a href="http://boost.org">Boost</a><br/>
+        <a href="http://www.riaforge.com/">RIAForge</a><br/>
+        <a href="http://www.sgi.com/tech/stl">SGI STL</a><br/>
+    </div>
+    </div>
 </td>
-<td width="10" nowrap="1"> </td>
-<td width="100%" valign="top">
+<td id='maintable' width="100%" valign="top">
 
 <!-- End Header -->
-
-<!-- Generated by Doxygen 1.4.6-NO -->
-<div class="tabs">
-  <ul>
-    <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-    <li><a href="annotated.html"><span>Classes</span></a></li>
-    <li id="current"><a href="files.html"><span>Files</span></a></li>
-    <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
-  </ul></div>
-<div class="tabs">
-  <ul>
-    <li><a href="files.html"><span>File&nbsp;List</span></a></li>
-    <li><a href="globals.html"><span>File&nbsp;Members</span></a></li>
-  </ul></div>
-<h1>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/dng_bottlenecks.h File Reference</h1>
+<!-- Generated by Doxygen 1.5.5 -->
+<div class="navigation" id="top">
+  <div class="tabs">
+    <ul>
+      <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
+      <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
+      <li><a href="annotated.html"><span>Classes</span></a></li>
+      <li class="current"><a href="files.html"><span>Files</span></a></li>
+    </ul>
+  </div>
+</div>
+<div class="contents">
+<h1>dng_bottlenecks.h File Reference</h1>
 <p>
 <a href="dng__bottlenecks_8h-source.html">Go to the source code of this file.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
@@ -109,116 +111,131 @@ Some files are held under additional license. Please see "licenses.html" for mor
 <tr><td class="memItemLeft" nowrap align="right" valign="top">struct &nbsp;</td><td class="memItemRight" valign="bottom"><b>dng_suite</b></td></tr>
 
 <tr><td colspan="2"><br><h2>Typedefs</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6b55b7e56001c1067073a93dcd70fc82"></a><!-- doxytag: member="dng_bottlenecks.h::ZeroBytesProc" ref="6b55b7e56001c1067073a93dcd70fc82" args="(void *dPtr, uint32 count)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>ZeroBytesProc</b> (void *dPtr, uint32 count)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6cc5c09d6a9c5962929a69958dea9fed"></a><!-- doxytag: member="dng_bottlenecks.h::ZeroBytesProc" ref="6cc5c09d6a9c5962929a69958dea9fed" args=")(void *dPtr, uint32 count)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>ZeroBytesProc</b> )(void *dPtr, uint32 count)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="24450322e805dc7359935746b7b2022b"></a><!-- doxytag: member="dng_bottlenecks.h::CopyBytesProc" ref="24450322e805dc7359935746b7b2022b" args="(const void *sPtr, void *dPtr, uint32 count)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyBytesProc</b> (const void *sPtr, void *dPtr, uint32 count)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3f77949b037de647d4bb9c0fccb6b0f7"></a><!-- doxytag: member="dng_bottlenecks.h::CopyBytesProc" ref="3f77949b037de647d4bb9c0fccb6b0f7" args=")(const void *sPtr, void *dPtr, uint32 count)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyBytesProc</b> )(const void *sPtr, void *dPtr, uint32 count)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="291d8b754b4b484918c15cdeeba6e0a0"></a><!-- doxytag: member="dng_bottlenecks.h::SwapBytes16Proc" ref="291d8b754b4b484918c15cdeeba6e0a0" args="(uint16 *dPtr, uint32 count)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>SwapBytes16Proc</b> (uint16 *dPtr, uint32 count)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5fd0a6c2f810d3e534e182dcd60ae07e"></a><!-- doxytag: member="dng_bottlenecks.h::SwapBytes16Proc" ref="5fd0a6c2f810d3e534e182dcd60ae07e" args=")(uint16 *dPtr, uint32 count)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>SwapBytes16Proc</b> )(uint16 *dPtr, uint32 count)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7b85c2e217c2bfa65b9eada4a3c01061"></a><!-- doxytag: member="dng_bottlenecks.h::SwapBytes32Proc" ref="7b85c2e217c2bfa65b9eada4a3c01061" args="(uint32 *dPtr, uint32 count)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>SwapBytes32Proc</b> (uint32 *dPtr, uint32 count)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ce738938a36c795c7940b03d9ee6dee8"></a><!-- doxytag: member="dng_bottlenecks.h::SwapBytes32Proc" ref="ce738938a36c795c7940b03d9ee6dee8" args=")(uint32 *dPtr, uint32 count)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>SwapBytes32Proc</b> )(uint32 *dPtr, uint32 count)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="157a29804984ca4781e4e4a859336b77"></a><!-- doxytag: member="dng_bottlenecks.h::SetArea8Proc" ref="157a29804984ca4781e4e4a859336b77" args="(uint8 *dPtr, uint8 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>SetArea8Proc</b> (uint8 *dPtr, uint8 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="78fe50a9465011340811b3b664ea3f39"></a><!-- doxytag: member="dng_bottlenecks.h::SetArea8Proc" ref="78fe50a9465011340811b3b664ea3f39" args=")(uint8 *dPtr, uint8 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>SetArea8Proc</b> )(uint8 *dPtr, uint8 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7491ac9abd89b0e374bdd8ea2d430b8f"></a><!-- doxytag: member="dng_bottlenecks.h::SetArea16Proc" ref="7491ac9abd89b0e374bdd8ea2d430b8f" args="(uint16 *dPtr, uint16 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>SetArea16Proc</b> (uint16 *dPtr, uint16 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="27746f627cf03e340e6a64280fce4be5"></a><!-- doxytag: member="dng_bottlenecks.h::SetArea16Proc" ref="27746f627cf03e340e6a64280fce4be5" args=")(uint16 *dPtr, uint16 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>SetArea16Proc</b> )(uint16 *dPtr, uint16 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="1c269652adab9ecd960c3971d7b064cd"></a><!-- doxytag: member="dng_bottlenecks.h::SetArea32Proc" ref="1c269652adab9ecd960c3971d7b064cd" args="(uint32 *dPtr, uint32 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>SetArea32Proc</b> (uint32 *dPtr, uint32 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3cd3ef93c714af9667ce60d00cb7ab56"></a><!-- doxytag: member="dng_bottlenecks.h::SetArea32Proc" ref="3cd3ef93c714af9667ce60d00cb7ab56" args=")(uint32 *dPtr, uint32 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>SetArea32Proc</b> )(uint32 *dPtr, uint32 value, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="74122ebf9a040f85d3bd2ac86563aebd"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8Proc" ref="74122ebf9a040f85d3bd2ac86563aebd" args="(const uint8 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8Proc</b> (const uint8 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8b07faff366db03de05bdedce61b5434"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8Proc" ref="8b07faff366db03de05bdedce61b5434" args=")(const uint8 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8Proc</b> )(const uint8 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9a4a12325eaa4869e6f203f1ed2b8032"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea16Proc" ref="9a4a12325eaa4869e6f203f1ed2b8032" args="(const uint16 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea16Proc</b> (const uint16 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8cf8be2ea0fbe856b99f690acf6c035e"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea16Proc" ref="8cf8be2ea0fbe856b99f690acf6c035e" args=")(const uint16 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea16Proc</b> )(const uint16 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c1019b0ef9c2262884168cda669b5c07"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea32Proc" ref="c1019b0ef9c2262884168cda669b5c07" args="(const uint32 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea32Proc</b> (const uint32 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="073106df4d5b6206d114c8c2d68cbab3"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea32Proc" ref="073106df4d5b6206d114c8c2d68cbab3" args=")(const uint32 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea32Proc</b> )(const uint32 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fc2ed02a1900930a998b67cdbcb12361"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8_16Proc" ref="fc2ed02a1900930a998b67cdbcb12361" args="(const uint8 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8_16Proc</b> (const uint8 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="cfdca10e2a7ecd6e0c2369c7148f0de5"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8_16Proc" ref="cfdca10e2a7ecd6e0c2369c7148f0de5" args=")(const uint8 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8_16Proc</b> )(const uint8 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8ad74842d49ea808fcd58e7bd85eea7d"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8_S16Proc" ref="8ad74842d49ea808fcd58e7bd85eea7d" args="(const uint8 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8_S16Proc</b> (const uint8 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="1a4b7c191f65463006def8185258db01"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8_S16Proc" ref="1a4b7c191f65463006def8185258db01" args=")(const uint8 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8_S16Proc</b> )(const uint8 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c9f2ecbca3a0ed26cdd327f5c8c2ad7c"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8_32Proc" ref="c9f2ecbca3a0ed26cdd327f5c8c2ad7c" args="(const uint8 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8_32Proc</b> (const uint8 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ec364f3db2fb3560c2d70e7356df883a"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8_32Proc" ref="ec364f3db2fb3560c2d70e7356df883a" args=")(const uint8 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8_32Proc</b> )(const uint8 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="cb4c9964db59ed5a54f8da62b1a1ed67"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea16_S16Proc" ref="cb4c9964db59ed5a54f8da62b1a1ed67" args="(const uint16 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea16_S16Proc</b> (const uint16 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e7d8eaa496ed6e176d1e00ed62ab43f4"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea16_S16Proc" ref="e7d8eaa496ed6e176d1e00ed62ab43f4" args=")(const uint16 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea16_S16Proc</b> )(const uint16 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="96f46c09d040d6623a00b4b842219acb"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea16_32Proc" ref="96f46c09d040d6623a00b4b842219acb" args="(const uint16 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea16_32Proc</b> (const uint16 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ee321c54f4ade06f7ad5f00d7e565bb0"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea16_32Proc" ref="ee321c54f4ade06f7ad5f00d7e565bb0" args=")(const uint16 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea16_32Proc</b> )(const uint16 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="391ba0e8fee5f37e16928fe8cd8405d9"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8_R32Proc" ref="391ba0e8fee5f37e16928fe8cd8405d9" args="(const uint8 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8_R32Proc</b> (const uint8 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="1ec61f9048bfcfcab48f5db99e0ccd45"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea8_R32Proc" ref="1ec61f9048bfcfcab48f5db99e0ccd45" args=")(const uint8 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea8_R32Proc</b> )(const uint8 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e9c5497a65413a07e75f63c326d41214"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea16_R32Proc" ref="e9c5497a65413a07e75f63c326d41214" args="(const uint16 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea16_R32Proc</b> (const uint16 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="bcb7d1c49a19184b4b7ff34dc48fca2f"></a><!-- doxytag: member="dng_bottlenecks.h::CopyArea16_R32Proc" ref="bcb7d1c49a19184b4b7ff34dc48fca2f" args=")(const uint16 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyArea16_R32Proc</b> )(const uint16 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="de7ee10552f5ef19906e1e322d8d45e4"></a><!-- doxytag: member="dng_bottlenecks.h::CopyAreaS16_R32Proc" ref="de7ee10552f5ef19906e1e322d8d45e4" args="(const int16 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyAreaS16_R32Proc</b> (const int16 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e2d8791a9c5b018c2c770eb2eeeb223a"></a><!-- doxytag: member="dng_bottlenecks.h::CopyAreaS16_R32Proc" ref="e2d8791a9c5b018c2c770eb2eeeb223a" args=")(const int16 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyAreaS16_R32Proc</b> )(const int16 *sPtr, real32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="69b1470672821ef7d3709cc1d71f3739"></a><!-- doxytag: member="dng_bottlenecks.h::CopyAreaR32_8Proc" ref="69b1470672821ef7d3709cc1d71f3739" args="(const real32 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyAreaR32_8Proc</b> (const real32 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="1135f7d245ad42d55bfcc6addf79dba6"></a><!-- doxytag: member="dng_bottlenecks.h::CopyAreaR32_8Proc" ref="1135f7d245ad42d55bfcc6addf79dba6" args=")(const real32 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyAreaR32_8Proc</b> )(const real32 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="0af5b191234a4edab0e9d03fcac42be8"></a><!-- doxytag: member="dng_bottlenecks.h::CopyAreaR32_16Proc" ref="0af5b191234a4edab0e9d03fcac42be8" args="(const real32 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyAreaR32_16Proc</b> (const real32 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fadd89d75c08ef19adcc68d101b70444"></a><!-- doxytag: member="dng_bottlenecks.h::CopyAreaR32_16Proc" ref="fadd89d75c08ef19adcc68d101b70444" args=")(const real32 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyAreaR32_16Proc</b> )(const real32 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d62eaf24d054a8802a9920f642f6815c"></a><!-- doxytag: member="dng_bottlenecks.h::CopyAreaR32_S16Proc" ref="d62eaf24d054a8802a9920f642f6815c" args="(const real32 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyAreaR32_S16Proc</b> (const real32 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ce342f088948da634c6edb88a7467940"></a><!-- doxytag: member="dng_bottlenecks.h::CopyAreaR32_S16Proc" ref="ce342f088948da634c6edb88a7467940" args=")(const real32 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>CopyAreaR32_S16Proc</b> )(const real32 *sPtr, int16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep, uint32 pixelRange)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b6ca14abf1ffb6b9de92391845ad05f4"></a><!-- doxytag: member="dng_bottlenecks.h::RepeatArea8Proc" ref="b6ca14abf1ffb6b9de92391845ad05f4" args="(const uint8 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>RepeatArea8Proc</b> (const uint8 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="49d6caba9088a098507d344e7e72d002"></a><!-- doxytag: member="dng_bottlenecks.h::RepeatArea8Proc" ref="49d6caba9088a098507d344e7e72d002" args=")(const uint8 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>RepeatArea8Proc</b> )(const uint8 *sPtr, uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7bbc13bd856fd0d864a73b55100de30b"></a><!-- doxytag: member="dng_bottlenecks.h::RepeatArea16Proc" ref="7bbc13bd856fd0d864a73b55100de30b" args="(const uint16 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>RepeatArea16Proc</b> (const uint16 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6f4f9e41d315ea22466345d3ae402395"></a><!-- doxytag: member="dng_bottlenecks.h::RepeatArea16Proc" ref="6f4f9e41d315ea22466345d3ae402395" args=")(const uint16 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>RepeatArea16Proc</b> )(const uint16 *sPtr, uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="2edbbddc155b8d08ba9b60be10de90a2"></a><!-- doxytag: member="dng_bottlenecks.h::RepeatArea32Proc" ref="2edbbddc155b8d08ba9b60be10de90a2" args="(const uint32 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>RepeatArea32Proc</b> (const uint32 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="0a53a0a5ec082548b34c60378c5b9fb5"></a><!-- doxytag: member="dng_bottlenecks.h::RepeatArea32Proc" ref="0a53a0a5ec082548b34c60378c5b9fb5" args=")(const uint32 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>RepeatArea32Proc</b> )(const uint32 *sPtr, uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 repeatV, uint32 repeatH, uint32 phaseV, uint32 phaseH)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="67283c3616bd9eec28ac7e4f3cc04d02"></a><!-- doxytag: member="dng_bottlenecks.h::ShiftRight16Proc" ref="67283c3616bd9eec28ac7e4f3cc04d02" args="(uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 shift)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>ShiftRight16Proc</b> (uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 shift)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c0dce2fbffee9b1cffbc9ea3e5cc7f10"></a><!-- doxytag: member="dng_bottlenecks.h::ShiftRight16Proc" ref="c0dce2fbffee9b1cffbc9ea3e5cc7f10" args=")(uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 shift)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>ShiftRight16Proc</b> )(uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 rowStep, int32 colStep, int32 planeStep, uint32 shift)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6ac35667c2e3a78a88dbbc585e04b484"></a><!-- doxytag: member="dng_bottlenecks.h::BilinearRow16Proc" ref="6ac35667c2e3a78a88dbbc585e04b484" args="(const uint16 *sPtr, uint16 *dPtr, uint32 cols, uint32 patPhase, uint32 patCount, const uint32 *kernCounts, const int32 *const *kernOffsets, const uint16 *const *kernWeights, uint32 sShift)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>BilinearRow16Proc</b> (const uint16 *sPtr, uint16 *dPtr, uint32 cols, uint32 patPhase, uint32 patCount, const uint32 *kernCounts, const int32 *const *kernOffsets, const uint16 *const *kernWeights, uint32 sShift)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b3cea835c06adda9a17c41764db504b6"></a><!-- doxytag: member="dng_bottlenecks.h::BilinearRow16Proc" ref="b3cea835c06adda9a17c41764db504b6" args=")(const uint16 *sPtr, uint16 *dPtr, uint32 cols, uint32 patPhase, uint32 patCount, const uint32 *kernCounts, const int32 *const *kernOffsets, const uint16 *const *kernWeights, uint32 sShift)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>BilinearRow16Proc</b> )(const uint16 *sPtr, uint16 *dPtr, uint32 cols, uint32 patPhase, uint32 patCount, const uint32 *kernCounts, const int32 *const *kernOffsets, const uint16 *const *kernWeights, uint32 sShift)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="51f8753c9121cad3af7795645ae89fa9"></a><!-- doxytag: member="dng_bottlenecks.h::BilinearRow32Proc" ref="51f8753c9121cad3af7795645ae89fa9" args="(const real32 *sPtr, real32 *dPtr, uint32 cols, uint32 patPhase, uint32 patCount, const uint32 *kernCounts, const int32 *const *kernOffsets, const real32 *const *kernWeights, uint32 sShift)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>BilinearRow32Proc</b> (const real32 *sPtr, real32 *dPtr, uint32 cols, uint32 patPhase, uint32 patCount, const uint32 *kernCounts, const int32 *const *kernOffsets, const real32 *const *kernWeights, uint32 sShift)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="73bd177d5f9f7dff92e11f341702de8f"></a><!-- doxytag: member="dng_bottlenecks.h::BilinearRow32Proc" ref="73bd177d5f9f7dff92e11f341702de8f" args=")(const real32 *sPtr, real32 *dPtr, uint32 cols, uint32 patPhase, uint32 patCount, const uint32 *kernCounts, const int32 *const *kernOffsets, const real32 *const *kernWeights, uint32 sShift)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>BilinearRow32Proc</b> )(const real32 *sPtr, real32 *dPtr, uint32 cols, uint32 patPhase, uint32 patCount, const uint32 *kernCounts, const int32 *const *kernOffsets, const real32 *const *kernWeights, uint32 sShift)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="41a458640670d24edc8a994aff5df256"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineABCtoRGBProc" ref="41a458640670d24edc8a994aff5df256" args="(const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineABCtoRGBProc</b> (const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c1ab314aa98c29a5c07400cd765d63cb"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineABCtoRGBProc" ref="c1ab314aa98c29a5c07400cd765d63cb" args=")(const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineABCtoRGBProc</b> )(const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f7fdf376b4f4b13f18e4631b596aec3f"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineABCDtoRGBProc" ref="f7fdf376b4f4b13f18e4631b596aec3f" args="(const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, const real32 *sPtrD, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineABCDtoRGBProc</b> (const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, const real32 *sPtrD, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="876fb92f85689637ca3ea74168c9ee96"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineABCDtoRGBProc" ref="876fb92f85689637ca3ea74168c9ee96" args=")(const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, const real32 *sPtrD, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineABCDtoRGBProc</b> )(const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, const real32 *sPtrD, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="92c26279e47871de962c3a43133b8ce7"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineGrayToRGBProc" ref="92c26279e47871de962c3a43133b8ce7" args="(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrG, uint32 count, const dng_matrix &amp;matrix)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineGrayToRGBProc</b> (const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrG, uint32 count, const dng_matrix &amp;matrix)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3c5d25f6830df5b97789a0e687eff5df"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineHueSatMapProc" ref="3c5d25f6830df5b97789a0e687eff5df" args=")(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_hue_sat_map &amp;lut)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineHueSatMapProc</b> )(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_hue_sat_map &amp;lut)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4ab5b86fe24a51c080684a5ae89c8560"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineRGBtoRGBProc" ref="4ab5b86fe24a51c080684a5ae89c8560" args="(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_matrix &amp;matrix)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineRGBtoRGBProc</b> (const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_matrix &amp;matrix)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="55814f090b472f9ef70e06e2177e1f03"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineGrayToRGBProc" ref="55814f090b472f9ef70e06e2177e1f03" args=")(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrG, uint32 count, const dng_matrix &amp;matrix)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineGrayToRGBProc</b> )(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrG, uint32 count, const dng_matrix &amp;matrix)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="00a675892ece2c351cef867f30dffb0f"></a><!-- doxytag: member="dng_bottlenecks.h::Baseline1DTableProc" ref="00a675892ece2c351cef867f30dffb0f" args="(const real32 *sPtr, real32 *dPtr, uint32 count, const dng_1d_table &amp;table)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>Baseline1DTableProc</b> (const real32 *sPtr, real32 *dPtr, uint32 count, const <a class="el" href="classdng__1d__table.html">dng_1d_table</a> &amp;table)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a2243b17d8f48534ae34cded4407ce09"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineRGBtoRGBProc" ref="a2243b17d8f48534ae34cded4407ce09" args=")(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_matrix &amp;matrix)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineRGBtoRGBProc</b> )(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_matrix &amp;matrix)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a1f1af5cb4b9ac1cd27f03c9f47a51ff"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineRGBToneProc" ref="a1f1af5cb4b9ac1cd27f03c9f47a51ff" args="(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_1d_table &amp;table)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineRGBToneProc</b> (const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const <a class="el" href="classdng__1d__table.html">dng_1d_table</a> &amp;table)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="db322667a808da3d96e1eaa1e6ec5e6a"></a><!-- doxytag: member="dng_bottlenecks.h::Baseline1DTableProc" ref="db322667a808da3d96e1eaa1e6ec5e6a" args=")(const real32 *sPtr, real32 *dPtr, uint32 count, const dng_1d_table &amp;table)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>Baseline1DTableProc</b> )(const real32 *sPtr, real32 *dPtr, uint32 count, const <a class="el" href="classdng__1d__table.html">dng_1d_table</a> &amp;table)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c0349bb00f57aa818e0f3c37e35605f3"></a><!-- doxytag: member="dng_bottlenecks.h::ResampleDown16Proc" ref="c0349bb00f57aa818e0f3c37e35605f3" args="(const uint16 *sPtr, uint16 *dPtr, uint32 sCount, int32 sRowStep, const int16 *wPtr, uint32 wCount, uint32 pixelRange)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>ResampleDown16Proc</b> (const uint16 *sPtr, uint16 *dPtr, uint32 sCount, int32 sRowStep, const int16 *wPtr, uint32 wCount, uint32 pixelRange)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7d72ebc22ea73bd8c0c07eb54320eb77"></a><!-- doxytag: member="dng_bottlenecks.h::BaselineRGBToneProc" ref="7d72ebc22ea73bd8c0c07eb54320eb77" args=")(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_1d_table &amp;table)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>BaselineRGBToneProc</b> )(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const <a class="el" href="classdng__1d__table.html">dng_1d_table</a> &amp;table)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9f3788cd91ea8575a361a4b90fe5bc8b"></a><!-- doxytag: member="dng_bottlenecks.h::ResampleDown32Proc" ref="9f3788cd91ea8575a361a4b90fe5bc8b" args="(const real32 *sPtr, real32 *dPtr, uint32 sCount, int32 sRowStep, const real32 *wPtr, uint32 wCount)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>ResampleDown32Proc</b> (const real32 *sPtr, real32 *dPtr, uint32 sCount, int32 sRowStep, const real32 *wPtr, uint32 wCount)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="75fbd571637aecb84caf71226b6360aa"></a><!-- doxytag: member="dng_bottlenecks.h::ResampleDown16Proc" ref="75fbd571637aecb84caf71226b6360aa" args=")(const uint16 *sPtr, uint16 *dPtr, uint32 sCount, int32 sRowStep, const int16 *wPtr, uint32 wCount, uint32 pixelRange)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>ResampleDown16Proc</b> )(const uint16 *sPtr, uint16 *dPtr, uint32 sCount, int32 sRowStep, const int16 *wPtr, uint32 wCount, uint32 pixelRange)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b8f7bc49f626fd181b4e78ca5ed33255"></a><!-- doxytag: member="dng_bottlenecks.h::ResampleAcross16Proc" ref="b8f7bc49f626fd181b4e78ca5ed33255" args="(const uint16 *sPtr, uint16 *dPtr, uint32 dCount, const int32 *coord, const int16 *wPtr, uint32 wCount, uint32 wStep, uint32 pixelRange)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>ResampleAcross16Proc</b> (const uint16 *sPtr, uint16 *dPtr, uint32 dCount, const int32 *coord, const int16 *wPtr, uint32 wCount, uint32 wStep, uint32 pixelRange)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d769f71c054e3ce46b33444dd8b8ba49"></a><!-- doxytag: member="dng_bottlenecks.h::ResampleDown32Proc" ref="d769f71c054e3ce46b33444dd8b8ba49" args=")(const real32 *sPtr, real32 *dPtr, uint32 sCount, int32 sRowStep, const real32 *wPtr, uint32 wCount)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>ResampleDown32Proc</b> )(const real32 *sPtr, real32 *dPtr, uint32 sCount, int32 sRowStep, const real32 *wPtr, uint32 wCount)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="181d7a7f03234954310c2f173eebb773"></a><!-- doxytag: member="dng_bottlenecks.h::ResampleAcross32Proc" ref="181d7a7f03234954310c2f173eebb773" args="(const real32 *sPtr, real32 *dPtr, uint32 dCount, const int32 *coord, const real32 *wPtr, uint32 wCount, uint32 wStep)" -->
-typedef void()&nbsp;</td><td class="memItemRight" valign="bottom"><b>ResampleAcross32Proc</b> (const real32 *sPtr, real32 *dPtr, uint32 dCount, const int32 *coord, const real32 *wPtr, uint32 wCount, uint32 wStep)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8baf65af14291db4f1c614ea1f5527dc"></a><!-- doxytag: member="dng_bottlenecks.h::ResampleAcross16Proc" ref="8baf65af14291db4f1c614ea1f5527dc" args=")(const uint16 *sPtr, uint16 *dPtr, uint32 dCount, const int32 *coord, const int16 *wPtr, uint32 wCount, uint32 wStep, uint32 pixelRange)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>ResampleAcross16Proc</b> )(const uint16 *sPtr, uint16 *dPtr, uint32 dCount, const int32 *coord, const int16 *wPtr, uint32 wCount, uint32 wStep, uint32 pixelRange)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4bd140c2f4d91055180d3518833ea53a"></a><!-- doxytag: member="dng_bottlenecks.h::ResampleAcross32Proc" ref="4bd140c2f4d91055180d3518833ea53a" args=")(const real32 *sPtr, real32 *dPtr, uint32 dCount, const int32 *coord, const real32 *wPtr, uint32 wCount, uint32 wStep)" -->
+typedef void(&nbsp;</td><td class="memItemRight" valign="bottom"><b>ResampleAcross32Proc</b> )(const real32 *sPtr, real32 *dPtr, uint32 dCount, const int32 *coord, const real32 *wPtr, uint32 wCount, uint32 wStep)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8de3d955e22877f1856fd62ca9060796"></a><!-- doxytag: member="dng_bottlenecks.h::EqualBytesProc" ref="8de3d955e22877f1856fd62ca9060796" args=")(const void *sPtr, const void *dPtr, uint32 count)" -->
+typedef bool(&nbsp;</td><td class="memItemRight" valign="bottom"><b>EqualBytesProc</b> )(const void *sPtr, const void *dPtr, uint32 count)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5c401322c09ec032a790cb7fee9e685e"></a><!-- doxytag: member="dng_bottlenecks.h::EqualArea8Proc" ref="5c401322c09ec032a790cb7fee9e685e" args=")(const uint8 *sPtr, const uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef bool(&nbsp;</td><td class="memItemRight" valign="bottom"><b>EqualArea8Proc</b> )(const uint8 *sPtr, const uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="409066e869d5f555ac4f0be206faa12c"></a><!-- doxytag: member="dng_bottlenecks.h::EqualArea16Proc" ref="409066e869d5f555ac4f0be206faa12c" args=")(const uint16 *sPtr, const uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef bool(&nbsp;</td><td class="memItemRight" valign="bottom"><b>EqualArea16Proc</b> )(const uint16 *sPtr, const uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7fa297de63437b7194c9c53b7067b547"></a><!-- doxytag: member="dng_bottlenecks.h::EqualArea32Proc" ref="7fa297de63437b7194c9c53b7067b547" args=")(const uint32 *sPtr, const uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+typedef bool(&nbsp;</td><td class="memItemRight" valign="bottom"><b>EqualArea32Proc</b> )(const uint32 *sPtr, const uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
 
 <tr><td colspan="2"><br><h2>Functions</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ce190d2e71f8eab97c98d9e3f4299e4a"></a><!-- doxytag: member="dng_bottlenecks.h::DoZeroBytes" ref="ce190d2e71f8eab97c98d9e3f4299e4a" args="(void *dPtr, uint32 count)" -->
@@ -308,6 +325,9 @@ void&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoBaselineABCtoRGB</b
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ebc77d9f0df994539d2f474716e0a475"></a><!-- doxytag: member="dng_bottlenecks.h::DoBaselineABCDtoRGB" ref="ebc77d9f0df994539d2f474716e0a475" args="(const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, const real32 *sPtrD, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)" -->
 void&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoBaselineABCDtoRGB</b> (const real32 *sPtrA, const real32 *sPtrB, const real32 *sPtrC, const real32 *sPtrD, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_vector &amp;cameraWhite, const dng_matrix &amp;cameraToRGB)</td></tr>
 
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="93f189e8eaffdc9816c5415bb2c7badb"></a><!-- doxytag: member="dng_bottlenecks.h::DoBaselineHueSatMap" ref="93f189e8eaffdc9816c5415bb2c7badb" args="(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_hue_sat_map &amp;lut)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoBaselineHueSatMap</b> (const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrR, real32 *dPtrG, real32 *dPtrB, uint32 count, const dng_hue_sat_map &amp;lut)</td></tr>
+
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b05c00727381c5aac17403e6a76d34ee"></a><!-- doxytag: member="dng_bottlenecks.h::DoBaselineRGBtoGray" ref="b05c00727381c5aac17403e6a76d34ee" args="(const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrG, uint32 count, const dng_matrix &amp;matrix)" -->
 void&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoBaselineRGBtoGray</b> (const real32 *sPtrR, const real32 *sPtrG, const real32 *sPtrB, real32 *dPtrG, uint32 count, const dng_matrix &amp;matrix)</td></tr>
 
@@ -332,19 +352,55 @@ void&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoResampleAcross16</b
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="362142dddaf5d09fc0fda3a711f23a7a"></a><!-- doxytag: member="dng_bottlenecks.h::DoResampleAcross32" ref="362142dddaf5d09fc0fda3a711f23a7a" args="(const real32 *sPtr, real32 *dPtr, uint32 dCount, const int32 *coord, const real32 *wPtr, uint32 wCount, uint32 wStep)" -->
 void&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoResampleAcross32</b> (const real32 *sPtr, real32 *dPtr, uint32 dCount, const int32 *coord, const real32 *wPtr, uint32 wCount, uint32 wStep)</td></tr>
 
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c4ea1d7fb5f40fa75787417298637cdb"></a><!-- doxytag: member="dng_bottlenecks.h::DoEqualBytes" ref="c4ea1d7fb5f40fa75787417298637cdb" args="(const void *sPtr, const void *dPtr, uint32 count)" -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoEqualBytes</b> (const void *sPtr, const void *dPtr, uint32 count)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="69a1d799477b2e56ed9149b69686128c"></a><!-- doxytag: member="dng_bottlenecks.h::DoEqualArea8" ref="69a1d799477b2e56ed9149b69686128c" args="(const uint8 *sPtr, const uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoEqualArea8</b> (const uint8 *sPtr, const uint8 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6b73b2287c0eeefd7ff64fbdce6584e7"></a><!-- doxytag: member="dng_bottlenecks.h::DoEqualArea16" ref="6b73b2287c0eeefd7ff64fbdce6584e7" args="(const uint16 *sPtr, const uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoEqualArea16</b> (const uint16 *sPtr, const uint16 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="143f65e6e421c9809ee4e5c0d897342b"></a><!-- doxytag: member="dng_bottlenecks.h::DoEqualArea32" ref="143f65e6e421c9809ee4e5c0d897342b" args="(const uint32 *sPtr, const uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)" -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>DoEqualArea32</b> (const uint32 *sPtr, const uint32 *dPtr, uint32 rows, uint32 cols, uint32 planes, int32 sRowStep, int32 sColStep, int32 sPlaneStep, int32 dRowStep, int32 dColStep, int32 dPlaneStep)</td></tr>
+
 <tr><td colspan="2"><br><h2>Variables</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a6df175956f262abdf4d35572f5bc57d"></a><!-- doxytag: member="dng_bottlenecks.h::gDNGSuite" ref="a6df175956f262abdf4d35572f5bc57d" args="" -->
 dng_suite&nbsp;</td><td class="memItemRight" valign="bottom"><b>gDNGSuite</b></td></tr>
 
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-Indirection mechanism for performance-critical routines that might be replaced with hand-optimized or hardware-specific implementations. 
+Indirection mechanism for performance-critical routines that might be replaced with hand-optimized or hardware-specific implementations. </div>
+
 <!-- Begin Footer -->
-</td>
-<td width="20">&nbsp;&nbsp;</td>
+</td></tr>
 </table>
-
-<div id="footerrow"><!--give footer 25px of white above--></div><div id="footer" title="footer: links to copyright and other legal information"><p><a href="licenses.html" class="el">Copyright &copy; 2005 Adobe Systems Incorporated</a></p><ul id="list1"><!-- due to a rendering error in IE, these links should all be on one line without returns --><li id="terms"><a title="Terms of Use" href="http://www.adobe.com/misc/copyright.html">Terms of Use</a></li><li><a title="Privacy Policy" href="http://www.adobe.com/misc/privacy.html">Privacy Policy</a></li><li><a href="http://access.adobe.com">Accessibility</a></li><li><a title="Avoid software piracy" href="http://www.adobe.com/aboutadobe/antipiracy/main.html">Avoid software piracy</a></li></ul><!--two lists because of quirks mode--><ul id="list2"><li id="tms"><a title="Permissions and trademarks" href="http://www.adobe.com/misc/agreement.html">Permissions and trademarks</a></li><li><a title="Product License Agreements" href="http://www.adobe.com/products/eulas/main.html">Product License Agreements</a></li></ul><a title="Reviewed by TRUSTe: site privacy statement" href="http://www.adobe.com/misc/privacy.html"><img id="privacyicon" src="http://www.adobe.com/images/finalmark.gif" alt="Reviewed by TRUSTe: site privacy statement" height="31" width="116" border="0"/></a></div>
-
+</div> <!-- content -->
+<div class='footerdiv'>
+    <div id='footersub'>
+        <ul>
+            <li><a href="http://www.adobe.com/go/gftray_foot_aboutadobe">Company</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_contact_adobe">Contact Us</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_accessibility">Accessibility</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_report_piracy">Report Piracy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_permissions_trademarks">Permissions &amp; Trademarks</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_product_license_agreements">Product License Agreements</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_feedback">Send Feedback</a></li>
+        </ul>
+        <div>
+            <p>Copyright &#169; 2006-2008 Adobe Systems Incorporated.</p>
+            <p>Use of this website signifies your agreement to the <a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a> and <a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>.</p>
+            <p>Search powered by <a href="http://www.google.com/" target="new">Google</a></p>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+_uacct = "UA-396569-1";
+urchinTracker();
+</script>
 </body>
 </html>

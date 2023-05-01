@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_reference.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_reference.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -16,6 +16,7 @@
 #include "dng_reference.h"
 
 #include "dng_1d_table.h"
+#include "dng_hue_sat_map.h"
 #include "dng_matrix.h"
 #include "dng_resample.h"
 #include "dng_utils.h"
@@ -1397,6 +1398,218 @@ void RefBaselineABCDtoRGB (const real32 *sPtrA,
 
 /*****************************************************************************/
 
+void RefBaselineHueSatMap (const real32 *sPtrR,
+						   const real32 *sPtrG,
+						   const real32 *sPtrB,
+						   real32 *dPtrR,
+						   real32 *dPtrG,
+						   real32 *dPtrB,
+						   uint32 count,
+						   const dng_hue_sat_map &lut)
+	{
+	
+	uint32 hueDivisions;
+	uint32 satDivisions;
+	uint32 valDivisions;
+	
+	lut.GetDivisions (hueDivisions,
+					  satDivisions,
+					  valDivisions);
+					  
+	real32 hScale = (hueDivisions < 2) ? 0.0f : (hueDivisions * (1.0f / 6.0f));
+	real32 sScale = (real32) (satDivisions - 1);
+	real32 vScale = (real32) (valDivisions - 1);
+		
+	int32 maxHueIndex0 = hueDivisions - 1;
+	int32 maxSatIndex0 = satDivisions - 2;
+	int32 maxValIndex0 = valDivisions - 2;
+		
+	const dng_hue_sat_map::HSBModify *tableBase = lut.GetDeltas ();
+	
+	int32 hueStep = satDivisions;
+	int32 valStep = hueDivisions * hueStep;
+	
+	#if 0	// Not required with "2.5D" table optimization.
+	
+	if (valDivisions < 2)
+		{
+		valStep      = 0;
+		maxValIndex0 = 0;
+		}
+		
+	#endif
+	
+	for (uint32 j = 0; j < count; j++)
+		{
+		
+		real32 r = sPtrR [j];
+		real32 g = sPtrG [j];
+		real32 b = sPtrB [j];
+		
+		real32 h, s, v;
+		
+		DNG_RGBtoHSV (r, g, b, h, s, v);
+		
+		real32 hueShift;
+		real32 satScale;
+		real32 valScale;
+		
+		if (valDivisions < 2)		// Optimize most common case of "2.5D" table.
+			{
+		
+			real32 hScaled = h * hScale;
+			real32 sScaled = s * sScale;
+			
+			int32 hIndex0 = (int32) hScaled;
+			int32 sIndex0 = (int32) sScaled;
+			
+			sIndex0 = Min_int32 (sIndex0, maxSatIndex0);
+			
+			int32 hIndex1 = hIndex0 + 1;
+			
+			if (hIndex0 >= maxHueIndex0)
+				{
+				hIndex0 = maxHueIndex0;
+				hIndex1 = 0;
+				}
+				
+			real32 hFract1 = hScaled - (real32) hIndex0;
+			real32 sFract1 = sScaled - (real32) sIndex0;
+			
+			real32 hFract0 = 1.0f - hFract1;
+			real32 sFract0 = 1.0f - sFract1;
+			
+			const dng_hue_sat_map::HSBModify *entry00 = tableBase + hIndex0 * hueStep +
+																	sIndex0;
+			
+			const dng_hue_sat_map::HSBModify *entry01 = entry00 + (hIndex1 - hIndex0) * hueStep;
+			
+			real32 hueShift0 = hFract0 * entry00->fHueShift +
+							   hFract1 * entry01->fHueShift;
+										 
+			real32 satScale0 = hFract0 * entry00->fSatScale +
+							   hFract1 * entry01->fSatScale;
+			
+			real32 valScale0 = hFract0 * entry00->fValScale +
+							   hFract1 * entry01->fValScale;
+
+			entry00++;
+			entry01++;
+
+			real32 hueShift1 = hFract0 * entry00->fHueShift +
+							   hFract1 * entry01->fHueShift;
+										 
+			real32 satScale1 = hFract0 * entry00->fSatScale +
+							   hFract1 * entry01->fSatScale;
+			
+			real32 valScale1 = hFract0 * entry00->fValScale +
+							   hFract1 * entry01->fValScale;
+						
+			hueShift = sFract0 * hueShift0 + sFract1 * hueShift1;
+			satScale = sFract0 * satScale0 + sFract1 * satScale1;
+			valScale = sFract0 * valScale0 + sFract1 * valScale1;
+			
+			}
+			
+		else
+			{
+		
+			real32 hScaled = h * hScale;
+			real32 sScaled = s * sScale;
+			real32 vScaled = v * vScale;
+			
+			int32 hIndex0 = (int32) hScaled;
+			int32 sIndex0 = (int32) sScaled;
+			int32 vIndex0 = (int32) vScaled;
+			
+			sIndex0 = Min_int32 (sIndex0, maxSatIndex0);
+			vIndex0 = Min_int32 (vIndex0, maxValIndex0);
+			
+			int32 hIndex1 = hIndex0 + 1;
+			
+			if (hIndex0 >= maxHueIndex0)
+				{
+				hIndex0 = maxHueIndex0;
+				hIndex1 = 0;
+				}
+				
+			real32 hFract1 = hScaled - (real32) hIndex0;
+			real32 sFract1 = sScaled - (real32) sIndex0;
+			real32 vFract1 = vScaled - (real32) vIndex0;
+			
+			real32 hFract0 = 1.0f - hFract1;
+			real32 sFract0 = 1.0f - sFract1;
+			real32 vFract0 = 1.0f - vFract1;
+			
+			const dng_hue_sat_map::HSBModify *entry00 = tableBase + vIndex0 * valStep + 
+																	hIndex0 * hueStep +
+																	sIndex0;
+			
+			const dng_hue_sat_map::HSBModify *entry01 = entry00 + (hIndex1 - hIndex0) * hueStep;
+			
+			const dng_hue_sat_map::HSBModify *entry10 = entry00 + valStep;
+			const dng_hue_sat_map::HSBModify *entry11 = entry01 + valStep;
+			
+			real32 hueShift0 = vFract0 * (hFract0 * entry00->fHueShift +
+									      hFract1 * entry01->fHueShift) +
+							   vFract1 * (hFract0 * entry10->fHueShift +
+									      hFract1 * entry11->fHueShift);
+										 
+			real32 satScale0 = vFract0 * (hFract0 * entry00->fSatScale +
+									      hFract1 * entry01->fSatScale) +
+							   vFract1 * (hFract0 * entry10->fSatScale +
+									      hFract1 * entry11->fSatScale);
+			
+			real32 valScale0 = vFract0 * (hFract0 * entry00->fValScale +
+									      hFract1 * entry01->fValScale) +
+							   vFract1 * (hFract0 * entry10->fValScale +
+									      hFract1 * entry11->fValScale);
+			
+			entry00++;
+			entry01++;
+			entry10++;
+			entry11++;
+
+			real32 hueShift1 = vFract0 * (hFract0 * entry00->fHueShift +
+										  hFract1 * entry01->fHueShift) +
+							   vFract1 * (hFract0 * entry10->fHueShift +
+										  hFract1 * entry11->fHueShift);
+										 
+			real32 satScale1 = vFract0 * (hFract0 * entry00->fSatScale +
+										  hFract1 * entry01->fSatScale) +
+							   vFract1 * (hFract0 * entry10->fSatScale +
+										  hFract1 * entry11->fSatScale);
+			
+			real32 valScale1 = vFract0 * (hFract0 * entry00->fValScale +
+										  hFract1 * entry01->fValScale) +
+							   vFract1 * (hFract0 * entry10->fValScale +
+										  hFract1 * entry11->fValScale);
+						
+			hueShift = sFract0 * hueShift0 + sFract1 * hueShift1;
+			satScale = sFract0 * satScale0 + sFract1 * satScale1;
+			valScale = sFract0 * valScale0 + sFract1 * valScale1;
+			
+			}
+			
+		hueShift *= (6.0f / 360.0f);	// Convert to internal hue range.
+		
+		h += hueShift;
+		
+		s = Min_real32 (s * satScale, 1.0f);
+		v = Min_real32 (v * valScale, 1.0f);
+		
+		DNG_HSVtoRGB (h, s, v, r, g, b);
+		
+		dPtrR [j] = r;
+		dPtrG [j] = g;
+		dPtrB [j] = b;
+		
+		}
+	
+	}
+
+/*****************************************************************************/
+
 void RefBaselineRGBtoGray (const real32 *sPtrR,
 						   const real32 *sPtrG,
 						   const real32 *sPtrB,
@@ -1520,7 +1733,7 @@ void RefBaselineRGBTone (const real32 *sPtrR,
 		#define RGBTone(r, g, b, rr, gg, bb)\
 			{\
 			\
-			ASSERT (r >= g && g >= b && r > b, "Logic Error RGBTone");\
+			DNG_ASSERT (r >= g && g >= b && r > b, "Logic Error RGBTone");\
 			\
 			rr = table.Interpolate (r);\
 			bb = table.Interpolate (b);\
@@ -1564,7 +1777,7 @@ void RefBaselineRGBTone (const real32 *sPtrR,
 				
 				// Case 4: r >= g == b
 				
-				ASSERT (r >= g && g == b, "Logic Error 2");
+				DNG_ASSERT (r >= g && g == b, "Logic Error 2");
 				
 				rr = table.Interpolate (r);
 				gg = table.Interpolate (g);
@@ -1786,4 +1999,171 @@ void RefResampleAcross32 (const real32 *sPtr,
 		
 	}
 				
-/******************************************************************************/
+/*****************************************************************************/
+
+bool RefEqualBytes (const void *sPtr,
+					const void *dPtr,
+					uint32 count)
+	{
+	
+	return memcmp (dPtr, sPtr, count) == 0;
+	
+	}
+
+/*****************************************************************************/
+
+bool RefEqualArea8 (const uint8 *sPtr,
+				    const uint8 *dPtr,
+				    uint32 rows,
+				    uint32 cols,
+				    uint32 planes,
+				    int32 sRowStep,
+				    int32 sColStep,
+				    int32 sPlaneStep,
+				    int32 dRowStep,
+				    int32 dColStep,
+				    int32 dPlaneStep)
+	{
+	
+	for (uint32 row = 0; row < rows; row++)
+		{
+		
+		const uint8 *sPtr1 = sPtr;
+		const uint8 *dPtr1 = dPtr;
+		      
+		for (uint32 col = 0; col < cols; col++)
+			{
+			
+			const uint8 *sPtr2 = sPtr1;
+			const uint8 *dPtr2 = dPtr1;
+			      
+			for (uint32 plane = 0; plane < planes; plane++)
+				{
+			
+				if (*dPtr2 != *sPtr2)
+					return false;
+				
+				sPtr2 += sPlaneStep;
+				dPtr2 += dPlaneStep;
+				
+				}
+			
+			sPtr1 += sColStep;
+			dPtr1 += dColStep;
+
+			}
+			
+		sPtr += sRowStep;
+		dPtr += dRowStep;
+		
+		}
+
+	return true;
+
+	}
+
+/*****************************************************************************/
+
+bool RefEqualArea16 (const uint16 *sPtr,
+					 const uint16 *dPtr,
+					 uint32 rows,
+					 uint32 cols,
+					 uint32 planes,
+					 int32 sRowStep,
+					 int32 sColStep,
+					 int32 sPlaneStep,
+					 int32 dRowStep,
+					 int32 dColStep,
+					 int32 dPlaneStep)
+	{
+	
+	for (uint32 row = 0; row < rows; row++)
+		{
+		
+		const uint16 *sPtr1 = sPtr;
+		const uint16 *dPtr1 = dPtr;
+		      
+		for (uint32 col = 0; col < cols; col++)
+			{
+			
+			const uint16 *sPtr2 = sPtr1;
+			const uint16 *dPtr2 = dPtr1;
+			      
+			for (uint32 plane = 0; plane < planes; plane++)
+				{
+			
+				if (*dPtr2 != *sPtr2)
+					return false;
+				
+				sPtr2 += sPlaneStep;
+				dPtr2 += dPlaneStep;
+				
+				}
+			
+			sPtr1 += sColStep;
+			dPtr1 += dColStep;
+
+			}
+			
+		sPtr += sRowStep;
+		dPtr += dRowStep;
+		
+		}
+
+	return true;
+
+	}
+
+/*****************************************************************************/
+
+bool RefEqualArea32 (const uint32 *sPtr,
+					 const uint32 *dPtr,
+					 uint32 rows,
+					 uint32 cols,
+					 uint32 planes,
+					 int32 sRowStep,
+					 int32 sColStep,
+					 int32 sPlaneStep,
+					 int32 dRowStep,
+					 int32 dColStep,
+					 int32 dPlaneStep)
+	{
+		
+	for (uint32 row = 0; row < rows; row++)
+		{
+		
+		const uint32 *sPtr1 = sPtr;
+		const uint32 *dPtr1 = dPtr;
+		      
+		for (uint32 col = 0; col < cols; col++)
+			{
+			
+			const uint32 *sPtr2 = sPtr1;
+			const uint32 *dPtr2 = dPtr1;
+			      
+			for (uint32 plane = 0; plane < planes; plane++)
+				{
+			
+				if (*dPtr2 != *sPtr2)
+					return false;
+				
+				sPtr2 += sPlaneStep;
+				dPtr2 += dPlaneStep;
+				
+				}
+			
+			sPtr1 += sColStep;
+			dPtr1 += dColStep;
+
+			}
+			
+		sPtr += sRowStep;
+		dPtr += dRowStep;
+		
+		}
+
+	return true;
+
+	}
+
+/*****************************************************************************/

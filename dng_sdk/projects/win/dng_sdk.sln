@@ -1,21 +1,35 @@
-Microsoft Visual Studio Solution File, Format Version 8.00
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dng_validate", "dng_validate\dng_validate.vcproj", "{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}"
 	ProjectSection(ProjectDependencies) = postProject
+		{2C99A4A0-17D0-4FE7-9F81-F434A8434680} = {2C99A4A0-17D0-4FE7-9F81-F434A8434680}
+		{C5BB1536-3776-4474-861D-B5923C610FE4} = {C5BB1536-3776-4474-861D-B5923C610FE4}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dng_sdk", "dng_sdk\dng_sdk.vcproj", "{2C99A4A0-17D0-4FE7-9F81-F434A8434680}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XMPCore", "..\..\..\XMP-SDK\build\vsnet\XMPCore.vcproj", "{C5BB1536-3776-4474-861D-B5923C610FE4}"
+EndProject
 Global
-	GlobalSection(SolutionConfiguration) = preSolution
-		Debug = Debug
-		Release = Release
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
 	EndGlobalSection
-	GlobalSection(ProjectConfiguration) = postSolution
-		{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}.Debug.ActiveCfg = Debug|Win32
-		{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}.Debug.Build.0 = Debug|Win32
-		{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}.Release.ActiveCfg = Release|Win32
-		{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}.Release.Build.0 = Release|Win32
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}.Debug|Win32.ActiveCfg = Validate Debug|Win32
+		{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}.Debug|Win32.Build.0 = Validate Debug|Win32
+		{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}.Release|Win32.ActiveCfg = Validate Release|Win32
+		{5BBFC43E-3ED8-4D35-9083-53A103BE17FB}.Release|Win32.Build.0 = Validate Release|Win32
+		{2C99A4A0-17D0-4FE7-9F81-F434A8434680}.Debug|Win32.ActiveCfg = Validate Debug|Win32
+		{2C99A4A0-17D0-4FE7-9F81-F434A8434680}.Debug|Win32.Build.0 = Validate Debug|Win32
+		{2C99A4A0-17D0-4FE7-9F81-F434A8434680}.Release|Win32.ActiveCfg = Validate Release|Win32
+		{2C99A4A0-17D0-4FE7-9F81-F434A8434680}.Release|Win32.Build.0 = Validate Release|Win32
+		{C5BB1536-3776-4474-861D-B5923C610FE4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C5BB1536-3776-4474-861D-B5923C610FE4}.Debug|Win32.Build.0 = Debug|Win32
+		{C5BB1536-3776-4474-861D-B5923C610FE4}.Release|Win32.ActiveCfg = Release|Win32
+		{C5BB1536-3776-4474-861D-B5923C610FE4}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-	EndGlobalSection
-	GlobalSection(ExtensibilityAddIns) = postSolution
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

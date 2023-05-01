@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_bottlenecks.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_bottlenecks.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -50,6 +50,7 @@ dng_suite gDNGSuite =
 	RefBilinearRow32,
 	RefBaselineABCtoRGB,
 	RefBaselineABCDtoRGB,
+	RefBaselineHueSatMap,
 	RefBaselineRGBtoGray,
 	RefBaselineRGBtoRGB,
 	RefBaseline1DTable,
@@ -57,7 +58,11 @@ dng_suite gDNGSuite =
 	RefResampleDown16,
 	RefResampleDown32,
 	RefResampleAcross16,
-	RefResampleAcross32
+	RefResampleAcross32,
+	RefEqualBytes,
+	RefEqualArea8,
+	RefEqualArea16,
+	RefEqualArea32
 	};
 
 /*****************************************************************************/

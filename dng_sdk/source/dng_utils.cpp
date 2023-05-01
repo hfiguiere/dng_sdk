@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_utils.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_utils.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -18,17 +18,13 @@
 #include "dng_assertions.h"
 
 #if qMacOS
-#ifdef __MWERKS__
-#include <MacTypes.h>
-#include <Events.h>
-#else
-#include <Carbon/Carbon.h>
 #include <CoreServices/CoreServices.h>
-#endif
 #endif
 
 #if qWinOS
 #include <windows.h>
+#else
+#include <sys/time.h>
 #endif
 
 /*****************************************************************************/
@@ -38,7 +34,7 @@
 void dng_show_message (const char *s)
 	{
 	
-	#if qDNGValidate
+	#if qDNGPrintMessages
 	
 		{
 	
@@ -81,28 +77,68 @@ void dng_show_message (const char *s)
 
 /*****************************************************************************/
 
-dng_timer::dng_timer (const char *message)
+#if qDNGDebug
 
-	:	fMessage (message)
-	,	fStartTime (0)
-	
+void dng_show_message_f (const char *fmt, ... )
 	{
+	
+	char buffer [1024];
+	
+	va_list ap;
+	va_start (ap, fmt);
 
-	fMessage = message;
+	vsnprintf (buffer, sizeof (buffer), fmt, ap);
 	
-	#if qMacOS
+	va_end (ap);
 	
-	// Don't use the "clock" function on the Macintosh since it does not
-	// measure time correctly on MP systems.
+	dng_show_message (buffer);
 	
-	fStartTime = TickCount ();
+	}
+
+#endif
+
+/*****************************************************************************/
+
+real64 TickTimeInSeconds ()
+	{
+	
+	#if qWinOS
+	
+	// One might think it prudent to cache the frequency here, however
+	// low-power CPU modes can, and do, change the value returned.
+	// Thus the frequencey needs to be retrieved each time.
+
+	LARGE_INTEGER freq;
+	LARGE_INTEGER cycles;
+
+	QueryPerformanceFrequency (&freq);
+	QueryPerformanceCounter (&cycles);
+
+	return (real64)cycles.QuadPart / (real64)freq.QuadPart;
 	
 	#else
 
-	fStartTime = clock ();
+	// Perhaps a better call exists. (e.g. avoid adjtime effects)
+
+	struct timeval tv;
+	
+	gettimeofday (&tv, NULL);
+
+	return tv.tv_sec + tv.tv_usec / 1000000.0;
 	
 	#endif
+
+	}
+
+/*****************************************************************************/
+
+dng_timer::dng_timer (const char *message)
+
+	:	fMessage   (message             )
+	,	fStartTime (TickTimeInSeconds ())
 	
+	{
+
 	}
 
 /*****************************************************************************/
@@ -110,22 +146,9 @@ dng_timer::dng_timer (const char *message)
 dng_timer::~dng_timer ()
 	{
 
-	#if qMacOS
+	real64 totalTime = TickTimeInSeconds () - fStartTime;
 	
-	uint32 finishTime = TickCount ();
-	
-	real64 sec = (finishTime - fStartTime) * (1.0 / 60.0);
-	
-	#else
-	
-	clock_t finishTime = clock ();
-	
-	real64 sec = (real64) (finishTime - fStartTime) /
-				 (real64) CLOCKS_PER_SEC;
-				 
-	#endif
-	
-	fprintf (stderr, "%s: %0.2f sec\n", fMessage, sec);
+	fprintf (stderr, "%s: %0.3f sec\n", fMessage, totalTime);
 
 	}
 

@@ -1,147 +1,206 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <!--
-/*
-    Copyright 2005-2006 Adobe Systems Incorporated
+    Copyright 2005-2007 Adobe Systems Incorporated
     Distributed under the MIT License (see accompanying file LICENSE_1_0_0.txt
-    or a copy at http://opensource.adobe.com/licenses.html)
-*/
-Some files are held under additional license. Please see "licenses.html" for more information.
+    or a copy at http://stlab.adobe.com/licenses.html)
+
+    Some files are held under additional license.
+    Please see "http://stlab.adobe.com/licenses.html" for more information.
 -->
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-    <TITLE>DNG SDK: Class Members</TITLE>
+    <TITLE>DNG SDK 1.2: Class Members</TITLE>
     <META HTTP-EQUIV="content-type" CONTENT="text/html;charset=ISO-8859-1"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/basic.css"/>
-    <STYLE TYPE="text/css" MEDIA="all"><!--
-        @import url("http://www.adobe.com/ssi/css/modern.css");
-    --></STYLE>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/print.css" MEDIA="print"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/mainnav.css"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="stlab.css"/>
-    <LINK REL="alternate" TITLE="opensource.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
-</HEAD>
-
-<body bgcolor="white">
-
-<div id="mainnav" width="100%">
-<table width="100%" border="0"><tr><td width="50%">
-<a title="Adobe Systems home page" href="http://www.adobe.com/" tabindex="2"><img src="http://www.adobe.com/images/logo.gif" alt="Adobe Systems, Inc." height="80" width="150"/></a>
-</td><td align="right" valign="top">
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="+2" color="black">Adobe Open Source</font></a><br/>
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="-2" color="black">opensource.adobe.com</font></a>
-</td></tr></table>
-</div>
-<br/>
-<table border="0" cellspacing="0" cellpadding="0" width="100%">
-<tr><td width="10" nowrap="1"> </td>
+    <LINK TYPE="text/css" REL="stylesheet" HREF="adobe_source.css"/>
+    <LINK REL="alternate" TITLE="stlab.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+</head>
+<body>
+<div id='content'>
+<table><tr>
+<td colspan='5'>
+    <div id='opensource_banner'>
+    <table style='width: 100%; padding: 5px;'><tr>
+    <td>
+        <span style='font-size: 30px'><a href='index.html' style='color: black; border: none'>stlab.adobe.com</a></span>
+    </td>
+    <td align='right'>
+        <a href='http://www.adobe.com' style='border: none'><img src='adobe_hlogo.gif' alt="Adobe Systems Incorporated"/></a>
+    </td>
+    </tr></table>
+    </div>
+</td></tr><tr>
 <td valign="top">
-    <table border="0" cellpadding="5">
-    <tr><td nowrap="1">
-        <h3 class="navbar">Information</h3>
-        <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="group__asl__overview.html">Overview</a></li>
-            <li><a href="asl_toc.html">Documentation</a></li>
-            <li><a href="asl_readme.html">Getting Started</a></li>
-            <li><a href="asl_release_notes.html">Release Notes</a></li>
-            <li><a href="http://opensource.adobe.com/twiki/bin/view/AdobeSource">ASL Wiki</a></li>
-            <li><a href="licenses.html">License</a></li>
-            <li><a href="asl_indices.html">Indices</a></li>
-        </ul>
-        <h3 class="navbar">Media</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a></li>
-            <li><a href="asl_download_cvs.html">ASL CVS Repository</a></li>
-            <li><a href="http://cvs.sourceforge.net/viewcvs.py/adobe-source/">View CVS Repository</a></li>
-        </ul>
-        <h3 class="navbar">Support</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a></li>
-            <li><a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a></li>
-            <li><a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a></li>
-            <li><a href="asl_contributing.html">Contributing to ASL</a></li>
-        </ul>
-        <h3 class="navbar">RSS</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a></li>
-        </ul>
-        <h3 class="navbar">Other Resources</h3>
-        <ul>
-            <li><a href="http://boost.org">Boost</a></li>
-            <li><a href="http://www.sgi.com/tech/stl">SGI STL</a></li>
-        </ul>
-        <h3 class="navbar">Other Adobe Projects</h3>
-        <ul>
-            <li><a href="http://www.adobe.com/products/xmp/">Adobe XMP</a></li>
-        </ul>
-    </td></tr>
-    </table>
+    <div id='navtable' height='100%'>
+    <div style='margin: 5px'>
+        <h4>Documentation</h4>
+
+        <a href="group__asl__overview.html">Overview</a><br/>
+        <a href="asl_readme.html">Building ASL</a><br/>
+        <a href="asl_toc.html">Documentation</a><br/>
+        <a href="http://stlab.adobe.com/wiki/index.php/Supplementary_ASL_Documentation">Library Wiki Docs</a><br/>
+        <a href="asl_indices.html">Indices</a><br/>
+        <a href="http://stlab.adobe.com/perforce/">Browse Perforce</a><br/>
+
+        <h4>More Info</h4>
+
+        <a href="asl_release_notes.html">Release Notes</a><br/>
+        <a href="http://stlab.adobe.com/wiki/">Wiki</a><br/>
+        <a href="asl_search.html">Site Search</a><br/>
+        <a href="licenses.html">License</a><br/>
+        <a href="success_stories.html">Success Stories</a><br/>
+        <a href="asl_contributors.html">Contributors</a><br/>
+
+        <h4>Media</h4>
+
+        <a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a><br/>
+        <a href="asl_download_perforce.html">Perforce Depots</a><br/>
+
+        <h4>Support</h4>
+
+        <a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a><br/>
+        <a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a><br/>
+        <a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a><br/>
+        <a href="asl_contributing.html">Contribute to ASL</a><br/>
+
+        <h4>RSS</h4>
+
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a><br/>
+
+        <h4>Other Adobe Projects</h4>
+
+        <a href="adobe_apollo.html">Adobe Air</a><br/>
+        <a href="http://stlab.adobe.com/gil/">Adobe GIL</a><br/>
+        <a href="http://labs.adobe.com">Adobe Labs</a><br/>
+        <a href="http://stlab.adobe.com/amg/">Adobe Media Gallery</a><br/>
+        <a href="http://www.adobe.com/products/xmp/">Adobe XMP</a><br/>
+        <a href="http://www.mozilla.org/projects/tamarin">Tamarin project<br/>(Mozilla Foundation)</a><br/>
+
+        <h4>Other Resources</h4>
+
+        <a href="http://boost.org">Boost</a><br/>
+        <a href="http://www.riaforge.com/">RIAForge</a><br/>
+        <a href="http://www.sgi.com/tech/stl">SGI STL</a><br/>
+    </div>
+    </div>
 </td>
-<td width="10" nowrap="1"> </td>
-<td width="100%" valign="top">
+<td id='maintable' width="100%" valign="top">
 
 <!-- End Header -->
-
-<!-- Generated by Doxygen 1.4.6-NO -->
-<div class="tabs">
-  <ul>
-    <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-    <li><a href="annotated.html"><span>Classes</span></a></li>
-    <li id="current"><a href="files.html"><span>Files</span></a></li>
-    <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
-  </ul></div>
-<div class="tabs">
-  <ul>
-    <li><a href="files.html"><span>File&nbsp;List</span></a></li>
-    <li id="current"><a href="globals.html"><span>File&nbsp;Members</span></a></li>
-  </ul></div>
-<div class="tabs">
-  <ul>
-    <li><a href="globals.html"><span>All</span></a></li>
-    <li id="current"><a href="globals_func.html"><span>Functions</span></a></li>
-    <li><a href="globals_vars.html"><span>Variables</span></a></li>
-    <li><a href="globals_type.html"><span>Typedefs</span></a></li>
-    <li><a href="globals_enum.html"><span>Enumerations</span></a></li>
-    <li><a href="globals_eval.html"><span>Enumerator</span></a></li>
-    <li><a href="globals_defs.html"><span>Defines</span></a></li>
-  </ul>
+<!-- Generated by Doxygen 1.5.5 -->
+<div class="navigation" id="top">
+  <div class="tabs">
+    <ul>
+      <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
+      <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
+      <li><a href="annotated.html"><span>Classes</span></a></li>
+      <li class="current"><a href="files.html"><span>Files</span></a></li>
+    </ul>
+  </div>
+  <div class="tabs">
+    <ul>
+      <li><a href="files.html"><span>File&nbsp;List</span></a></li>
+      <li class="current"><a href="globals.html"><span>File&nbsp;Members</span></a></li>
+    </ul>
+  </div>
+  <div class="tabs">
+    <ul>
+      <li><a href="globals.html"><span>All</span></a></li>
+      <li class="current"><a href="globals_func.html"><span>Functions</span></a></li>
+      <li><a href="globals_vars.html"><span>Variables</span></a></li>
+      <li><a href="globals_type.html"><span>Typedefs</span></a></li>
+      <li><a href="globals_enum.html"><span>Enumerations</span></a></li>
+      <li><a href="globals_eval.html"><span>Enumerator</span></a></li>
+      <li><a href="globals_defs.html"><span>Defines</span></a></li>
+    </ul>
+  </div>
 </div>
+<div class="contents">
 &nbsp;
 <p>
 <ul>
 <li>CurrentDateTimeAndZone()
-: <a class="el" href="dng__date__time_8h.html#4be8f573458a19f0fedc0e716bf7beb5">dng_date_time.h</a><li>DecodeUnixTime()
-: <a class="el" href="dng__date__time_8h.html#2b07191d00dfdab64d38efdc197025a5">dng_date_time.h</a><li>Fail_dng_error()
-: <a class="el" href="dng__exceptions_8h.html#a0ed0dd3d8f9635391865a6b2ff390fb">dng_exceptions.h</a><li>LocalTimeZone()
-: <a class="el" href="dng__date__time_8h.html#c3c7dfb3a4daf1e908b65c4a7abc3ff1">dng_date_time.h</a><li>MapWhiteMatrix()
-: <a class="el" href="dng__color__spec_8h.html#8f0d17b51017b70f0a337503fd117a7f">dng_color_spec.h</a><li>OptimizeOrder()
-: <a class="el" href="dng__pixel__buffer_8h.html#919f5e967f81ef3f094618866a503a2c">dng_pixel_buffer.h</a><li>Throw_dng_error()
-: <a class="el" href="dng__exceptions_8h.html#ce6074cb2ee974e463a29532eb0d7284">dng_exceptions.h</a><li>ThrowBadFormat()
-: <a class="el" href="dng__exceptions_8h.html#29f3cfd9536f922a8b9ba71cb7b5a329">dng_exceptions.h</a><li>ThrowEndOfFile()
-: <a class="el" href="dng__exceptions_8h.html#24a026e5a9f456f51ee2daee6b6c7000">dng_exceptions.h</a><li>ThrowHostInsufficient()
-: <a class="el" href="dng__exceptions_8h.html#e21a996043a184cd506351958d9fc7c7">dng_exceptions.h</a><li>ThrowMatrixMath()
-: <a class="el" href="dng__exceptions_8h.html#f15020187fff13ac84acbca30af293d3">dng_exceptions.h</a><li>ThrowMemoryFull()
-: <a class="el" href="dng__exceptions_8h.html#9bbe7dff92068bd953d9700d162e85dd">dng_exceptions.h</a><li>ThrowNotYetImplemented()
-: <a class="el" href="dng__exceptions_8h.html#0070e431be240150fa6a2243aedb13ac">dng_exceptions.h</a><li>ThrowOpenFile()
-: <a class="el" href="dng__exceptions_8h.html#32bdcff589ecb8765872ecc15edc0cdd">dng_exceptions.h</a><li>ThrowProgramError()
-: <a class="el" href="dng__exceptions_8h.html#edb2d4a873f850320ff9c1b1e9b6e654">dng_exceptions.h</a><li>ThrowReadFile()
-: <a class="el" href="dng__exceptions_8h.html#2c7a07d1822090c3e9c09d82c83ae794">dng_exceptions.h</a><li>ThrowSilentError()
-: <a class="el" href="dng__exceptions_8h.html#64fd2d8a7090a0cbba7fb4a00f5df931">dng_exceptions.h</a><li>ThrowUserCanceled()
-: <a class="el" href="dng__exceptions_8h.html#dc7896c0c3c8dce3d13fecfc81ceab58">dng_exceptions.h</a><li>ThrowWriteFile()
-: <a class="el" href="dng__exceptions_8h.html#3bc4d56574f60c81112e4a7914e5e2f7">dng_exceptions.h</a></ul>
+: <a class="el" href="dng__date__time_8h.html#f60f39a322119491e74e09245eb67e59">dng_date_time.h</a>
+<li>DecodeUnixTime()
+: <a class="el" href="dng__date__time_8h.html#2b07191d00dfdab64d38efdc197025a5">dng_date_time.h</a>
+<li>Fail_dng_error()
+: <a class="el" href="dng__exceptions_8h.html#a0ed0dd3d8f9635391865a6b2ff390fb">dng_exceptions.h</a>
+<li>LocalTimeZone()
+: <a class="el" href="dng__date__time_8h.html#19cc0dad12c5ab288f7ef6487d476d54">dng_date_time.h</a>
+<li>MapWhiteMatrix()
+: <a class="el" href="dng__color__spec_8h.html#8f0d17b51017b70f0a337503fd117a7f">dng_color_spec.h</a>
+<li>OptimizeOrder()
+: <a class="el" href="dng__pixel__buffer_8h.html#919f5e967f81ef3f094618866a503a2c">dng_pixel_buffer.h</a>
+<li>ReportError()
+: <a class="el" href="dng__exceptions_8h.html#ee0ea1691bd36d373b9655487ed39dca">dng_exceptions.h</a>
+<li>ReportWarning()
+: <a class="el" href="dng__exceptions_8h.html#68550e01877f340eaac10dee8ced9fea">dng_exceptions.h</a>
+<li>Throw_dng_error()
+: <a class="el" href="dng__exceptions_8h.html#c1faf3feb169c52825d97dd3c90cd350">dng_exceptions.h</a>
+<li>ThrowBadFormat()
+: <a class="el" href="dng__exceptions_8h.html#f2606a65a29e3a276501df6b2baec11b">dng_exceptions.h</a>
+<li>ThrowBadOriginalDigest()
+: <a class="el" href="dng__exceptions_8h.html#46d5684b7e239d695d4b5dbddc39d533">dng_exceptions.h</a>
+<li>ThrowBadRawDigest()
+: <a class="el" href="dng__exceptions_8h.html#27c0e3196fecdf76a7306a1630c7c427">dng_exceptions.h</a>
+<li>ThrowEndOfFile()
+: <a class="el" href="dng__exceptions_8h.html#0e972f6540e1bbfd7b6869dd8e24dabe">dng_exceptions.h</a>
+<li>ThrowHostInsufficient()
+: <a class="el" href="dng__exceptions_8h.html#a27370ed366407eff94a717f6f2cbb8b">dng_exceptions.h</a>
+<li>ThrowMatrixMath()
+: <a class="el" href="dng__exceptions_8h.html#f21ac4b9fe428584659b8932a6a93432">dng_exceptions.h</a>
+<li>ThrowMemoryFull()
+: <a class="el" href="dng__exceptions_8h.html#619ea59661040ecd46da10687407c882">dng_exceptions.h</a>
+<li>ThrowNotYetImplemented()
+: <a class="el" href="dng__exceptions_8h.html#930efb1953a9b6fae63600bb836b6dbe">dng_exceptions.h</a>
+<li>ThrowOpenFile()
+: <a class="el" href="dng__exceptions_8h.html#1368e22cfcfa5c87fa611a365248e59c">dng_exceptions.h</a>
+<li>ThrowProgramError()
+: <a class="el" href="dng__exceptions_8h.html#d86e151635a7ebab9c6f192996fffd63">dng_exceptions.h</a>
+<li>ThrowReadFile()
+: <a class="el" href="dng__exceptions_8h.html#2c444d5faaaf58dd08bb57a24940f824">dng_exceptions.h</a>
+<li>ThrowSilentError()
+: <a class="el" href="dng__exceptions_8h.html#64fd2d8a7090a0cbba7fb4a00f5df931">dng_exceptions.h</a>
+<li>ThrowUserCanceled()
+: <a class="el" href="dng__exceptions_8h.html#dc7896c0c3c8dce3d13fecfc81ceab58">dng_exceptions.h</a>
+<li>ThrowWriteFile()
+: <a class="el" href="dng__exceptions_8h.html#9218e420d43a10ce3c0024356c2b30df">dng_exceptions.h</a>
+</ul>
+</div>
 
 <!-- Begin Footer -->
-</td>
-<td width="20">&nbsp;&nbsp;</td>
+</td></tr>
 </table>
-
-<div id="footerrow"><!--give footer 25px of white above--></div><div id="footer" title="footer: links to copyright and other legal information"><p><a href="licenses.html" class="el">Copyright &copy; 2005 Adobe Systems Incorporated</a></p><ul id="list1"><!-- due to a rendering error in IE, these links should all be on one line without returns --><li id="terms"><a title="Terms of Use" href="http://www.adobe.com/misc/copyright.html">Terms of Use</a></li><li><a title="Privacy Policy" href="http://www.adobe.com/misc/privacy.html">Privacy Policy</a></li><li><a href="http://access.adobe.com">Accessibility</a></li><li><a title="Avoid software piracy" href="http://www.adobe.com/aboutadobe/antipiracy/main.html">Avoid software piracy</a></li></ul><!--two lists because of quirks mode--><ul id="list2"><li id="tms"><a title="Permissions and trademarks" href="http://www.adobe.com/misc/agreement.html">Permissions and trademarks</a></li><li><a title="Product License Agreements" href="http://www.adobe.com/products/eulas/main.html">Product License Agreements</a></li></ul><a title="Reviewed by TRUSTe: site privacy statement" href="http://www.adobe.com/misc/privacy.html"><img id="privacyicon" src="http://www.adobe.com/images/finalmark.gif" alt="Reviewed by TRUSTe: site privacy statement" height="31" width="116" border="0"/></a></div>
-
+</div> <!-- content -->
+<div class='footerdiv'>
+    <div id='footersub'>
+        <ul>
+            <li><a href="http://www.adobe.com/go/gftray_foot_aboutadobe">Company</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_contact_adobe">Contact Us</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_accessibility">Accessibility</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_report_piracy">Report Piracy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_permissions_trademarks">Permissions &amp; Trademarks</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_product_license_agreements">Product License Agreements</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_feedback">Send Feedback</a></li>
+        </ul>
+        <div>
+            <p>Copyright &#169; 2006-2008 Adobe Systems Incorporated.</p>
+            <p>Use of this website signifies your agreement to the <a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a> and <a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>.</p>
+            <p>Search powered by <a href="http://www.google.com/" target="new">Google</a></p>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+_uacct = "UA-396569-1";
+urchinTracker();
+</script>
 </body>
 </html>

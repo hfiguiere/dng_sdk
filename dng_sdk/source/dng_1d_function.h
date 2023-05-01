@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_1d_function.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_1d_function.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Classes for a 1D floating-point to floating-point function abstraction.
@@ -63,6 +63,7 @@ class dng_1d_function
 /*****************************************************************************/
 
 /// An identity (x -> y such that x == y for all x) mapping function.
+
 class dng_1d_identity: public dng_1d_function
 	{
 	
@@ -84,7 +85,6 @@ class dng_1d_identity: public dng_1d_function
 		static const dng_1d_function & Get ();
 	
 	};
-
 
 /*****************************************************************************/
 
@@ -125,6 +125,29 @@ class dng_1d_concatenate: public dng_1d_function
 		/// \param y A value to reverse map. Should be within the range of function2.Evaluate.
 		/// \retval A value x such that function2.Evaluate(function1.Evaluate(x)) == y (to very close approximation).
 
+		virtual real64 EvaluateInverse (real64 y) const;
+	
+	};
+
+/*****************************************************************************/
+
+/// A dng_1d_function that represents the inverse of another dng_1d_function.
+
+class dng_1d_inverse: public dng_1d_function
+	{
+	
+	protected:
+	
+		const dng_1d_function &fFunction;
+	
+	public:
+	
+		dng_1d_inverse (const dng_1d_function &f);
+	
+		virtual bool IsIdentity () const;
+	
+		virtual real64 Evaluate (real64 x) const;
+	
 		virtual real64 EvaluateInverse (real64 y) const;
 	
 	};

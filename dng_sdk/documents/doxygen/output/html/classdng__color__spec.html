@@ -1,123 +1,126 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <!--
-/*
-    Copyright 2005-2006 Adobe Systems Incorporated
+    Copyright 2005-2007 Adobe Systems Incorporated
     Distributed under the MIT License (see accompanying file LICENSE_1_0_0.txt
-    or a copy at http://opensource.adobe.com/licenses.html)
-*/
-Some files are held under additional license. Please see "licenses.html" for more information.
+    or a copy at http://stlab.adobe.com/licenses.html)
+
+    Some files are held under additional license.
+    Please see "http://stlab.adobe.com/licenses.html" for more information.
 -->
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-    <TITLE>DNG SDK: dng_color_spec Class Reference</TITLE>
+    <TITLE>DNG SDK 1.2: dng_color_spec Class Reference</TITLE>
     <META HTTP-EQUIV="content-type" CONTENT="text/html;charset=ISO-8859-1"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/basic.css"/>
-    <STYLE TYPE="text/css" MEDIA="all"><!--
-        @import url("http://www.adobe.com/ssi/css/modern.css");
-    --></STYLE>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/print.css" MEDIA="print"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/mainnav.css"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="stlab.css"/>
-    <LINK REL="alternate" TITLE="opensource.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
-</HEAD>
-
-<body bgcolor="white">
-
-<div id="mainnav" width="100%">
-<table width="100%" border="0"><tr><td width="50%">
-<a title="Adobe Systems home page" href="http://www.adobe.com/" tabindex="2"><img src="http://www.adobe.com/images/logo.gif" alt="Adobe Systems, Inc." height="80" width="150"/></a>
-</td><td align="right" valign="top">
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="+2" color="black">Adobe Open Source</font></a><br/>
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="-2" color="black">opensource.adobe.com</font></a>
-</td></tr></table>
-</div>
-<br/>
-<table border="0" cellspacing="0" cellpadding="0" width="100%">
-<tr><td width="10" nowrap="1"> </td>
+    <LINK TYPE="text/css" REL="stylesheet" HREF="adobe_source.css"/>
+    <LINK REL="alternate" TITLE="stlab.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+</head>
+<body>
+<div id='content'>
+<table><tr>
+<td colspan='5'>
+    <div id='opensource_banner'>
+    <table style='width: 100%; padding: 5px;'><tr>
+    <td>
+        <span style='font-size: 30px'><a href='index.html' style='color: black; border: none'>stlab.adobe.com</a></span>
+    </td>
+    <td align='right'>
+        <a href='http://www.adobe.com' style='border: none'><img src='adobe_hlogo.gif' alt="Adobe Systems Incorporated"/></a>
+    </td>
+    </tr></table>
+    </div>
+</td></tr><tr>
 <td valign="top">
-    <table border="0" cellpadding="5">
-    <tr><td nowrap="1">
-        <h3 class="navbar">Information</h3>
-        <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="group__asl__overview.html">Overview</a></li>
-            <li><a href="asl_toc.html">Documentation</a></li>
-            <li><a href="asl_readme.html">Getting Started</a></li>
-            <li><a href="asl_release_notes.html">Release Notes</a></li>
-            <li><a href="http://opensource.adobe.com/twiki/bin/view/AdobeSource">ASL Wiki</a></li>
-            <li><a href="licenses.html">License</a></li>
-            <li><a href="asl_indices.html">Indices</a></li>
-        </ul>
-        <h3 class="navbar">Media</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a></li>
-            <li><a href="asl_download_cvs.html">ASL CVS Repository</a></li>
-            <li><a href="http://cvs.sourceforge.net/viewcvs.py/adobe-source/">View CVS Repository</a></li>
-        </ul>
-        <h3 class="navbar">Support</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a></li>
-            <li><a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a></li>
-            <li><a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a></li>
-            <li><a href="asl_contributing.html">Contributing to ASL</a></li>
-        </ul>
-        <h3 class="navbar">RSS</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a></li>
-        </ul>
-        <h3 class="navbar">Other Resources</h3>
-        <ul>
-            <li><a href="http://boost.org">Boost</a></li>
-            <li><a href="http://www.sgi.com/tech/stl">SGI STL</a></li>
-        </ul>
-        <h3 class="navbar">Other Adobe Projects</h3>
-        <ul>
-            <li><a href="http://www.adobe.com/products/xmp/">Adobe XMP</a></li>
-        </ul>
-    </td></tr>
-    </table>
+    <div id='navtable' height='100%'>
+    <div style='margin: 5px'>
+        <h4>Documentation</h4>
+
+        <a href="group__asl__overview.html">Overview</a><br/>
+        <a href="asl_readme.html">Building ASL</a><br/>
+        <a href="asl_toc.html">Documentation</a><br/>
+        <a href="http://stlab.adobe.com/wiki/index.php/Supplementary_ASL_Documentation">Library Wiki Docs</a><br/>
+        <a href="asl_indices.html">Indices</a><br/>
+        <a href="http://stlab.adobe.com/perforce/">Browse Perforce</a><br/>
+
+        <h4>More Info</h4>
+
+        <a href="asl_release_notes.html">Release Notes</a><br/>
+        <a href="http://stlab.adobe.com/wiki/">Wiki</a><br/>
+        <a href="asl_search.html">Site Search</a><br/>
+        <a href="licenses.html">License</a><br/>
+        <a href="success_stories.html">Success Stories</a><br/>
+        <a href="asl_contributors.html">Contributors</a><br/>
+
+        <h4>Media</h4>
+
+        <a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a><br/>
+        <a href="asl_download_perforce.html">Perforce Depots</a><br/>
+
+        <h4>Support</h4>
+
+        <a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a><br/>
+        <a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a><br/>
+        <a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a><br/>
+        <a href="asl_contributing.html">Contribute to ASL</a><br/>
+
+        <h4>RSS</h4>
+
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a><br/>
+
+        <h4>Other Adobe Projects</h4>
+
+        <a href="adobe_apollo.html">Adobe Air</a><br/>
+        <a href="http://stlab.adobe.com/gil/">Adobe GIL</a><br/>
+        <a href="http://labs.adobe.com">Adobe Labs</a><br/>
+        <a href="http://stlab.adobe.com/amg/">Adobe Media Gallery</a><br/>
+        <a href="http://www.adobe.com/products/xmp/">Adobe XMP</a><br/>
+        <a href="http://www.mozilla.org/projects/tamarin">Tamarin project<br/>(Mozilla Foundation)</a><br/>
+
+        <h4>Other Resources</h4>
+
+        <a href="http://boost.org">Boost</a><br/>
+        <a href="http://www.riaforge.com/">RIAForge</a><br/>
+        <a href="http://www.sgi.com/tech/stl">SGI STL</a><br/>
+    </div>
+    </div>
 </td>
-<td width="10" nowrap="1"> </td>
-<td width="100%" valign="top">
+<td id='maintable' width="100%" valign="top">
 
 <!-- End Header -->
-
-<!-- Generated by Doxygen 1.4.6-NO -->
-<div class="tabs">
-  <ul>
-    <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-    <li id="current"><a href="annotated.html"><span>Classes</span></a></li>
-    <li><a href="files.html"><span>Files</span></a></li>
-    <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
-  </ul></div>
-<div class="tabs">
-  <ul>
-    <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
-    <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
-    <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
-  </ul></div>
-<h1>dng_color_spec Class Reference</h1><!-- doxytag: class="dng_color_spec" -->Color transform taking into account white point and camera calibration and individual calibration from DNG negative.  
-<a href="#_details">More...</a>
+<!-- Generated by Doxygen 1.5.5 -->
+<div class="navigation" id="top">
+  <div class="tabs">
+    <ul>
+      <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
+      <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="files.html"><span>Files</span></a></li>
+    </ul>
+  </div>
+  <div class="tabs">
+    <ul>
+      <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
+      <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
+      <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
+    </ul>
+  </div>
+</div>
+<div class="contents">
+<h1>dng_color_spec Class Reference</h1><!-- doxytag: class="dng_color_spec" --><code>#include &lt;<a class="el" href="dng__color__spec_8h-source.html">dng_color_spec.h</a>&gt;</code>
 <p>
-<code>#include &lt;<a class="el" href="dng__color__spec_8h-source.html">dng_color_spec.h</a>&gt;</code>
+
 <p>
 <a href="classdng__color__spec-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="749ed8f88fb7a1474c27b9d8f32c88c8"></a><!-- doxytag: member="dng_color_spec::dng_color_spec" ref="749ed8f88fb7a1474c27b9d8f32c88c8" args="(const dng_negative &amp;negative, const dng_camera_profile *profile)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__color__spec.html#749ed8f88fb7a1474c27b9d8f32c88c8">dng_color_spec</a> (const <a class="el" href="classdng__negative.html">dng_negative</a> &amp;negative, const <a class="el" href="classdng__camera__profile.html">dng_camera_profile</a> *profile)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__color__spec.html#749ed8f88fb7a1474c27b9d8f32c88c8">dng_color_spec</a> (const <a class="el" href="classdng__negative.html">dng_negative</a> &amp;negative, const <a class="el" href="classdng__camera__profile.html">dng_camera_profile</a> *profile)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Read calibration info from DNG negative and construct a <a class="el" href="classdng__color__spec.html">dng_color_spec</a>. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="41a6c5a918373a167157aa5e960d65f1"></a><!-- doxytag: member="dng_color_spec::Channels" ref="41a6c5a918373a167157aa5e960d65f1" args="() const " -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__color__spec.html#41a6c5a918373a167157aa5e960d65f1">Channels</a> () const </td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">uint32&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__color__spec.html#41a6c5a918373a167157aa5e960d65f1">Channels</a> () const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Number of channels used for this color transform. Three for most cameras. <br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__color__spec.html#bfa5c72f82d9ddcca2869a266317b09c">SetWhiteXY</a> (const dng_xy_coord &amp;white)</td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top">const dng_xy_coord &amp;&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__color__spec.html#6f01ec2cefb28e1268c82e614ba36310">WhiteXY</a> () const </td></tr>
@@ -130,63 +133,123 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="cl
 
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-Color transform taking into account white point and camera calibration and individual calibration from DNG negative. 
-<p>
-<hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="d6559acfba5e45597b3a45786887ceb8"></a><!-- doxytag: member="dng_color_spec::CameraToPCS" ref="d6559acfba5e45597b3a45786887ceb8" args="() const " --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
+Color transform taking into account white point and camera calibration and individual calibration from DNG negative. <hr><h2>Constructor &amp; Destructor Documentation</h2>
+<a class="anchor" name="749ed8f88fb7a1474c27b9d8f32c88c8"></a><!-- doxytag: member="dng_color_spec::dng_color_spec" ref="749ed8f88fb7a1474c27b9d8f32c88c8" args="(const dng_negative &amp;negative, const dng_camera_profile *profile)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
         <tr>
-          <td class="md" nowrap valign="top">const dng_matrix &amp; dng_color_spec::CameraToPCS           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="mdname1" valign="top" nowrap>          </td>
-          <td class="md" valign="top">&nbsp;)&nbsp;</td>
-          <td class="md" nowrap> const</td>
+          <td class="memname">dng_color_spec::dng_color_spec           </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdng__negative.html">dng_negative</a> &amp;&nbsp;</td>
+          <td class="paramname"> <em>negative</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdng__camera__profile.html">dng_camera_profile</a> *&nbsp;</td>
+          <td class="paramname"> <em>profile</em></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td width="100%"></td>
         </tr>
       </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
+</div>
+<div class="memdoc">
 
 <p>
-Getter for camera to Profile Connection Space color transform. <dl compact><dt><b>Return values:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>A</em>&nbsp;</td><td>transform that takes into account all camera calibration transforms and white point. </td></tr>
-  </table>
-</dl>
-    </td>
-  </tr>
-</table>
-<a class="anchor" name="fedbe610537a5b714ea138f96187cbf7"></a><!-- doxytag: member="dng_color_spec::CameraWhite" ref="fedbe610537a5b714ea138f96187cbf7" args="() const " --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
+Read calibration info from DNG negative and construct a <a class="el" href="classdng__color__spec.html">dng_color_spec</a>. 
+<p>References <a class="el" href="dng__negative_8cpp-source.html#l00202">dng_negative::AnalogBalance()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00310">dng_camera_profile::CalibrationTemperature1()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00318">dng_camera_profile::CalibrationTemperature2()</a>, <a class="el" href="dng__negative_8h-source.html#l00858">dng_negative::CameraCalibration1()</a>, <a class="el" href="dng__negative_8h-source.html#l00865">dng_negative::CameraCalibration2()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00357">dng_camera_profile::ColorMatrix1()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00364">dng_camera_profile::ColorMatrix2()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00385">dng_camera_profile::ForwardMatrix1()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00392">dng_camera_profile::ForwardMatrix2()</a>, <a class="el" href="dng__camera__profile_8cpp-source.html#l00288">dng_camera_profile::HasColorMatrix2()</a>, <a class="el" href="dng__camera__profile_8cpp-source.html#l00517">dng_camera_profile::IsValid()</a>, <a class="el" href="dng__camera__profile_8cpp-source.html#l00204">dng_camera_profile::NormalizeForwardMatrix()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00524">dng_camera_profile::ProfileCalibrationSignature()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00413">dng_camera_profile::ReductionMatrix1()</a>, <a class="el" href="dng__camera__profile_8h-source.html#l00420">dng_camera_profile::ReductionMatrix2()</a>, and <a class="el" href="dng__exceptions_8h-source.html#l00182">ThrowBadFormat()</a>.</p>
+
+</div>
+</div><p>
+<hr><h2>Member Function Documentation</h2>
+<a class="anchor" name="41a6c5a918373a167157aa5e960d65f1"></a><!-- doxytag: member="dng_color_spec::Channels" ref="41a6c5a918373a167157aa5e960d65f1" args="() const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
         <tr>
-          <td class="md" nowrap valign="top">const dng_vector &amp; dng_color_spec::CameraWhite           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="mdname1" valign="top" nowrap>          </td>
-          <td class="md" valign="top">&nbsp;)&nbsp;</td>
-          <td class="md" nowrap> const</td>
+          <td class="memname">uint32 dng_color_spec::Channels           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"> const<code> [inline]</code></td>
         </tr>
       </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
+</div>
+<div class="memdoc">
+
+<p>
+Number of channels used for this color transform. Three for most cameras. 
+</div>
+</div><p>
+<a class="anchor" name="bfa5c72f82d9ddcca2869a266317b09c"></a><!-- doxytag: member="dng_color_spec::SetWhiteXY" ref="bfa5c72f82d9ddcca2869a266317b09c" args="(const dng_xy_coord &amp;white)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void dng_color_spec::SetWhiteXY           </td>
+          <td>(</td>
+          <td class="paramtype">const dng_xy_coord &amp;&nbsp;</td>
+          <td class="paramname"> <em>white</em>          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Setter for white point. Value is as XY colorspace coordinate. <dl compact><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>white</em>&nbsp;</td><td>White point to set as an XY value. </td></tr>
+  </table>
+</dl>
+
+</div>
+</div><p>
+<a class="anchor" name="6f01ec2cefb28e1268c82e614ba36310"></a><!-- doxytag: member="dng_color_spec::WhiteXY" ref="6f01ec2cefb28e1268c82e614ba36310" args="() const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const dng_xy_coord &amp; dng_color_spec::WhiteXY           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"> const</td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Getter for white point. Value is as XY colorspace coordinate. <dl compact><dt><b>Return values:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>XY</em>&nbsp;</td><td>value of white point. </td></tr>
+  </table>
+</dl>
+
+<p>References <a class="el" href="dng__assertions_8h-source.html#l00057">DNG_ASSERT</a>.</p>
+
+</div>
+</div><p>
+<a class="anchor" name="fedbe610537a5b714ea138f96187cbf7"></a><!-- doxytag: member="dng_color_spec::CameraWhite" ref="fedbe610537a5b714ea138f96187cbf7" args="() const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const dng_vector &amp; dng_color_spec::CameraWhite           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"> const</td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
 
 <p>
 Return white point in camera native color coordinates. <dl compact><dt><b>Return values:</b></dt><dd>
@@ -194,32 +257,52 @@ Return white point in camera native color coordinates. <dl compact><dt><b>Return
     <tr><td valign="top"></td><td valign="top"><em>A</em>&nbsp;</td><td>dng_vector with components ranging from 0.0 to 1.0 that is normalized such that one component is equal to 1.0 . </td></tr>
   </table>
 </dl>
-    </td>
-  </tr>
-</table>
-<a class="anchor" name="43c3623416098e43700aad334ea19c93"></a><!-- doxytag: member="dng_color_spec::NeutralToXY" ref="43c3623416098e43700aad334ea19c93" args="(const dng_vector &amp;neutral)" --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
+
+<p>References <a class="el" href="dng__assertions_8h-source.html#l00057">DNG_ASSERT</a>.</p>
+
+</div>
+</div><p>
+<a class="anchor" name="d6559acfba5e45597b3a45786887ceb8"></a><!-- doxytag: member="dng_color_spec::CameraToPCS" ref="d6559acfba5e45597b3a45786887ceb8" args="() const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
         <tr>
-          <td class="md" nowrap valign="top">dng_xy_coord dng_color_spec::NeutralToXY           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="md" nowrap valign="top">const dng_vector &amp;&nbsp;</td>
-          <td class="mdname1" valign="top" nowrap> <em>neutral</em>          </td>
-          <td class="md" valign="top">&nbsp;)&nbsp;</td>
-          <td class="md" nowrap></td>
+          <td class="memname">const dng_matrix &amp; dng_color_spec::CameraToPCS           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"> const</td>
         </tr>
       </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
+</div>
+<div class="memdoc">
+
+<p>
+Getter for camera to Profile Connection Space color transform. <dl compact><dt><b>Return values:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>A</em>&nbsp;</td><td>transform that takes into account all camera calibration transforms and white point. </td></tr>
+  </table>
+</dl>
+
+<p>References <a class="el" href="dng__assertions_8h-source.html#l00057">DNG_ASSERT</a>.</p>
+
+</div>
+</div><p>
+<a class="anchor" name="43c3623416098e43700aad334ea19c93"></a><!-- doxytag: member="dng_color_spec::NeutralToXY" ref="43c3623416098e43700aad334ea19c93" args="(const dng_vector &amp;neutral)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">dng_xy_coord dng_color_spec::NeutralToXY           </td>
+          <td>(</td>
+          <td class="paramtype">const dng_vector &amp;&nbsp;</td>
+          <td class="paramname"> <em>neutral</em>          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
 
 <p>
 Return the XY value to use for SetWhiteXY for a given camera color space coordinate as the white point. <dl compact><dt><b>Parameters:</b></dt><dd>
@@ -232,83 +315,42 @@ Return the XY value to use for SetWhiteXY for a given camera color space coordin
     <tr><td valign="top"></td><td valign="top"><em>White</em>&nbsp;</td><td>point in XY space that makes neutral map to this XY value as closely as possible. </td></tr>
   </table>
 </dl>
-    </td>
-  </tr>
-</table>
-<a class="anchor" name="bfa5c72f82d9ddcca2869a266317b09c"></a><!-- doxytag: member="dng_color_spec::SetWhiteXY" ref="bfa5c72f82d9ddcca2869a266317b09c" args="(const dng_xy_coord &amp;white)" --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td class="md" nowrap valign="top">void dng_color_spec::SetWhiteXY           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="md" nowrap valign="top">const dng_xy_coord &amp;&nbsp;</td>
-          <td class="mdname1" valign="top" nowrap> <em>white</em>          </td>
-          <td class="md" valign="top">&nbsp;)&nbsp;</td>
-          <td class="md" nowrap></td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
 
-<p>
-Setter for white point. Value is as XY colorspace coordinate. <dl compact><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>white</em>&nbsp;</td><td>White point to set as an XY value. </td></tr>
-  </table>
-</dl>
-    </td>
-  </tr>
-</table>
-<a class="anchor" name="6f01ec2cefb28e1268c82e614ba36310"></a><!-- doxytag: member="dng_color_spec::WhiteXY" ref="6f01ec2cefb28e1268c82e614ba36310" args="() const " --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td class="md" nowrap valign="top">const dng_xy_coord &amp; dng_color_spec::WhiteXY           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="mdname1" valign="top" nowrap>          </td>
-          <td class="md" valign="top">&nbsp;)&nbsp;</td>
-          <td class="md" nowrap> const</td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
-
-<p>
-Getter for white point. Value is as XY colorspace coordinate. <dl compact><dt><b>Return values:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>XY</em>&nbsp;</td><td>value of white point. </td></tr>
-  </table>
-</dl>
-    </td>
-  </tr>
-</table>
+</div>
+</div><p>
 <hr>The documentation for this class was generated from the following files:<ul>
-<li>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/<a class="el" href="dng__color__spec_8h-source.html">dng_color_spec.h</a><li>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/dng_color_spec.cpp</ul>
+<li><a class="el" href="dng__color__spec_8h-source.html">dng_color_spec.h</a><li>dng_color_spec.cpp</ul>
+</div>
 
 <!-- Begin Footer -->
-</td>
-<td width="20">&nbsp;&nbsp;</td>
+</td></tr>
 </table>
-
-<div id="footerrow"><!--give footer 25px of white above--></div><div id="footer" title="footer: links to copyright and other legal information"><p><a href="licenses.html" class="el">Copyright &copy; 2005 Adobe Systems Incorporated</a></p><ul id="list1"><!-- due to a rendering error in IE, these links should all be on one line without returns --><li id="terms"><a title="Terms of Use" href="http://www.adobe.com/misc/copyright.html">Terms of Use</a></li><li><a title="Privacy Policy" href="http://www.adobe.com/misc/privacy.html">Privacy Policy</a></li><li><a href="http://access.adobe.com">Accessibility</a></li><li><a title="Avoid software piracy" href="http://www.adobe.com/aboutadobe/antipiracy/main.html">Avoid software piracy</a></li></ul><!--two lists because of quirks mode--><ul id="list2"><li id="tms"><a title="Permissions and trademarks" href="http://www.adobe.com/misc/agreement.html">Permissions and trademarks</a></li><li><a title="Product License Agreements" href="http://www.adobe.com/products/eulas/main.html">Product License Agreements</a></li></ul><a title="Reviewed by TRUSTe: site privacy statement" href="http://www.adobe.com/misc/privacy.html"><img id="privacyicon" src="http://www.adobe.com/images/finalmark.gif" alt="Reviewed by TRUSTe: site privacy statement" height="31" width="116" border="0"/></a></div>
-
+</div> <!-- content -->
+<div class='footerdiv'>
+    <div id='footersub'>
+        <ul>
+            <li><a href="http://www.adobe.com/go/gftray_foot_aboutadobe">Company</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_contact_adobe">Contact Us</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_accessibility">Accessibility</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_report_piracy">Report Piracy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_permissions_trademarks">Permissions &amp; Trademarks</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_product_license_agreements">Product License Agreements</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_feedback">Send Feedback</a></li>
+        </ul>
+        <div>
+            <p>Copyright &#169; 2006-2008 Adobe Systems Incorporated.</p>
+            <p>Use of this website signifies your agreement to the <a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a> and <a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>.</p>
+            <p>Search powered by <a href="http://www.google.com/" target="new">Google</a></p>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+_uacct = "UA-396569-1";
+urchinTracker();
+</script>
 </body>
 </html>

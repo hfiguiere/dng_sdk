@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_flags.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_flags.h#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /** \file
@@ -39,7 +39,8 @@
 
 /*****************************************************************************/
 
-/// \def qDNGDebug 1 if debug code (e.g. assertions) is compiled in, 0 otherwise.
+/// \def qDNGDebug 1 if debug code is compiled in, 0 otherwise. Enables assertions and other
+/// debug checks in exchange for slower processing.
 
 // Figure out if debug build or not.
 
@@ -78,6 +79,9 @@
 #elif defined(_M_IX86)
 #define qDNGBigEndian 0
 
+#elif defined(_M_X64)
+#define qDNGBigEndian 0
+
 #elif defined(__LITTLE_ENDIAN__)
 #define qDNGBigEndian 0
 
@@ -85,13 +89,50 @@
 #define qDNGBigEndian 1
 
 #else
+
+#ifndef qXCodeRez
 #error Unable to figure out byte order.
+#endif
 
 #endif
 #endif
+
+#ifndef qXCodeRez
 
 #ifndef qDNGLittleEndian
 #define qDNGLittleEndian !qDNGBigEndian
+#endif
+
+#endif
+
+/*****************************************************************************/
+
+/// \def qDNG64Bit 1 if this target platform uses 64-bit addresses, 0 otherwise
+
+#ifndef qDNG64Bit
+
+#if qMacOS
+
+#ifdef __LP64__
+#if    __LP64__
+#define qDNG64Bit 1
+#endif
+#endif
+
+#elif qWinOS
+
+#ifdef WIN64
+#if    WIN64
+#define qDNG64Bit 1
+#endif
+#endif
+
+#endif
+
+#ifndef qDNG64Bit
+#define qDNG64Bit 0
+#endif
+
 #endif
 
 /*****************************************************************************/
@@ -116,6 +157,15 @@
 
 #ifndef qDNGValidate
 #define qDNGValidate qDNGValidateTarget
+#endif
+
+/*****************************************************************************/
+
+/// \def qDNGPrintMessages 1 if dng_show_message should use fprintf to stderr.
+/// 0 if it should use a platform specific interrupt mechanism.
+
+#ifndef qDNGPrintMessages
+#define qDNGPrintMessages qDNGValidate
 #endif
 
 /*****************************************************************************/

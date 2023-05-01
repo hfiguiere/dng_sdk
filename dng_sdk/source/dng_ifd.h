@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_ifd.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_ifd.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /** \file
@@ -22,11 +22,42 @@
 
 /*****************************************************************************/
 
-#include "dng_types.h"
+#include "dng_fingerprint.h"
 #include "dng_rect.h"
 #include "dng_shared.h"
 #include "dng_stream.h"
+#include "dng_string.h"
 #include "dng_sdk_limits.h"
+#include "dng_tag_values.h"
+
+/*****************************************************************************/
+
+class dng_preview_info
+	{
+	
+	public:
+	
+		bool fIsPrimary;
+		
+		dng_string fApplicationName;
+		
+		dng_string fApplicationVersion;
+		
+		dng_string fSettingsName;
+		
+		dng_fingerprint fSettingsDigest;
+		
+		PreviewColorSpaceEnum fColorSpace;
+		
+		dng_string fDateTime;
+		
+	public:
+	
+		dng_preview_info ();
+		
+		~dng_preview_info ();
+		
+	};
 
 /*****************************************************************************/
 
@@ -57,6 +88,9 @@ class dng_ifd
 		uint32 fFillOrder;
 		
 		uint32 fOrientation;
+		uint32 fOrientationType;
+		uint64 fOrientationOffset;
+		bool   fOrientationBigEndian;
 		
 		uint32 fSamplesPerPixel;
 		
@@ -80,16 +114,16 @@ class dng_ifd
 		
 		uint32 fTileOffsetsType;
 		uint32 fTileOffsetsCount;
-		uint32 fTileOffsetsOffset;
-		uint32 fTileOffset [kMaxTileInfo];
+		uint64 fTileOffsetsOffset;
+		uint64 fTileOffset [kMaxTileInfo];
 		
 		uint32 fTileByteCountsType;
 		uint32 fTileByteCountsCount;
-		uint32 fTileByteCountsOffset;
+		uint64 fTileByteCountsOffset;
 		uint32 fTileByteCount [kMaxTileInfo];
 
 		uint32 fSubIFDsCount;
-		uint32 fSubIFDsOffset;
+		uint64 fSubIFDsOffset;
 		
 		uint32 fExtraSamplesCount;
 		uint32 fExtraSamples [kMaxSamplesPerPixel];
@@ -97,9 +131,9 @@ class dng_ifd
 		uint32 fSampleFormat [kMaxSamplesPerPixel];
 		
 		uint32 fJPEGTablesCount;
-		uint32 fJPEGTablesOffset;
+		uint64 fJPEGTablesOffset;
 		
-		uint32 fJPEGInterchangeFormat;
+		uint64 fJPEGInterchangeFormat;
 		uint32 fJPEGInterchangeFormatLength;
 
 		real64 fYCbCrCoefficientR;
@@ -124,7 +158,7 @@ class dng_ifd
 		
 		uint32 fLinearizationTableType;
 		uint32 fLinearizationTableCount;
-		uint32 fLinearizationTableOffset;
+		uint64 fLinearizationTableOffset;
 		
 		uint32 fBlackLevelRepeatRows;
 		uint32 fBlackLevelRepeatCols;
@@ -133,11 +167,11 @@ class dng_ifd
 		
 		uint32 fBlackLevelDeltaHType;
 		uint32 fBlackLevelDeltaHCount;
-		uint32 fBlackLevelDeltaHOffset;
+		uint64 fBlackLevelDeltaHOffset;
 		
 		uint32 fBlackLevelDeltaVType;
 		uint32 fBlackLevelDeltaVCount;
-		uint32 fBlackLevelDeltaVOffset;
+		uint64 fBlackLevelDeltaVOffset;
 		
 		real64 fWhiteLevel [kMaxSamplesPerPixel];
 		
@@ -163,12 +197,19 @@ class dng_ifd
 		uint32   fMaskedAreaCount;
 		dng_rect fMaskedArea [kMaxMaskedAreas];
 		
+		uint32 fRowInterleaveFactor;
+		
+		uint32 fSubTileBlockRows;
+		uint32 fSubTileBlockCols;
+		
+		dng_preview_info fPreviewInfo;
+		
 		bool fLosslessJPEGBug16;
 		
 		uint32 fSampleBitShift;
 		
-		uint32 fThisIFD;
-		uint32 fNextIFD;
+		uint64 fThisIFD;
+		uint64 fNextIFD;
 
 	public:
 	
@@ -181,7 +222,7 @@ class dng_ifd
 							   uint32 tagCode,
 							   uint32 tagType,
 							   uint32 tagCount,
-							   uint32 tagOffset);
+							   uint64 tagOffset);
 							   
 		virtual void PostParse ();
 		

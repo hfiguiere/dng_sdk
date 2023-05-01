@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_pixel_buffer.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_pixel_buffer.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Support for holding buffers of sample data.
@@ -61,6 +61,20 @@ void OptimizeOrder (void *&dPtr,
 					int32 &dStep0,
 					int32 &dStep1,
 					int32 &dStep2);
+
+/*****************************************************************************/
+
+#define qDebugPixelType 0
+
+#if qDebugPixelType
+
+#define ASSERT_PIXEL_TYPE(typeVal) CheckPixelType (typeVal)
+
+#else
+
+#define ASSERT_PIXEL_TYPE(typeVal) DNG_ASSERT (fPixelType == typeVal, "Pixel type access mismatch")
+
+#endif
 
 /*****************************************************************************/
 
@@ -119,12 +133,18 @@ class dng_pixel_buffer
 			{
 			
 			return (void *)
-				   (((uint8 *) fData) + fPixelSize *
+				   (((uint8 *) fData) + (int32)fPixelSize *
 					(fRowStep   * (row   - fArea.t) +
 					 fColStep   * (col   - fArea.l) +
-					 fPlaneStep * (plane - fPlane )));
+					 fPlaneStep * (int32)(plane - fPlane )));
 			
 			}
+			
+		#if qDebugPixelType
+			
+		void CheckPixelType (uint32 pixelType) const;
+		
+		#endif
 		
 	public:
 	
@@ -140,6 +160,38 @@ class dng_pixel_buffer
 		/// \retval Range of value a pixel can take. (Meaning [0, max] for unsigned case. Signed case is biased so [-32768, max - 32768].)
 
 		uint32 PixelRange () const;
+
+		/// Get extent of pixels in buffer
+		/// \retval Rectangle giving valid extent of buffer.
+
+		const dng_rect & Area () const
+			{
+			return fArea;
+			}
+
+		/// Number of planes of image data.
+		/// \retval Number of planes held in buffer.
+
+		uint32 Planes () const
+			{
+			return fPlanes;
+			}
+
+		/// Step, in pixels not bytes, between rows of data in buffer.
+		/// \retval row step in pixels. May be negative.
+
+		int32 RowStep () const
+			{
+			return fRowStep;
+			}
+			
+		/// Step, in pixels not bytes, between planes of data in buffer.
+		/// \retval plane step in pixels. May be negative.
+
+		int32 PlaneStep () const
+			{
+			return fPlaneStep;
+			}
 
 		/// Get read-only untyped (void *) pointer to pixel data starting at a specific pixel in the buffer.
 		/// \param row Start row for buffer pointer.
@@ -167,7 +219,7 @@ class dng_pixel_buffer
 					  	   uint32 plane = 0)
 			{
 			
-			ASSERT (fDirty, "Dirty access to const pixel buffer");
+			DNG_ASSERT (fDirty, "Dirty access to const pixel buffer");
 			
 			return InternalPixel (row, col, plane);
 			
@@ -184,7 +236,7 @@ class dng_pixel_buffer
 										uint32 plane = 0) const
 			{
 			
-			ASSERT (fPixelType == ttByte, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttByte);
 
 			return (const uint8 *) ConstPixel (row, col, plane);
 			
@@ -201,7 +253,7 @@ class dng_pixel_buffer
 								  uint32 plane = 0)
 			{
 			
-			ASSERT (fPixelType == ttByte, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttByte);
 
 			return (uint8 *) DirtyPixel (row, col, plane);
 			
@@ -218,7 +270,7 @@ class dng_pixel_buffer
 									  uint32 plane = 0) const
 			{
 			
-			ASSERT (fPixelType == ttSByte, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttSByte);
 
 			return (const int8 *) ConstPixel (row, col, plane);
 			
@@ -235,7 +287,7 @@ class dng_pixel_buffer
 								uint32 plane = 0)
 			{
 			
-			ASSERT (fPixelType == ttSByte, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttSByte);
 
 			return (int8 *) DirtyPixel (row, col, plane);
 			
@@ -252,7 +304,7 @@ class dng_pixel_buffer
 										  uint32 plane = 0) const
 			{
 			
-			ASSERT (fPixelType == ttShort, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttShort);
 
 			return (const uint16 *) ConstPixel (row, col, plane);
 			
@@ -269,7 +321,7 @@ class dng_pixel_buffer
 								    uint32 plane = 0)
 			{
 			
-			ASSERT (fPixelType == ttShort, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttShort);
 
 			return (uint16 *) DirtyPixel (row, col, plane);
 			
@@ -286,7 +338,7 @@ class dng_pixel_buffer
 										uint32 plane = 0) const
 			{
 			
-			ASSERT (fPixelType == ttSShort, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttSShort);
 
 			return (const int16 *) ConstPixel (row, col, plane);
 			
@@ -303,7 +355,7 @@ class dng_pixel_buffer
 								  uint32 plane = 0)
 			{
 			
-			ASSERT (fPixelType == ttSShort, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttSShort);
 
 			return (int16 *) DirtyPixel (row, col, plane);
 			
@@ -320,7 +372,7 @@ class dng_pixel_buffer
 										  uint32 plane = 0) const
 			{
 			
-			ASSERT (fPixelType == ttLong, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttLong);
 
 			return (const uint32 *) ConstPixel (row, col, plane);
 			
@@ -337,7 +389,7 @@ class dng_pixel_buffer
 								    uint32 plane = 0)
 			{
 			
-			ASSERT (fPixelType == ttLong, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttLong);
 
 			return (uint32 *) DirtyPixel (row, col, plane);
 			
@@ -354,7 +406,7 @@ class dng_pixel_buffer
 										uint32 plane = 0) const
 			{
 			
-			ASSERT (fPixelType == ttSLong, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttSLong);
 
 			return (const int32 *) ConstPixel (row, col, plane);
 			
@@ -371,7 +423,7 @@ class dng_pixel_buffer
 								  uint32 plane = 0)
 			{
 			
-			ASSERT (fPixelType == ttSLong, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttSLong);
 
 			return (int32 *) DirtyPixel (row, col, plane);
 			
@@ -388,7 +440,7 @@ class dng_pixel_buffer
 										  uint32 plane = 0) const
 			{
 			
-			ASSERT (fPixelType == ttFloat, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttFloat);
 
 			return (const real32 *) ConstPixel (row, col, plane);
 			
@@ -405,12 +457,121 @@ class dng_pixel_buffer
 									uint32 plane = 0)
 			{
 			
-			ASSERT (fPixelType == ttFloat, "Pixel type access mismatch");
+			ASSERT_PIXEL_TYPE (ttFloat);
 
 			return (real32 *) DirtyPixel (row, col, plane);
 			
 			}
 		
+		/// Initialize a rectangular area of pixel buffer to a constant.
+		/// \param area Rectangle of pixel buffer to set.
+		/// \param plane Plane to start filling on.
+		/// \param planes Number of planes to fill.
+		/// \param value Constant value to set pixels to.
+
+		void SetConstant (const dng_rect &area,
+					      uint32 plane,
+					      uint32 planes,
+					      uint32 value);
+		
+		/// Initialize a rectangular area of pixel buffer to a constant unsigned 8-bit value.
+		/// \param area Rectangle of pixel buffer to set.
+		/// \param plane Plane to start filling on.
+		/// \param planes Number of planes to fill.
+		/// \param value Constant uint8 value to set pixels to.
+
+		void SetConstant_uint8 (const dng_rect &area,
+								uint32 plane,
+								uint32 planes,
+								uint8 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttByte, "Mismatched pixel type");
+			
+			SetConstant (area, plane, planes, (uint32) value);
+			
+			}
+		
+		/// Initialize a rectangular area of pixel buffer to a constant unsigned 16-bit value.
+		/// \param area Rectangle of pixel buffer to set.
+		/// \param plane Plane to start filling on.
+		/// \param planes Number of planes to fill.
+		/// \param value Constant uint16 value to set pixels to.
+
+		void SetConstant_uint16 (const dng_rect &area,
+								 uint32 plane,
+								 uint32 planes,
+								 uint16 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttShort, "Mismatched pixel type");
+			
+			SetConstant (area, plane, planes, (uint32) value);
+			
+			}
+		
+		/// Initialize a rectangular area of pixel buffer to a constant signed 16-bit value.
+		/// \param area Rectangle of pixel buffer to set.
+		/// \param plane Plane to start filling on.
+		/// \param planes Number of planes to fill.
+		/// \param value Constant int16 value to set pixels to.
+
+		void SetConstant_int16 (const dng_rect &area,
+								uint32 plane,
+								uint32 planes,
+								int16 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttSShort, "Mismatched pixel type");
+			
+			SetConstant (area, plane, planes, (uint32) (uint16) value);
+			
+			}
+		
+		/// Initialize a rectangular area of pixel buffer to a constant unsigned 32-bit value.
+		/// \param area Rectangle of pixel buffer to set.
+		/// \param plane Plane to start filling on.
+		/// \param planes Number of planes to fill.
+		/// \param value Constant uint32 value to set pixels to.
+
+		void SetConstant_uint32 (const dng_rect &area,
+								 uint32 plane,
+								 uint32 planes,
+								 uint32 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttLong, "Mismatched pixel type");
+			
+			SetConstant (area, plane, planes, value);
+			
+			}
+		
+		/// Initialize a rectangular area of pixel buffer to a constant real 32-bit value.
+		/// \param area Rectangle of pixel buffer to set.
+		/// \param plane Plane to start filling on.
+		/// \param planes Number of planes to fill.
+		/// \param value Constant real32 value to set pixels to.
+
+		void SetConstant_real32 (const dng_rect &area,
+								 uint32 plane,
+								 uint32 planes,
+								 real32 value)
+			{
+			
+			DNG_ASSERT (fPixelType == ttFloat, "Mismatched pixel type");
+			
+			union
+				{
+				uint32 i;
+				real32 f;
+				} x;
+				
+			x.f = value;
+			
+			SetConstant (area, plane, planes, x.i);
+			
+			}
+
 		/// Initialize a rectangular area of pixel buffer to zeros.
 		/// \param area Rectangle of pixel buffer to zero.
 		/// \param area Area to zero
@@ -424,13 +585,31 @@ class dng_pixel_buffer
 		/// Copy image data from an area of one pixel buffer to same area of another.
 		/// \param src Buffer to copy from.
 		/// \param area Rectangle of pixel buffer to copy.
-		/// \param plane Plane to start copy.
+		/// \param srcPlane Plane to start copy in src.
+		/// \param dstPlane Plane to start copy in dst.
+		/// \param planes Number of planes to copy.
+
+		void CopyArea (const dng_pixel_buffer &src,
+					   const dng_rect &area,
+					   uint32 srcPlane,
+					   uint32 dstPlane,
+					   uint32 planes);
+					   
+		/// Copy image data from an area of one pixel buffer to same area of another.
+		/// \param src Buffer to copy from.
+		/// \param area Rectangle of pixel buffer to copy.
+		/// \param plane Plane to start copy in src and this.
 		/// \param planes Number of planes to copy.
 
 		void CopyArea (const dng_pixel_buffer &src,
 					   const dng_rect &area,
 					   uint32 plane,
-					   uint32 planes);
+					   uint32 planes)
+			{
+			
+			CopyArea (src, area, plane, plane, planes);
+			
+			}
 					   
 		/// Calculate the offset phase of destination rectangle relative to source rectangle.
 		/// Phase is based on a 0,0 origin and the notion of repeating srcArea across dstArea.
@@ -468,6 +647,17 @@ class dng_pixel_buffer
 
 		void FlipZ ();	// Flip planes
 		
+		/// Return true if the contents of an area of the pixel buffer area are the same as those of another.
+		/// \param rhs Buffer to compare against.
+		/// \param area Rectangle of pixel buffer to test.
+		/// \param plane Plane to start comparing.
+		/// \param planes Number of planes to compare.
+
+		bool EqualArea (const dng_pixel_buffer &rhs,
+					    const dng_rect &area,
+					    uint32 plane,
+					    uint32 planes) const;
+
 	};
 
 /*****************************************************************************/

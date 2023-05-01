@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_render.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_render.cpp#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -17,6 +17,7 @@
 
 #include "dng_1d_table.h"
 #include "dng_bottlenecks.h"
+#include "dng_camera_profile.h"
 #include "dng_color_space.h"
 #include "dng_color_spec.h"
 #include "dng_filter_task.h"
@@ -712,7 +713,11 @@ class dng_render_task: public dng_filter_task
 		dng_vector fCameraWhite;
 		dng_matrix fCameraToRGB;
 		
+		AutoPtr<dng_hue_sat_map> fHueSatMap;
+		
 		dng_1d_table fExposureRamp;
+		
+		AutoPtr<dng_hue_sat_map> fLookTable;
 		
 		dng_1d_table fToneCurve;
 		
@@ -761,7 +766,11 @@ dng_render_task::dng_render_task (const dng_image &srcImage,
 	,	fCameraWhite ()
 	,	fCameraToRGB ()
 	
+	,	fHueSatMap ()
+	
 	,	fExposureRamp ()
+	
+	,	fLookTable ()
 	
 	,	fToneCurve ()
 	
@@ -800,9 +809,12 @@ void dng_render_task::Start (uint32 threadCount,
 							
 	// Compute camera space to linear ProPhoto RGB parameters.
 	
+	if (!fNegative.IsMonochrome ())
 		{
 		
-		AutoPtr<dng_color_spec> spec (fNegative.MakeColorSpec ());
+		dng_camera_profile_id profileID;	// Default profile ID.
+		
+		AutoPtr<dng_color_spec> spec (fNegative.MakeColorSpec (profileID));
 		
 		if (fParams.WhiteXY ().IsValid ())
 			{
@@ -836,6 +848,24 @@ void dng_render_task::Start (uint32 threadCount,
 		
 		fCameraToRGB = dng_space_ProPhoto::Get ().MatrixFromPCS () *
 					   spec->CameraToPCS ();
+					   
+		// Find Hue/Sat table, if any.
+		
+		const dng_camera_profile *profile = fNegative.ProfileByID (profileID);
+		
+		if (profile)
+			{
+			
+			fHueSatMap.Reset (profile->HueSatMapForWhite (spec->WhiteXY ()));
+			
+			if (profile->HasLookTable ())
+				{
+				
+				fLookTable.Reset (new dng_hue_sat_map (profile->LookTable ()));
+				
+				}
+			
+			}
 		
 		}
 		
@@ -987,6 +1017,22 @@ void dng_render_task::ProcessArea (uint32 threadIndex,
 									     fCameraToRGB);
 					
 					}
+					
+				// Apply Hue/Sat map, if any.
+				
+				if (fHueSatMap.Get ())
+					{
+					
+					DoBaselineHueSatMap (tPtrR,
+										 tPtrG,
+										 tPtrB,
+										 tPtrR,
+										 tPtrG,
+										 tPtrB,
+										 srcCols,
+										 *fHueSatMap.Get ());
+					
+					}
 				
 				}
 				
@@ -1009,6 +1055,22 @@ void dng_render_task::ProcessArea (uint32 threadIndex,
 						   srcCols,
 						   fExposureRamp);
 		
+		// Apply Hue/Sat map, if any.
+		
+		if (fLookTable.Get ())
+			{
+			
+			DoBaselineHueSatMap (tPtrR,
+								 tPtrG,
+								 tPtrB,
+								 tPtrR,
+								 tPtrG,
+								 tPtrB,
+								 srcCols,
+								 *fLookTable.Get ());
+			
+			}
+
 		// Apply baseline tone curve.
 		
 		DoBaselineRGBTone (tPtrR,
@@ -1105,6 +1167,8 @@ dng_render::dng_render (dng_host &host,
 	
 	,	fMaximumSize	(0)
 	
+	,	fProfileToneCurve ()
+	
 	{
 	
 	// Switch to NOP default parameters for non-scence referred data.
@@ -1115,6 +1179,21 @@ dng_render::dng_render (dng_host &host,
 		fShadows = 0.0;
 		
 		fToneCurve = &dng_1d_identity::Get ();
+		
+		}
+		
+	// Use default tone curve from profile if any.
+	
+	const dng_camera_profile *profile = fNegative.ProfileByID (dng_camera_profile_id ());
+	
+	if (profile && profile->ToneCurve ().IsValid ())
+		{
+		
+		fProfileToneCurve.Reset (new dng_spline_solver);
+		
+		profile->ToneCurve ().Solve (*fProfileToneCurve.Get ());
+		
+		fToneCurve = fProfileToneCurve.Get ();
 		
 		}
 	
@@ -1164,10 +1243,9 @@ dng_image * dng_render::Render ()
 	if (srcBounds.Size () != dstSize)
 		{
 
-		tempImage.Reset (fNegative.MakeImage (dstSize,
-											  srcImage->Planes     (),
-											  srcImage->PixelType  (),
-											  srcImage->PixelRange ()));
+		tempImage.Reset (fHost.Make_dng_image (dstSize,
+											   srcImage->Planes    (),
+											   srcImage->PixelType ()));
 											 
 		ResampleImage (fHost,
 					   *srcImage,
@@ -1184,10 +1262,9 @@ dng_image * dng_render::Render ()
 	
 	uint32 dstPlanes = FinalSpace ().IsMonochrome () ? 1 : 3;
 	
-	AutoPtr<dng_image> dstImage (fNegative.MakeImage (srcBounds.Size (),
-													  dstPlanes,
-													  FinalPixelType (),
-													  0));
+	AutoPtr<dng_image> dstImage (fHost.Make_dng_image (srcBounds.Size (),
+													   dstPlanes,
+													   FinalPixelType ()));
 													 
 	dng_render_task task (*srcImage,
 						  *dstImage.Get (),

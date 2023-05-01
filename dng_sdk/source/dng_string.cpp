@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_string.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_string.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -18,20 +18,20 @@
 #include "dng_assertions.h"
 #include "dng_exceptions.h"
 #include "dng_flags.h"
+#include "dng_mutex.h"
 #include "dng_utils.h"
 
 #if qMacOS
-#ifdef __MWERKS__
-#include <Script.h>
-#include <UnicodeConverter.h>
-#else
 #include <CoreServices/CoreServices.h>
-#endif
 #endif
 
 #if qWinOS
 #include <windows.h>
 #endif
+
+/*****************************************************************************/
+
+const uint32 kREPLACEMENT_CHARACTER	= 0x0000FFFD;
 
 /*****************************************************************************/
 
@@ -237,7 +237,7 @@ static void Assign_Multibyte (dng_string &dngString,
 							  UINT encoding)
 	{
 	
-	ASSERT (sizeof (WCHAR) == 2, "WCHAR must be 2 bytes");
+	DNG_ASSERT (sizeof (WCHAR) == 2, "WCHAR must be 2 bytes");
 	
 	int aSize = (int) strlen (otherString);
 	
@@ -279,7 +279,7 @@ static uint32 Extract_Multibyte (const dng_string &dngString,
 							     UINT encoding)
 	{
 	
-	ASSERT (sizeof (WCHAR) == 2, "WCHAR must be 2 bytes");
+	DNG_ASSERT (sizeof (WCHAR) == 2, "WCHAR must be 2 bytes");
 	
 	dng_memory_data sBuffer;
 	
@@ -530,6 +530,94 @@ void dng_string::Set_ASCII (const char *s)
 		
 /*****************************************************************************/
 
+void dng_string::Set_UTF8 (const char *s)
+	{
+	
+	uint32 len = (uint32) strlen (s);
+	
+	const char *sEnd = s + len;
+	
+	// Worst case expansion is 1-byte characters expanding to
+	// replacement character, which requires 3 bytes.
+	
+	dng_memory_data buffer (len * 3 + 1);
+	
+	uint8 *d = buffer.Buffer_uint8 ();
+	
+	while (s < sEnd)
+		{
+		
+		uint32 aChar = DecodeUTF8 (s, (uint32) (sEnd - s));
+		
+		if (aChar > 0x7FFFFFFF)
+			{
+			aChar = kREPLACEMENT_CHARACTER;
+			}
+			
+		#if qDNGValidate
+		
+		if (aChar == kREPLACEMENT_CHARACTER)
+			{
+			ReportWarning ("Expected UTF-8 value is not valid UTF-8 (or contains a kREPLACEMENT_CHARACTER)");
+			}
+		
+		#endif
+			
+		if (aChar < 0x00000080) 
+			{
+			*(d++) = (uint8) aChar;
+			}
+			
+		else if (aChar < 0x00000800)
+			{
+			*(d++) = (uint8) ((aChar >> 6) | 0x000000C0);
+			*(d++) = (uint8) ((aChar & 0x0000003F) | 0x00000080);
+			}
+			
+		else if (aChar < 0x00010000)
+			{
+			*(d++) = (uint8) ( (aChar >> 12) | 0x000000E0);
+			*(d++) = (uint8) (((aChar >>  6) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) ( (aChar & 0x0000003F) | 0x00000080);
+			}
+			
+		else if (aChar < 0x00200000)
+			{
+			*(d++) = (uint8) ( (aChar >> 18) | 0x000000F0);
+			*(d++) = (uint8) (((aChar >> 12) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) (((aChar >>  6) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) ( (aChar & 0x0000003F) | 0x00000080);
+			}
+			
+		else if (aChar < 0x04000000)
+			{
+			*(d++) = (uint8) ( (aChar >> 24) | 0x000000F8);
+			*(d++) = (uint8) (((aChar >> 18) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) (((aChar >> 12) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) (((aChar >>  6) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) ( (aChar & 0x0000003F) | 0x00000080);
+			}
+			
+		else
+			{
+			*(d++) = (uint8) ( (aChar >> 30) | 0x000000FC);
+			*(d++) = (uint8) (((aChar >> 24) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) (((aChar >> 18) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) (((aChar >> 12) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) (((aChar >>  6) & 0x0000003F) | 0x00000080);
+			*(d++) = (uint8) ( (aChar & 0x0000003F) | 0x00000080);
+			}
+			
+		}
+		
+	*d = 0;
+	
+	Set (buffer.Buffer_char ());
+	
+	}
+	
+/*****************************************************************************/
+
 uint32 dng_string::Get_SystemEncoding (dng_memory_data &buffer) const
 	{
 	
@@ -622,7 +710,31 @@ void dng_string::Set_SystemEncoding (const char *s)
 		}
 
 	}
+		
+/*****************************************************************************/
 
+bool dng_string::ValidSystemEncoding () const
+	{
+	
+	if (IsASCII ())
+		{
+		
+		return true;
+		
+		}
+		
+	dng_memory_data buffer;
+	
+	Get_SystemEncoding (buffer);
+	
+	dng_string temp;
+	
+	temp.Set_SystemEncoding (buffer.Buffer_char ());
+	
+	return (*this == temp);
+	
+	}
+		
 /*****************************************************************************/
 
 void dng_string::Set_JIS_X208_1990 (const char *s)
@@ -656,11 +768,10 @@ void dng_string::Set_JIS_X208_1990 (const char *s)
 
 /*****************************************************************************/
 
-uint32 dng_string::DecodeUTF8 (const char *&s)
+uint32 dng_string::DecodeUTF8 (const char *&s,
+							   uint32 maxBytes)
 	{
 	
-	const uint32 kREPLACEMENT_CHARACTER	= 0x0000FFFD;
-
 	static const uint8 gUTF8Bytes [256] =
 		{
 		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -679,13 +790,22 @@ uint32 dng_string::DecodeUTF8 (const char *&s)
 	
 	uint32 aSize = gUTF8Bytes [aChar];
 	
+	if (aSize > maxBytes)
+		{
+		s += maxBytes;
+		return kREPLACEMENT_CHARACTER;
+		}
+	
 	s += aSize;
 
 	switch (aSize)
 		{
 		
 		case 0:
+			{
+			s++;		// Don't get stuck in infinite loop
 			return kREPLACEMENT_CHARACTER;
+			}
 			
 		case 1:
 			return aChar;
@@ -725,8 +845,6 @@ uint32 dng_string::DecodeUTF8 (const char *&s)
 
 uint32 dng_string::Get_UTF16 (dng_memory_data &buffer) const
 	{
-	
-	const uint32 kREPLACEMENT_CHARACTER	= 0x0000FFFD;
 	
 	uint32 count = 0;
 	
@@ -807,8 +925,6 @@ void dng_string::Set_UTF16 (const uint16 *s)
 		Clear ();
 		return;
 		}
-	
-	const uint32 kREPLACEMENT_CHARACTER	= 0x0000FFFD;
 	
 	bool swap = false;
 	
@@ -1052,11 +1168,10 @@ bool dng_string::operator== (const dng_string &s) const
 
 /*****************************************************************************/
 
-bool dng_string::Matches (const char *s,
-						  bool case_sensitive) const
+bool dng_string::Matches (const char *t,
+						  const char *s,
+						  bool case_sensitive)
 	{
-	
-	const char *t = Get ();
 	
 	while (*s != 0)
 		{
@@ -1078,6 +1193,16 @@ bool dng_string::Matches (const char *s,
 		}
 		
 	return (*t == 0);
+	
+	}
+
+/*****************************************************************************/
+
+bool dng_string::Matches (const char *s,
+						  bool case_sensitive) const
+	{
+	
+	return dng_string::Matches (Get (), s, case_sensitive);
 	
 	}
 
@@ -1154,6 +1279,157 @@ bool dng_string::EndsWith (const char *s,
 
 /*****************************************************************************/
 
+bool dng_string::Contains (const char *s,
+						   bool case_sensitive,
+						   int32 *match_offset) const
+	{
+	
+	if (match_offset)
+		{
+		*match_offset = -1;
+		}
+	
+	uint32 len1 = Length ();
+	
+	uint32 len2 = (uint32) strlen (s);
+	
+	if (len1 < len2)
+		{
+		return false;
+		}
+		
+	uint32 offsets = len1 - len2;
+		
+	for (uint32 offset = 0; offset <= offsets; offset++)
+		{
+		
+		const char *ss = s;
+		const char *tt = Get () + offset;
+		
+		while (*ss != 0)
+			{
+			
+			char c1 = *(ss++);
+			char c2 = *(tt++);
+			
+			if (!case_sensitive)
+				{
+				c1 = ForceUppercase (c1);
+				c2 = ForceUppercase (c2);
+				}
+				
+			if (c1 != c2)
+				{
+				goto tryNextOffset;
+				}
+				
+			}
+			
+		if (match_offset)
+			{
+			*match_offset = offset;
+			}
+	
+		return true;
+		
+		tryNextOffset:	;
+		
+		}
+		
+	return false;
+	
+	}
+		
+/*****************************************************************************/
+
+bool dng_string::Replace (const char *old_string,
+						  const char *new_string,
+						  bool case_sensitive)
+	{
+	
+	int32 match_offset = -1;
+	
+	if (Contains (old_string,
+				  case_sensitive,
+				  &match_offset))
+		{
+		
+		uint32 len1 = Length ();
+		
+		uint32 len2 = (uint32) strlen (old_string);
+		uint32 len3 = (uint32) strlen (new_string);
+		
+		if (len2 == len3)
+			{
+			
+			strncpy (fData.Buffer_char () + match_offset,
+					 new_string,
+					 len3);
+			
+			}
+			
+		else if (len2 > len3)
+			{
+			
+			strncpy (fData.Buffer_char () + match_offset,
+					 new_string,
+					 len3);
+					 
+			const char *s = fData.Buffer_char () + match_offset + len2;
+				  char *d = fData.Buffer_char () + match_offset + len3;
+				  
+			uint32 extra = len1 - match_offset - len2 + 1;	// + 1 for NULL termination
+			
+			for (uint32 j = 0; j < extra; j++)
+				{
+				*(d++) = *(s++);
+				}
+			
+			}
+			
+		else
+			{
+			
+			dng_memory_data tempBuffer (len1 - len2 + len3 + 1);
+			
+			if (match_offset)
+				{
+				
+				strncpy (tempBuffer.Buffer_char (),
+						 fData     .Buffer_char (),
+						 match_offset);
+						 
+				}
+				
+			if (len3)
+				{
+
+				strncpy (tempBuffer.Buffer_char () + match_offset,
+						 new_string,
+						 len3);
+						 
+				}
+				
+			uint32 extra = len1 - match_offset - len2 + 1;	// + 1 for NULL termination
+			
+			strncpy (tempBuffer.Buffer_char () + match_offset + len3,
+					 fData     .Buffer_char () + match_offset + len2,
+					 extra);
+					 
+			Set (tempBuffer.Buffer_char ());
+
+			}
+			
+		return true;
+		
+		}
+		
+	return false;
+	
+	}
+		
+/*****************************************************************************/
+
 bool dng_string::TrimLeading (const char *s,
 						      bool case_sensitive)
 	{
@@ -1198,6 +1474,66 @@ void dng_string::Append (const char *s)
 		
 		}
 	
+	}
+		
+/*****************************************************************************/
+
+void dng_string::SetUppercase ()
+	{
+	
+	if (fData.Buffer ())
+		{
+		
+		uint32 len = Length ();
+		
+		char *dPtr = fData.Buffer_char ();
+		
+		for (uint32 j = 0; j < len; j++)
+			{
+			
+			char c = dPtr [j];
+			
+			if (c >= 'a' && c <= 'z')
+				{
+				
+				dPtr [j] = c - 'a' + 'A';
+				
+				}
+				
+			}
+			
+		}
+		
+	}
+		
+/*****************************************************************************/
+
+void dng_string::SetLowercase ()
+	{
+	
+	if (fData.Buffer ())
+		{
+		
+		uint32 len = Length ();
+		
+		char *dPtr = fData.Buffer_char ();
+		
+		for (uint32 j = 0; j < len; j++)
+			{
+			
+			char c = dPtr [j];
+			
+			if (c >= 'A' && c <= 'Z')
+				{
+				
+				dPtr [j] = c - 'A' + 'a';
+				
+				}
+				
+			}
+			
+		}
+		
 	}
 		
 /*****************************************************************************/
@@ -1475,6 +1811,233 @@ void dng_string::ForceASCII ()
 		Set (tempBuffer.Buffer_char ());
 		
 		}
+	
+	}
+	
+/******************************************************************************/
+
+int32 dng_string::Compare (const dng_string &s) const
+	{
+	
+	#if qMacOS
+	
+		{
+	
+		dng_memory_data aStrA;
+		dng_memory_data aStrB;
+		
+		uint32 aLenA = this->Get_UTF16 (aStrA);
+		uint32 aLenB = s    .Get_UTF16 (aStrB);
+		
+		if (aLenA > 0)
+			{
+			
+			if (aLenB > 0)
+				{
+				
+				// For some Mac OS versions anyway, UCCompareTextDefault is not
+				// thread safe.
+				
+				static dng_mutex sProtectUCCalls ("sProtectUCCalls");
+				
+				dng_lock_mutex lockMutex (&sProtectUCCalls);
+
+				UCCollateOptions aOptions = kUCCollateStandardOptions |
+											kUCCollatePunctuationSignificantMask;
+											   
+				SInt32 aOrder = -1;
+				
+				Boolean aEqual = false;
+				
+				OSStatus searchStatus = ::UCCompareTextDefault (aOptions,
+																aStrA.Buffer_uint16 (),
+																aLenA,
+																aStrB.Buffer_uint16 (),
+																aLenB,
+																&aEqual,
+																&aOrder);
+																
+				if (searchStatus == noErr)
+					{
+					
+					if (aEqual || (aOrder == 0))
+						{
+						return 0;
+						}
+	
+					else
+						{
+						return (aOrder > 0) ? 1 : -1;
+						}
+						
+					}
+					
+				else
+					{
+					
+					DNG_REPORT ("UCCompareTextDefault failed");
+					
+					return -1;
+					
+					}
+
+				}
+
+			else
+				{
+				return 1;
+				}
+
+			}
+			
+		else
+			{
+			
+			if (aLenB > 0)
+				{
+				return -1;
+				}
+				
+			else
+				{
+				return 0;
+				}
+				
+			}
+			
+		}
+
+	#elif qWinOS
+	
+		{
+
+		dng_memory_data aStrA;
+		dng_memory_data aStrB;
+		
+		uint32 aLenA = this->Get_UTF16 (aStrA);
+		uint32 aLenB = s    .Get_UTF16 (aStrB);
+			
+		if (aLenA > 0)
+			{
+				
+			if (aLenB > 0)
+				{
+
+				LCID locale = LOCALE_SYSTEM_DEFAULT;
+
+				DWORD aFlags = NORM_IGNOREWIDTH;
+				
+				int aOrder = ::CompareStringW (locale, 
+											   aFlags,
+											   (const WCHAR *) aStrA.Buffer_uint16 (), 
+											   aLenA,
+											   (const WCHAR *) aStrB.Buffer_uint16 (), 
+											   aLenB);
+
+				if (aOrder == CSTR_EQUAL)
+					{
+					return 0;
+					}
+
+				else if (aOrder == CSTR_GREATER_THAN)
+					{
+					return 1;
+					} 
+				
+				else 
+					{
+					return -1;
+					}
+
+				}
+
+			else 
+				{
+				return 1;
+				}
+
+			}
+
+		else 
+			{
+
+			if (aLenB > 0) 
+				{
+				return -1;
+				} 
+			else
+				{
+				return 0;
+				}
+
+			}
+		
+		}
+		
+	#else
+	
+	// Fallback to a pure Unicode sort order.
+	
+		{
+		
+		for (uint32 pass = 0; pass < 2; pass++)
+			{
+		
+			const char *aPtr =   Get ();
+			const char *bPtr = s.Get ();
+			
+			while (*aPtr || *bPtr)
+				{
+				
+				if (!bPtr)
+					{
+					return 1;
+					}
+	
+				else if (!aPtr)
+					{
+					return -1;
+					}
+					
+				uint32 a = DecodeUTF8 (aPtr);
+				uint32 b = DecodeUTF8 (bPtr);
+				
+				// Ignore case on first compare pass.
+				
+				if (pass == 0)
+					{
+					
+					if (a >= (uint32) 'a' && a <= (uint32) 'z')
+						{
+						a = a - (uint32) 'a' + (uint32) 'A';
+						}
+						
+					if (b >= (uint32) 'a' && b <= (uint32) 'z')
+						{
+						b = b - (uint32) 'a' + (uint32) 'A';
+						}
+				
+					}
+					
+				if (b > a)
+					{
+					return 1;
+					}
+					
+				else if (a < b)
+					{
+					return -1;
+					}
+					
+				}
+				
+			}
+			
+		}
+		
+	#endif
+			
+	return 0;
 	
 	}
 

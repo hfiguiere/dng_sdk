@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_image_writer.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_image_writer.h#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /** \file
@@ -33,41 +33,6 @@
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
 #include "dng_types.h"
-
-/*****************************************************************************/
-
-class dng_jpeg_preview
-	{
-	
-	public:
-	
-		dng_point fPreviewSize;
-		
-		uint16 fPhotometricInterpretation;
-		
-		dng_point fYCbCrSubSampling;
-		
-		uint16 fYCbCrPositioning;
-		
-		AutoPtr<dng_memory_block> fCompressedData;
-
-	public:
-	
-		dng_jpeg_preview ();
-		
-		virtual ~dng_jpeg_preview ();
-		
-		void SpoolAdobeThumbnail (dng_stream &stream) const;
-		
-	private:
-	
-		// Hidden copy constructor and assignment operator.
-		
-		dng_jpeg_preview (const dng_jpeg_preview &preview);
-		
-		dng_jpeg_preview & operator= (const dng_jpeg_preview &preview);
-					 
-	};
 
 /*****************************************************************************/
 
@@ -497,7 +462,7 @@ class tag_icc_profile: public tag_data_ptr
 	
 	public:
 	
-		tag_icc_profile (const dng_color_space *space);
+		tag_icc_profile (const void *profileData, uint32 profileSize);
 			
 	};
 
@@ -641,7 +606,7 @@ class tag_adobe_data: public tiff_tag
 
 /******************************************************************************/
 
-class tiff_directory
+class dng_tiff_directory
 	{
 	
 	private:
@@ -657,10 +622,14 @@ class tiff_directory
 		
 	public:
 	
-		tiff_directory ()
+		dng_tiff_directory ()
 		
 			:	fEntries (0)
 			
+			{
+			}
+			
+		virtual ~dng_tiff_directory ()
 			{
 			}
 			
@@ -668,13 +637,30 @@ class tiff_directory
 		
 		uint32 Size () const;
 		
-		void Put (dng_stream &stream) const;
+		enum OffsetsBase
+			{
+			offsetsRelativeToStream			= 0,
+			offsetsRelativeToExplicitBase	= 1,
+			offsetsRelativeToIFD			= 2
+			};
+
+		void Put (dng_stream &stream,
+				  OffsetsBase offsetsBase = offsetsRelativeToStream,
+				  uint32 explicitBase = 0) const;
 	
+	private:
+	
+		// Hidden copy constructor and assignment operator.
+		
+		dng_tiff_directory (const dng_tiff_directory &dir);
+		
+		dng_tiff_directory & operator= (const dng_tiff_directory &dir);
+					 
 	};
-	
+
 /******************************************************************************/
 
-class basic_tag_set
+class dng_basic_tag_set
 	{
 	
 	private:
@@ -722,13 +708,19 @@ class basic_tag_set
 		uint16 fSampleFormatData [kMaxSamplesPerPixel];
 		
 		tag_uint16_ptr fSampleFormat;
+		
+		tag_uint16 fRowInterleaveFactor;
+		
+		uint16 fSubTileBlockSizeData [2];
+		
+		tag_uint16_ptr fSubTileBlockSize;
 
 	public:
 	
-		basic_tag_set (tiff_directory &directory,
-					   const dng_ifd &info);
+		dng_basic_tag_set (dng_tiff_directory &directory,
+					       const dng_ifd &info);
 					   
-		virtual ~basic_tag_set ()
+		virtual ~dng_basic_tag_set ()
 			{
 			}
 					 
@@ -753,9 +745,9 @@ class basic_tag_set
 	
 		// Hidden copy constructor and assignment operator.
 		
-		basic_tag_set (const basic_tag_set &set);
+		dng_basic_tag_set (const dng_basic_tag_set &set);
 		
-		basic_tag_set & operator= (const basic_tag_set &set);
+		dng_basic_tag_set & operator= (const dng_basic_tag_set &set);
 					 
 	};
 	
@@ -766,8 +758,8 @@ class exif_tag_set
 	
 	protected:
 	
-		tiff_directory fExifIFD;
-		tiff_directory fGPSIFD;
+		dng_tiff_directory fExifIFD;
+		dng_tiff_directory fGPSIFD;
 		
 	private:
 		
@@ -937,7 +929,7 @@ class exif_tag_set
 		
 	public:
 	
-		exif_tag_set (tiff_directory &directory,
+		exif_tag_set (dng_tiff_directory &directory,
 					  const dng_exif &exif,
 					  bool makerNoteSafe = false,
 					  const void *makerNoteData = NULL,
@@ -964,7 +956,7 @@ class exif_tag_set
 			
 	protected:
 	
-		void AddLinks (tiff_directory &directory);
+		void AddLinks (dng_tiff_directory &directory);
 	
 	private:
 	
@@ -976,10 +968,28 @@ class exif_tag_set
 					 
 	};
 
+/******************************************************************************/
+
+class tiff_dng_extended_color_profile: private dng_tiff_directory
+	{
+
+	protected:
+
+		const dng_camera_profile &fProfile;
+
+	public:
+
+		tiff_dng_extended_color_profile (const dng_camera_profile &profile);
+
+		void Put (dng_stream &stream,
+				  bool includeModelRestriction = true);
+
+	};
+
 /*****************************************************************************/
 
-
-/// \brief Support for writing dng_image or dng_negative instances to a dng_stream in TIFF or DNG format.
+/// \brief Support for writing dng_image or dng_negative instances to a
+/// dng_stream in TIFF or DNG format.
 
 class dng_image_writer
 	{
@@ -998,6 +1008,8 @@ class dng_image_writer
 		AutoPtr<dng_memory_block> fCompressedBuffer;
 	
 		AutoPtr<dng_memory_block> fUncompressedBuffer;
+		
+		AutoPtr<dng_memory_block> fSubTileBlockBuffer;
 	
 	public:
 	
@@ -1005,14 +1017,23 @@ class dng_image_writer
 		
 		virtual ~dng_image_writer ();
 
+		virtual void WriteImage (dng_host &host,
+						         const dng_ifd &ifd,
+						         dng_basic_tag_set &basic,
+						         dng_stream &stream,
+						         const dng_image &image,
+						         bool mapRange = false,
+						         uint32 fakeChannels = 1);
+						    
 		/// Write a dng_image to a dng_stream in TIFF format.
 		/// \param host Host interface used for progress updates, abort testing, buffer allocation, etc.
 		/// \param stream The dng_stream on which to write the TIFF.
 		/// \param image The actual image data to be written.
 		/// \param photometricInterpretation Either piBlackIsZero for monochrome or piRGB for RGB images.
-		/// \param compression Must be ccUncompressed .
+		/// \param compression Must be ccUncompressed.
 		/// \param negative If non-NULL, EXIF, IPTC, and XMP metadata from this negative is written to TIFF. 
-		/// \param space If non-null and color space has an ICC profile, TIFF will be tagged with this profile. No color space conversion of image data occurs.
+		/// \param space If non-null and color space has an ICC profile, TIFF will be tagged with this
+		/// profile. No color space conversion of image data occurs.
 		/// \param resolution If non-NULL, TIFF will be tagged with this resolution.
 		/// \param thumbnail If non-NULL, will be stored in TIFF as preview image.
 		/// \param imageResources If non-NULL, will image resources be stored in TIFF as well.
@@ -1028,22 +1049,47 @@ class dng_image_writer
 								const dng_jpeg_preview *thumbnail = NULL,
 								const dng_memory_block *imageResources = NULL);
 								
+		/// Write a dng_image to a dng_stream in TIFF format.
+		/// \param host Host interface used for progress updates, abort testing, buffer allocation, etc.
+		/// \param stream The dng_stream on which to write the TIFF.
+		/// \param image The actual image data to be written.
+		/// \param photometricInterpretation Either piBlackIsZero for monochrome or piRGB for RGB images.
+		/// \param compression Must be ccUncompressed.
+		/// \param negative If non-NULL, EXIF, IPTC, and XMP metadata from this negative is written to TIFF. 
+		/// \param profileData If non-null, TIFF will be tagged with this profile. No color space conversion
+		/// of image data occurs.
+		/// \param profileSize The size for the profile data.
+		/// \param resolution If non-NULL, TIFF will be tagged with this resolution.
+		/// \param thumbnail If non-NULL, will be stored in TIFF as preview image.
+		/// \param imageResources If non-NULL, will image resources be stored in TIFF as well.
+
+		virtual void WriteTIFFWithProfile (dng_host &host,
+										   dng_stream &stream,
+										   const dng_image &image,
+										   uint32 photometricInterpretation = piBlackIsZero,
+										   uint32 compression = ccUncompressed,
+										   const dng_negative *negative = NULL,
+										   const void *profileData = NULL,
+										   uint32 profileSize = 0,
+										   const dng_resolution *resolution = NULL,
+										   const dng_jpeg_preview *thumbnail = NULL,
+										   const dng_memory_block *imageResources = NULL);
+								
 		/// Write a dng_image to a dng_stream in DNG format.
 		/// \param host Host interface used for progress updates, abort testing, buffer allocation, etc.
 		/// \param stream The dng_stream on which to write the TIFF.
 		/// \param negative The image data and metadata (EXIF, IPTC, XMP) to be written.
 		/// \param thumbnail Thumbanil image. Must be provided.
 		/// \param compression Either ccUncompressed or ccJPEG for lossless JPEG.
-		/// \param preview1 First preview image to write.
-		/// \param preview2 Second preview image to write. Ignored if preview1 is NULL.
+		/// \param previewCount The number of previews (not counting thumbnail).
+		/// \param preview Array of previewCount dng_preview pointers.
 
 		virtual void WriteDNG (dng_host &host,
 							   dng_stream &stream,
 							   const dng_negative &negative,
-							   const dng_image &thumbnail,
+							   const dng_image_preview &thumbnail,
 							   uint32 compression = ccJPEG,
-							   const dng_jpeg_preview *preview1 = NULL,
-							   const dng_jpeg_preview *preview2 = NULL);
+							   const dng_preview_list *previewList = NULL);
 							   
 	protected:
 	
@@ -1056,6 +1102,9 @@ class dng_image_writer
 						        	  
 		virtual void ByteSwapBuffer (dng_host &host,
 									 dng_pixel_buffer &buffer);
+									 
+		void ReorderSubTileBlocks (const dng_ifd &ifd,
+								   dng_pixel_buffer &buffer);
 						    
 		virtual void WriteData (dng_host &host,
 								const dng_ifd &ifd,
@@ -1070,14 +1119,6 @@ class dng_image_writer
 						        bool mapRange,
 						        uint32 fakeChannels);
 
-		virtual void WriteImage (dng_host &host,
-						         const dng_ifd &ifd,
-						         basic_tag_set &basic,
-						         dng_stream &stream,
-						         const dng_image &image,
-						         bool mapRange = false,
-						         uint32 fakeChannels = 1);
-						    
 	};
 	
 /*****************************************************************************/

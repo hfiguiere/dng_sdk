@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_image_writer.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_image_writer.cpp#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -27,6 +27,8 @@
 #include "dng_lossless_jpeg.h"
 #include "dng_negative.h"
 #include "dng_pixel_buffer.h"
+#include "dng_preview.h"
+#include "dng_read_image.h"
 #include "dng_stream.h"
 #include "dng_tag_codes.h"
 #include "dng_tag_values.h"
@@ -35,65 +37,13 @@
 
 /*****************************************************************************/
 
-dng_jpeg_preview::dng_jpeg_preview ()
+// Defines for testing DNG 1.2 features.
 
-	:	fPreviewSize 			   ()
-	,	fPhotometricInterpretation (piYCbCr)
-	,	fYCbCrSubSampling 		   (1, 1)
-	,	fYCbCrPositioning		   (2)
-	,	fCompressedData			   ()
-	
-	{
-	
-	}
+//#define qTestRowInterleave 2
 
-/*****************************************************************************/
+//#define qTestSubTileBlockRows 2
+//#define qTestSubTileBlockCols 2
 
-dng_jpeg_preview::~dng_jpeg_preview ()
-	{
-	
-	}
-		
-/*****************************************************************************/
-
-void dng_jpeg_preview::SpoolAdobeThumbnail (dng_stream &stream) const
-	{
-	
-	ASSERT (fCompressedData.Get (),
-			"SpoolAdobeThumbnail: no data");
-	
-	ASSERT (fPhotometricInterpretation == piYCbCr,
-			"SpoolAdobeThumbnail: Non-YCbCr");
-	
-	uint32 compressedSize = fCompressedData->LogicalSize ();
-	
-	stream.Put_uint32 (DNG_CHAR4 ('8','B','I','M'));
-	stream.Put_uint16 (1036);
-	stream.Put_uint16 (0);
-	
-	stream.Put_uint32 (compressedSize + 28);
-	
-	uint32 widthBytes = (fPreviewSize.h * 24 + 31) / 32 * 4;
-	
-	stream.Put_uint32 (1);
-	stream.Put_uint32 (fPreviewSize.h);
-	stream.Put_uint32 (fPreviewSize.v);
-	stream.Put_uint32 (widthBytes);
-	stream.Put_uint32 (widthBytes * fPreviewSize.v);
-	stream.Put_uint32 (compressedSize);
-	stream.Put_uint16 (24);
-	stream.Put_uint16 (1);
-	
-	stream.Put (fCompressedData->Buffer (),
-			    compressedSize);
-			    
-	if (compressedSize & 1)
-		{
-		stream.Put_uint8 (0);
-		}
-	
-	}
-		
 /*****************************************************************************/
 
 dng_resolution::dng_resolution ()
@@ -336,7 +286,8 @@ tag_matrix::tag_matrix (uint16 code,
 
 /******************************************************************************/
 
-tag_icc_profile::tag_icc_profile (const dng_color_space *space)
+tag_icc_profile::tag_icc_profile (const void *profileData,
+								  uint32 profileSize)
 			
 	:	tag_data_ptr (tcICCProfile, 
 					  ttUndefined,
@@ -345,19 +296,11 @@ tag_icc_profile::tag_icc_profile (const dng_color_space *space)
 	
 	{
 	
-	if (space)
+	if (profileData && profileSize)
 		{
 		
-		uint32 size = 0;
-		const uint8 *data = NULL;
-		
-		if (space->ICCProfile (size, data))
-			{
-			
-			SetCount (size);
-			SetData  (data);
-			
-			}
+		SetCount (profileSize);
+		SetData  (profileData);
 		
 		}
 	
@@ -575,7 +518,7 @@ void tag_adobe_data::Put (dng_stream &stream) const
 
 /******************************************************************************/
 
-void tiff_directory::Add (const tiff_tag *tag)
+void dng_tiff_directory::Add (const tiff_tag *tag)
 	{
 	
 	if (fEntries >= kMaxEntries)
@@ -613,7 +556,7 @@ void tiff_directory::Add (const tiff_tag *tag)
 		
 /******************************************************************************/
 
-uint32 tiff_directory::Size () const
+uint32 dng_tiff_directory::Size () const
 	{
 	
 	if (!fEntries) return 0;
@@ -640,15 +583,23 @@ uint32 tiff_directory::Size () const
 		
 /******************************************************************************/
 
-void tiff_directory::Put (dng_stream &stream) const
+void dng_tiff_directory::Put (dng_stream &stream,
+						      OffsetsBase offsetsBase,
+						      uint32 explicitBase) const
 	{
 	
 	if (!fEntries) return;
 	
 	uint32 index;
 	
-	uint32 bigData = stream.Position () + fEntries * 12 + 6;
+	uint32 bigData = fEntries * 12 + 6;
 	
+	if (offsetsBase == offsetsRelativeToStream)
+		bigData += (uint32) stream.Position ();
+
+	else if (offsetsBase == offsetsRelativeToExplicitBase)
+		bigData += explicitBase;
+
 	stream.Put_uint16 ((uint16) fEntries);
 	
 	for (index = 0; index < fEntries; index++)
@@ -708,11 +659,11 @@ void tiff_directory::Put (dng_stream &stream) const
 		}
 	
 	}
-		
+
 /******************************************************************************/
 
-basic_tag_set::basic_tag_set (tiff_directory &directory,
-					 	      const dng_ifd &info)
+dng_basic_tag_set::dng_basic_tag_set (dng_tiff_directory &directory,
+									  const dng_ifd &info)
 					 	  
 	:	fNewSubFileType (tcNewSubFileType, info.fNewSubFileType)
 	
@@ -763,6 +714,13 @@ basic_tag_set::basic_tag_set (tiff_directory &directory,
 	,	fSampleFormat (tcSampleFormat,
 					   fSampleFormatData,
 					   info.fSamplesPerPixel)
+					   
+	,	fRowInterleaveFactor (tcRowInterleaveFactor,
+							  (uint16) info.fRowInterleaveFactor)
+							  
+	,	fSubTileBlockSize (tcSubTileBlockSize,
+						   fSubTileBlockSizeData,
+						   2)
 								 
 	{
 	
@@ -841,12 +799,30 @@ basic_tag_set::basic_tag_set (tiff_directory &directory,
 		directory.Add (&fSampleFormat);
 		
 		}
+		
+	if (info.fRowInterleaveFactor != 1)
+		{
+		
+		directory.Add (&fRowInterleaveFactor);
+		
+		}
+		
+	if (info.fSubTileBlockRows != 1 ||
+		info.fSubTileBlockCols != 1)
+		{
+		
+		fSubTileBlockSizeData [0] = (uint16) info.fSubTileBlockRows;
+		fSubTileBlockSizeData [1] = (uint16) info.fSubTileBlockCols;
+		
+		directory.Add (&fSubTileBlockSize);
+		
+		}
 	
 	}
 
 /******************************************************************************/
 
-exif_tag_set::exif_tag_set (tiff_directory &directory,
+exif_tag_set::exif_tag_set (dng_tiff_directory &directory,
 					  		const dng_exif &exif,
 							bool makerNoteSafe,
 							const void *makerNoteData,
@@ -935,13 +911,13 @@ exif_tag_set::exif_tag_set (tiff_directory &directory,
 
 	,	fLensInfo (tcLensInfo, fLensInfoData, 4)
 	
-	,	fDateTime		   (tcDateTime		   , exif.fDateTime         )
-	,	fDateTimeOriginal  (tcDateTimeOriginal , exif.fDateTimeOriginal )
-	,	fDateTimeDigitized (tcDateTimeDigitized, exif.fDateTimeDigitized)
+	,	fDateTime		   (tcDateTime		   , exif.fDateTime         .DateTime ())
+	,	fDateTimeOriginal  (tcDateTimeOriginal , exif.fDateTimeOriginal .DateTime ())
+	,	fDateTimeDigitized (tcDateTimeDigitized, exif.fDateTimeDigitized.DateTime ())
 	
-	,	fSubsecTime			 (tcSubsecTime, 		 exif.fSubsecTime         )
-	,	fSubsecTimeOriginal  (tcSubsecTimeOriginal,  exif.fSubsecTimeOriginal )
-	,	fSubsecTimeDigitized (tcSubsecTimeDigitized, exif.fSubsecTimeDigitized)
+	,	fSubsecTime			 (tcSubsecTime, 		 exif.fDateTime         .Subseconds ())
+	,	fSubsecTimeOriginal  (tcSubsecTimeOriginal,  exif.fDateTimeOriginal .Subseconds ())
+	,	fSubsecTimeDigitized (tcSubsecTimeDigitized, exif.fDateTimeDigitized.Subseconds ())
 	
 	,	fTimeZoneOffset (tcTimeZoneOffset, fTimeZoneOffsetData, 2)
 	
@@ -1251,7 +1227,7 @@ exif_tag_set::exif_tag_set (tiff_directory &directory,
 		
 		directory.Add (&fDateTime);
 		
-		if (exif.fSubsecTime.NotEmpty ())
+		if (exif.fDateTime.Subseconds ().NotEmpty ())
 			{
 			fExifIFD.Add (&fSubsecTime);
 			}
@@ -1263,7 +1239,7 @@ exif_tag_set::exif_tag_set (tiff_directory &directory,
 		
 		fExifIFD.Add (&fDateTimeOriginal);
 		
-		if (exif.fSubsecTimeOriginal.NotEmpty ())
+		if (exif.fDateTimeOriginal.Subseconds ().NotEmpty ())
 			{
 			fExifIFD.Add (&fSubsecTimeOriginal);
 			}
@@ -1275,26 +1251,33 @@ exif_tag_set::exif_tag_set (tiff_directory &directory,
 		
 		fExifIFD.Add (&fDateTimeDigitized);
 		
-		if (exif.fSubsecTimeDigitized.NotEmpty ())
+		if (exif.fDateTimeDigitized.Subseconds ().NotEmpty ())
 			{
 			fExifIFD.Add (&fSubsecTimeDigitized);
 			}
 		
 		}
 		
-	if (exif.fDateTimeOriginal.IsValid () && exif.fTimeZoneOffsetOriginal != 0x7FFFFFFF)
+	if (insideDNG)	// TIFF-EP only tags
 		{
 		
-		fTimeZoneOffsetData [0] = (int16) exif.fTimeZoneOffsetOriginal;
-		fTimeZoneOffsetData [1] = (int16) exif.fTimeZoneOffset;
-		
-		if (!exif.fDateTime.IsValid () || exif.fTimeZoneOffset == 0x7FFFFFFF)
+		if (exif.fDateTimeOriginal.IsValid  () && 
+			exif.fDateTimeOriginal.TimeZone ().IsExactHourOffset ())
 			{
-			fTimeZoneOffset.SetCount (1);
+			
+			fTimeZoneOffsetData [0] = (int16) exif.fDateTimeOriginal.TimeZone ().ExactHourOffset ();
+			fTimeZoneOffsetData [1] = (int16) exif.fDateTime        .TimeZone ().ExactHourOffset ();
+			
+			if (!exif.fDateTime.IsValid  () ||
+				!exif.fDateTime.TimeZone ().IsExactHourOffset ())
+				{
+				fTimeZoneOffset.SetCount (1);
+				}
+			
+			directory.Add (&fTimeZoneOffset);
+			
 			}
-		
-		directory.Add (&fTimeZoneOffset);
-		
+			
 		}
 		
 	if (exif.fMake.NotEmpty ())
@@ -1518,7 +1501,7 @@ exif_tag_set::exif_tag_set (tiff_directory &directory,
 
 /******************************************************************************/
 
-void exif_tag_set::AddLinks (tiff_directory &directory)
+void exif_tag_set::AddLinks (dng_tiff_directory &directory)
 	{
 	
 	if (fExifIFD.Size () != 0 && !fAddedExifLink)
@@ -1582,14 +1565,14 @@ class range_tag_set
 		
 	public:
 	
-		range_tag_set (tiff_directory &directory,
+		range_tag_set (dng_tiff_directory &directory,
 				       const dng_negative &negative);
 		
 	};
 	
 /******************************************************************************/
 
-range_tag_set::range_tag_set (tiff_directory &directory,
+range_tag_set::range_tag_set (dng_tiff_directory &directory,
 				     	      const dng_negative &negative)
 				     	  
 	:	fActiveArea (tcActiveArea,
@@ -1842,14 +1825,14 @@ class mosaic_tag_set
 		
 	public:
 	
-		mosaic_tag_set (tiff_directory &directory,
-				     const dng_mosaic_info &info);
+		mosaic_tag_set (dng_tiff_directory &directory,
+				        const dng_mosaic_info &info);
 		
 	};
 	
 /******************************************************************************/
 
-mosaic_tag_set::mosaic_tag_set (tiff_directory &directory,
+mosaic_tag_set::mosaic_tag_set (dng_tiff_directory &directory,
 					            const dng_mosaic_info &info)
 
 	:	fCFARepeatPatternDim (tcCFARepeatPatternDim,
@@ -1942,18 +1925,13 @@ class color_tag_set
 	
 		uint32 fColorChannels;
 		
-		tag_uint16 fCalibrationIlluminant1;
-		tag_uint16 fCalibrationIlluminant2;
-		
-		tag_matrix fColorMatrix1;
-		tag_matrix fColorMatrix2;
-		
 		tag_matrix fCameraCalibration1;
 		tag_matrix fCameraCalibration2;
 										 
-		tag_matrix fReductionMatrix1;
-		tag_matrix fReductionMatrix2;
-										 
+		tag_string fCameraCalibrationSignature;
+		
+		tag_string fAsShotProfileName;
+
 		dng_urational fAnalogBalanceData [4];
 	
 		tag_urational_ptr fAnalogBalance;
@@ -1970,44 +1948,30 @@ class color_tag_set
 										  
 	public:
 	
-		color_tag_set (tiff_directory &directory,
-				       const dng_negative &negative,
-				       const dng_camera_profile &profile);
+		color_tag_set (dng_tiff_directory &directory,
+				       const dng_negative &negative);
 		
 	};
 	
 /******************************************************************************/
 
-color_tag_set::color_tag_set (tiff_directory &directory,
-				     	  	  const dng_negative &negative,
-				     	  	  const dng_camera_profile &profile)
+color_tag_set::color_tag_set (dng_tiff_directory &directory,
+				     	  	  const dng_negative &negative)
 				     	  
 	:	fColorChannels (negative.ColorChannels ())
 	
-	,	fCalibrationIlluminant1 (tcCalibrationIlluminant1,
-								 (uint16) profile.CalibrationIlluminant1 ())
-								 
-	,	fCalibrationIlluminant2 (tcCalibrationIlluminant2,
-								 (uint16) profile.CalibrationIlluminant2 ())
-	
-	,	fColorMatrix1 (tcColorMatrix1,
-					   profile.ColorMatrix1 ())
-						
-	,	fColorMatrix2 (tcColorMatrix2,
-					   profile.ColorMatrix2 ())
-				     	  
 	,	fCameraCalibration1 (tcCameraCalibration1,
-						     profile.CameraCalibration1 ())
+						     negative.CameraCalibration1 ())
 						
 	,	fCameraCalibration2 (tcCameraCalibration2,
-						     profile.CameraCalibration2 ())
-						       
-	,	fReductionMatrix1 (tcReductionMatrix1,
-						   profile.ReductionMatrix1 ())
-						
-	,	fReductionMatrix2 (tcReductionMatrix2,
-						   profile.ReductionMatrix2 ())
-						
+						     negative.CameraCalibration2 ())
+							 
+	,	fCameraCalibrationSignature (tcCameraCalibrationSignature,
+									 negative.CameraCalibrationSignature ())
+									 
+	,	fAsShotProfileName (tcAsShotProfileName,
+							negative.AsShotProfileName ())
+
 	,	fAnalogBalance (tcAnalogBalance,
 						fAnalogBalanceData,
 						fColorChannels)
@@ -2030,10 +1994,6 @@ color_tag_set::color_tag_set (tiff_directory &directory,
 		
 		uint32 channels2 = fColorChannels * fColorChannels;
 		
-		directory.Add (&fCalibrationIlluminant1);
-		
-		directory.Add (&fColorMatrix1);
-		
 		if (fCameraCalibration1.Count () == channels2)
 			{
 			
@@ -2041,34 +2001,31 @@ color_tag_set::color_tag_set (tiff_directory &directory,
 		
 			}
 			
-		if (fColorChannels > 3 && fReductionMatrix1.Count () == fColorChannels * 3)
+		if (fCameraCalibration2.Count () == channels2)
 			{
 			
-			directory.Add (&fReductionMatrix1);
+			directory.Add (&fCameraCalibration2);
+		
+			}
+			
+		if (fCameraCalibration1.Count () == channels2 ||
+			fCameraCalibration2.Count () == channels2)
+			{
+			
+			if (negative.CameraCalibrationSignature ().NotEmpty ())
+				{
+				
+				directory.Add (&fCameraCalibrationSignature);
+				
+				}
 			
 			}
-		
-		if (profile.HasColorMatrix2 ())
+			
+		if (negative.AsShotProfileName ().NotEmpty ())
 			{
-		
-			directory.Add (&fCalibrationIlluminant2);
-		
-			directory.Add (&fColorMatrix2);
 			
-			if (fCameraCalibration2.Count () == channels2)
-				{
+			directory.Add (&fAsShotProfileName);
 				
-				directory.Add (&fCameraCalibration2);
-			
-				}
-				
-			if (fColorChannels > 3 && fReductionMatrix2.Count () == fColorChannels * 3)
-				{
-				
-				directory.Add (&fReductionMatrix2);
-				
-				}
-	
 			}
 			
 		for (uint32 j = 0; j < fColorChannels; j++)
@@ -2112,78 +2069,354 @@ color_tag_set::color_tag_set (tiff_directory &directory,
 
 /******************************************************************************/
 
-class jpeg_tag_set: public basic_tag_set
+class profile_tag_set
 	{
 	
 	private:
 	
-		dng_urational fCoefficientsData [3];
+		tag_uint16 fCalibrationIlluminant1;
+		tag_uint16 fCalibrationIlluminant2;
 		
-		tag_urational_ptr fCoefficientsTag;
+		tag_matrix fColorMatrix1;
+		tag_matrix fColorMatrix2;
 		
-		uint16 fSubSamplingData [2];
+		tag_matrix fForwardMatrix1;
+		tag_matrix fForwardMatrix2;
+
+		tag_matrix fReductionMatrix1;
+		tag_matrix fReductionMatrix2;
 		
-		tag_uint16_ptr fSubSamplingTag;
+		tag_string fProfileName;
 		
-		tag_uint16 fPositioningTag;
+		tag_string fProfileCalibrationSignature;
 		
-		dng_urational fReferenceData [6];
+		tag_uint32 fEmbedPolicyTag;
 		
-		tag_urational_ptr fReferenceTag;
-	
+		tag_string fCopyrightTag;
+		
+		uint32 fHueSatMapDimData [3];
+		
+		tag_uint32_ptr fHueSatMapDims;
+
+		tag_data_ptr fHueSatData1;
+		tag_data_ptr fHueSatData2;
+		
+		uint32 fLookTableDimData [3];
+		
+		tag_uint32_ptr fLookTableDims;
+
+		tag_data_ptr fLookTableData;
+		
+		dng_memory_data fToneCurveBuffer;
+		
+		tag_data_ptr fToneCurveTag;
+
 	public:
 	
-		jpeg_tag_set (tiff_directory &directory,
-					  const dng_ifd &info,
-					  const dng_jpeg_preview &preview);
-	
+		profile_tag_set (dng_tiff_directory &directory,
+						 const dng_camera_profile &profile);
+		
 	};
+	
+/******************************************************************************/
+
+profile_tag_set::profile_tag_set (dng_tiff_directory &directory,
+				     	  	      const dng_camera_profile &profile)
+				     	  
+	:	fCalibrationIlluminant1 (tcCalibrationIlluminant1,
+								 (uint16) profile.CalibrationIlluminant1 ())
+								 
+	,	fCalibrationIlluminant2 (tcCalibrationIlluminant2,
+								 (uint16) profile.CalibrationIlluminant2 ())
+	
+	,	fColorMatrix1 (tcColorMatrix1,
+					   profile.ColorMatrix1 ())
+						
+	,	fColorMatrix2 (tcColorMatrix2,
+					   profile.ColorMatrix2 ())
+
+	,	fForwardMatrix1 (tcForwardMatrix1,
+						 profile.ForwardMatrix1 ())
+						
+	,	fForwardMatrix2 (tcForwardMatrix2,
+						 profile.ForwardMatrix2 ())
+						
+	,	fReductionMatrix1 (tcReductionMatrix1,
+						   profile.ReductionMatrix1 ())
+						
+	,	fReductionMatrix2 (tcReductionMatrix2,
+						   profile.ReductionMatrix2 ())
+						   
+	,	fProfileName (tcProfileName,
+					  profile.Name ())
+						   
+	,	fProfileCalibrationSignature (tcProfileCalibrationSignature,
+									  profile.ProfileCalibrationSignature ())
+						
+	,	fEmbedPolicyTag (tcProfileEmbedPolicy,
+						 profile.EmbedPolicy ())
+						 
+	,	fCopyrightTag (tcProfileCopyright,
+					   profile.Copyright ())
+					   
+	,	fHueSatMapDims (tcProfileHueSatMapDims, 
+						fHueSatMapDimData,
+						3)
+		
+	,	fHueSatData1 (tcProfileHueSatMapData1,
+					  ttFloat,
+					  profile.HueSatDeltas1 ().DeltasCount () * 3,
+					  profile.HueSatDeltas1 ().GetDeltas ())
+					  
+	,	fHueSatData2 (tcProfileHueSatMapData2,
+					  ttFloat,
+					  profile.HueSatDeltas2 ().DeltasCount () * 3,
+					  profile.HueSatDeltas2 ().GetDeltas ())
+					  
+	,	fLookTableDims (tcProfileLookTableDims,
+						fLookTableDimData,
+						3)
+						
+	,	fLookTableData (tcProfileLookTableData,
+						ttFloat,
+						profile.LookTable ().DeltasCount () * 3,
+					    profile.LookTable ().GetDeltas ())
+					  
+	,	fToneCurveBuffer ()
+					  
+	,	fToneCurveTag (tcProfileToneCurve,
+					   ttFloat,
+					   0,
+					   NULL)
+
+	{
+	
+	if (profile.HasColorMatrix1 ())
+		{
+	
+		uint32 colorChannels = profile.ColorMatrix1 ().Rows ();
+		
+		directory.Add (&fCalibrationIlluminant1);
+		
+		directory.Add (&fColorMatrix1);
+		
+		if (fForwardMatrix1.Count () == colorChannels * 3)
+			{
+			
+			directory.Add (&fForwardMatrix1);
+
+			}
+		
+		if (colorChannels > 3 && fReductionMatrix1.Count () == colorChannels * 3)
+			{
+			
+			directory.Add (&fReductionMatrix1);
+			
+			}
+			
+		if (profile.HasColorMatrix2 ())
+			{
+		
+			directory.Add (&fCalibrationIlluminant2);
+		
+			directory.Add (&fColorMatrix2);
+				
+			if (fForwardMatrix2.Count () == colorChannels * 3)
+				{
+				
+				directory.Add (&fForwardMatrix2);
+
+				}
+		
+			if (colorChannels > 3 && fReductionMatrix2.Count () == colorChannels * 3)
+				{
+				
+				directory.Add (&fReductionMatrix2);
+				
+				}
+	
+			}
+			
+		if (profile.Name ().NotEmpty ())
+			{
+			
+			directory.Add (&fProfileName);
+
+			}
+			
+		if (profile.ProfileCalibrationSignature ().NotEmpty ())
+			{
+			
+			directory.Add (&fProfileCalibrationSignature);
+			
+			}
+			
+		directory.Add (&fEmbedPolicyTag);
+		
+		if (profile.Copyright ().NotEmpty ())
+			{
+			
+			directory.Add (&fCopyrightTag);
+			
+			}
+		
+		bool haveHueSat1 = profile.HueSatDeltas1 ().IsValid ();
+		
+		bool haveHueSat2 = profile.HueSatDeltas2 ().IsValid () &&
+						   profile.HasColorMatrix2 ();
+
+		if (haveHueSat1 || haveHueSat2)
+			{
+			
+			uint32 hueDivs = 0;
+			uint32 satDivs = 0;
+			uint32 valDivs = 0;
+
+			if (haveHueSat1)
+				{
+
+				profile.HueSatDeltas1 ().GetDivisions (hueDivs,
+													   satDivs,
+													   valDivs);
+
+				}
+
+			else
+				{
+
+				profile.HueSatDeltas2 ().GetDivisions (hueDivs,
+													   satDivs,
+													   valDivs);
+
+				}
+				
+			fHueSatMapDimData [0] = hueDivs;
+			fHueSatMapDimData [1] = satDivs;
+			fHueSatMapDimData [2] = valDivs;
+			
+			directory.Add (&fHueSatMapDims);
+
+			}
+			
+		if (haveHueSat1)
+			{
+			
+			directory.Add (&fHueSatData1);
+			
+			}
+			
+		if (haveHueSat2)
+			{
+			
+			directory.Add (&fHueSatData2);
+			
+			}
+			
+		if (profile.HasLookTable ())
+			{
+			
+			uint32 hueDivs = 0;
+			uint32 satDivs = 0;
+			uint32 valDivs = 0;
+
+			profile.LookTable ().GetDivisions (hueDivs,
+											   satDivs,
+											   valDivs);
+
+			fLookTableDimData [0] = hueDivs;
+			fLookTableDimData [1] = satDivs;
+			fLookTableDimData [2] = valDivs;
+			
+			directory.Add (&fLookTableDims);
+			
+			directory.Add (&fLookTableData);
+			
+			}
+			
+		if (profile.ToneCurve ().IsValid ())
+			{
+			
+			// Tone curve stored as pairs of 32-bit coordinates.  Probably could do with
+			// 16-bits here, but should be small number of points so...
+			
+			uint32 toneCurvePoints = (uint32) (profile.ToneCurve ().fCoord.size ());
+
+			fToneCurveBuffer.Allocate (toneCurvePoints * 2 * sizeof (real32));
+
+			real32 *points = fToneCurveBuffer.Buffer_real32 ();
+			
+			fToneCurveTag.SetCount (toneCurvePoints * 2);
+			fToneCurveTag.SetData  (points);
+			
+			for (uint32 i = 0; i < toneCurvePoints; i++)
+				{
+
+				// Transpose coordinates so they are in a more expected
+				// order (domain -> range).
+
+				points [i * 2    ] = (real32) profile.ToneCurve ().fCoord [i].h;
+				points [i * 2 + 1] = (real32) profile.ToneCurve ().fCoord [i].v;
+
+				}
+
+			directory.Add (&fToneCurveTag);
+
+			}
+
+		}
+	
+	}
 
 /******************************************************************************/
 
-jpeg_tag_set::jpeg_tag_set (tiff_directory &directory,
-							const dng_ifd &info,
-							const dng_jpeg_preview &preview)
-					
-	:	basic_tag_set (directory, info)
-	
-	,	fCoefficientsTag (tcYCbCrCoefficients, fCoefficientsData, 3)
-	
-	,	fSubSamplingTag (tcYCbCrSubSampling, fSubSamplingData, 2)
-	
-	,	fPositioningTag (tcYCbCrPositioning, preview.fYCbCrPositioning)
-	
-	,	fReferenceTag (tcReferenceBlackWhite, fReferenceData, 6)
-	
+tiff_dng_extended_color_profile::tiff_dng_extended_color_profile 
+								 (const dng_camera_profile &profile)
+
+	:	fProfile (profile)
+
 	{
 	
-	if (info.fPhotometricInterpretation == piYCbCr)
-		{
-	
-		fCoefficientsData [0] = dng_urational (299, 1000);
-		fCoefficientsData [1] = dng_urational (587, 1000);
-		fCoefficientsData [2] = dng_urational (114, 1000);
-		
-		directory.Add (&fCoefficientsTag);
-		
-		fSubSamplingData [0] = (uint16) preview.fYCbCrSubSampling.h;
-		fSubSamplingData [1] = (uint16) preview.fYCbCrSubSampling.v;
+	}
 
-		directory.Add (&fSubSamplingTag);
-		
-		directory.Add (&fPositioningTag);
-		
-		fReferenceData [0] = dng_urational (  0, 1);
-		fReferenceData [1] = dng_urational (255, 1);
-		fReferenceData [2] = dng_urational (128, 1);
-		fReferenceData [3] = dng_urational (255, 1);
-		fReferenceData [4] = dng_urational (128, 1);
-		fReferenceData [5] = dng_urational (255, 1);
-		
-		directory.Add (&fReferenceTag);
-		
-		}
+/******************************************************************************/
+
+void tiff_dng_extended_color_profile::Put (dng_stream &stream,
+										   bool includeModelRestriction)
+	{
 	
+	// Profile header.
+
+	stream.Put_uint16 (stream.BigEndian () ? byteOrderMM : byteOrderII);
+
+	stream.Put_uint16 (magicExtendedProfile);
+
+	stream.Put_uint32 (8);
+	
+	// Profile tags.
+	
+	profile_tag_set tagSet (*this, fProfile);
+
+	// Camera this profile is for.
+
+	tag_string cameraModelTag (tcUniqueCameraModel, 
+							   fProfile.UniqueCameraModelRestriction ());
+							   
+	if (includeModelRestriction)
+		{
+		
+		if (fProfile.UniqueCameraModelRestriction ().NotEmpty ())
+			{
+			
+			Add (&cameraModelTag);
+			
+			}
+			
+		}
+
+	// Write it all out.
+
+	dng_tiff_directory::Put (stream, offsetsRelativeToExplicitBase, 8);
+
 	}
 
 /*****************************************************************************/
@@ -2192,6 +2425,7 @@ dng_image_writer::dng_image_writer ()
 
 	:	fCompressedBuffer   ()
 	,	fUncompressedBuffer ()
+	,	fSubTileBlockBuffer ()
 	
 	{
 	
@@ -2211,7 +2445,7 @@ uint32 dng_image_writer::CompressedBufferSize (const dng_ifd &ifd,
 	{
 	
 	// If we are saving lossless JPEG from an 8-bit image, reserve
-	// save to pad the data out to 16-bits.
+	// space to pad the data out to 16-bits.
 	
 	if (ifd.fCompression == ccJPEG && ifd.fBitsPerSample [0] <= 8)
 		{
@@ -2280,6 +2514,71 @@ void dng_image_writer::ByteSwapBuffer (dng_host & /* host */,
 						    
 /*****************************************************************************/
 
+void dng_image_writer::ReorderSubTileBlocks (const dng_ifd &ifd,
+											 dng_pixel_buffer &buffer)
+	{
+	
+	uint32 blockRows = ifd.fSubTileBlockRows;
+	uint32 blockCols = ifd.fSubTileBlockCols;
+	
+	uint32 rowBlocks = buffer.fArea.H () / blockRows;
+	uint32 colBlocks = buffer.fArea.W () / blockCols;
+	
+	int32 rowStep = buffer.fRowStep * buffer.fPixelSize;
+	int32 colStep = buffer.fColStep * buffer.fPixelSize;
+	
+	int32 rowBlockStep = rowStep * blockRows;
+	int32 colBlockStep = colStep * blockCols;
+	
+	uint32 blockColBytes = blockCols * buffer.fPlanes * buffer.fPixelSize;
+	
+	const uint8 *s0 = fUncompressedBuffer->Buffer_uint8 ();
+	      uint8 *d0 = fSubTileBlockBuffer->Buffer_uint8 ();
+	
+	for (uint32 rowBlock = 0; rowBlock < rowBlocks; rowBlock++)
+		{
+		
+		const uint8 *s1 = s0;
+		
+		for (uint32 colBlock = 0; colBlock < colBlocks; colBlock++)
+			{
+			
+			const uint8 *s2 = s1;
+			
+			for (uint32 blockRow = 0; blockRow < blockRows; blockRow++)
+				{
+				
+				for (uint32 j = 0; j < blockColBytes; j++)
+					{
+					
+					d0 [j] = s2 [j];
+					
+					}
+					
+				d0 += blockColBytes;
+				
+				s2 += rowStep;
+				
+				}
+			
+			s1 += colBlockStep;
+			
+			}
+			
+		s0 += rowBlockStep;
+		
+		}
+		
+	// Copy back reordered pixels.
+		
+	DoCopyBytes (fSubTileBlockBuffer->Buffer      (),
+				 fUncompressedBuffer->Buffer      (),
+				 fUncompressedBuffer->LogicalSize ());
+	
+	}
+						    
+/*****************************************************************************/
+
 void dng_image_writer::WriteData (dng_host &host,
 								  const dng_ifd &ifd,
 						          dng_stream &stream,
@@ -2291,21 +2590,46 @@ void dng_image_writer::WriteData (dng_host &host,
 		
 		case ccUncompressed:
 			{
-	
-			// Swap bytes if required.
 			
-			if (stream.SwapBytes ())
+			// Special case support for when we save to 8-bits from
+			// 16-bit data.
+			
+			if (ifd.fBitsPerSample [0] == 8 && buffer.fPixelType == ttShort)
 				{
 				
-				ByteSwapBuffer (host, buffer);
-									
+				uint32 count = buffer.fRowStep *
+							   buffer.fArea.H ();
+							   
+				const uint16 *sPtr = (const uint16 *) buffer.fData;
+				
+				for (uint32 j = 0; j < count; j++)
+					{
+					
+					stream.Put_uint8 ((uint8) sPtr [j]);
+					
+					}
+				
 				}
-		
-			// Write the bytes.
+				
+			else
+				{
+	
+				// Swap bytes if required.
+				
+				if (stream.SwapBytes ())
+					{
+					
+					ByteSwapBuffer (host, buffer);
+										
+					}
 			
-			stream.Put (buffer.fData, buffer.fRowStep *
-									  buffer.fArea.H () *
-									  buffer.fPixelSize);
+				// Write the bytes.
+				
+				stream.Put (buffer.fData, buffer.fRowStep *
+										  buffer.fArea.H () *
+										  buffer.fPixelSize);
+										  
+				}
 			
 			break;
 			
@@ -2393,6 +2717,15 @@ void dng_image_writer::WriteTile (dng_host &host,
 	// Get the uncompressed data.
 	
 	image.Get (buffer, dng_image::edge_zero);
+	
+	// Deal with sub-tile blocks.
+	
+	if (ifd.fSubTileBlockRows > 1)
+		{
+		
+		ReorderSubTileBlocks (ifd, buffer);
+		
+		}
 	
 	// Range mapping if required.
 	
@@ -2490,12 +2823,37 @@ void dng_image_writer::WriteTile (dng_host &host,
 
 void dng_image_writer::WriteImage (dng_host &host,
 						           const dng_ifd &ifd,
-						           basic_tag_set &basic,
+						           dng_basic_tag_set &basic,
 						           dng_stream &stream,
 						           const dng_image &image,
 						           bool mapRange,
 						           uint32 fakeChannels)
 	{
+	
+	// Deal with row interleaved images.
+	
+	if (ifd.fRowInterleaveFactor > 1 &&
+		ifd.fRowInterleaveFactor < ifd.fImageLength)
+		{
+		
+		dng_ifd tempIFD (ifd);
+		
+		tempIFD.fRowInterleaveFactor = 1;
+		
+		dng_row_interleaved_image tempImage (*((dng_image *) &image),
+											 ifd.fRowInterleaveFactor);
+		
+		WriteImage (host,
+					tempIFD,
+					basic,
+					stream,
+					tempImage,
+					mapRange,
+					fakeChannels);
+			  
+		return;
+		
+		}
 	
 	// Compute basic information.
 	
@@ -2513,9 +2871,14 @@ void dng_image_writer::WriteImage (dng_host &host,
 	if (ifd.TileByteCount (ifd.TileArea (0, 0)) != 0)
 		{
 		
-		subTileLength = Pin_uint32 (1,
+		subTileLength = Pin_uint32 (ifd.fSubTileBlockRows,
 									kImageBufferSize / tileRowBytes, 
 									ifd.fTileLength);
+					
+		// Don't split sub-tiles across subTileBlocks.
+		
+		subTileLength = subTileLength / ifd.fSubTileBlockRows
+									  * ifd.fSubTileBlockRows;
 									
 		}
 		
@@ -2524,6 +2887,15 @@ void dng_image_writer::WriteImage (dng_host &host,
 	uint32 uncompressedSize = subTileLength * tileRowBytes;
 	
 	fUncompressedBuffer.Reset (host.Allocate (uncompressedSize));
+	
+	// Buffer to repack tiles order.
+	
+	if (ifd.fSubTileBlockRows > 1)
+		{
+		
+		fSubTileBlockBuffer.Reset (host.Allocate (uncompressedSize));
+		
+		}
 	
 	// Allocate compressed buffer, if required.
 	
@@ -2551,7 +2923,7 @@ void dng_image_writer::WriteImage (dng_host &host,
 			
 			// Remember this offset.
 			
-			uint32 tileOffset = stream.Position ();
+			uint32 tileOffset = (uint32) stream.Position ();
 		
 			basic.SetTileOffset (tileIndex, tileOffset);
 			
@@ -2588,7 +2960,7 @@ void dng_image_writer::WriteImage (dng_host &host,
 				
 			// Update tile count.
 				
-			uint32 tileByteCount = stream.Position () - tileOffset;
+			uint32 tileByteCount = (uint32) stream.Position () - tileOffset;
 				
 			basic.SetTileByteCount (tileIndex, tileByteCount);
 			
@@ -2624,6 +2996,49 @@ void dng_image_writer::WriteTIFF (dng_host &host,
 								  const dng_resolution *resolution,
 								  const dng_jpeg_preview *thumbnail,
 								  const dng_memory_block *imageResources)
+	{
+	
+	const void *profileData = NULL;
+	uint32 profileSize = 0;
+	
+	const uint8 *data = NULL;
+	uint32 size = 0;
+	
+	if (space && space->ICCProfile (size, data))
+		{
+		
+		profileData = data;
+		profileSize = size;
+		
+		}
+		
+	WriteTIFFWithProfile (host,
+						  stream,
+						  image,
+						  photometricInterpretation,
+						  compression,
+						  negative,
+						  profileData,
+						  profileSize,
+						  resolution,
+						  thumbnail,
+						  imageResources);
+	
+	}
+
+/*****************************************************************************/
+
+void dng_image_writer::WriteTIFFWithProfile (dng_host &host,
+											 dng_stream &stream,
+											 const dng_image &image,
+											 uint32 photometricInterpretation,
+											 uint32 compression,
+											 const dng_negative *negative,
+											 const void *profileData,
+											 uint32 profileSize,
+											 const dng_resolution *resolution,
+											 const dng_jpeg_preview *thumbnail,
+											 const dng_memory_block *imageResources)
 	{
 	
 	uint32 j;
@@ -2698,9 +3113,9 @@ void dng_image_writer::WriteTIFF (dng_host &host,
 			
 		}
 	
-	tiff_directory mainIFD;
+	dng_tiff_directory mainIFD;
 	
-	basic_tag_set basic (mainIFD, ifd);
+	dng_basic_tag_set basic (mainIFD, ifd);
 	
 	// Resolution.
 	
@@ -2725,7 +3140,7 @@ void dng_image_writer::WriteTIFF (dng_host &host,
 
 	// ICC Profile.
 	
-	tag_icc_profile iccProfileTag (space);
+	tag_icc_profile iccProfileTag (profileData, profileSize);
 	
 	if (iccProfileTag.Count ())
 		{
@@ -2742,6 +3157,20 @@ void dng_image_writer::WriteTIFF (dng_host &host,
 		xmp.Reset (new dng_xmp (*negative->GetXMP ()));
 		
 		xmp->ClearOrientation ();
+		
+		xmp->ClearImageInfo ();
+		
+		xmp->SetImageSize (image.Size ());
+		
+		xmp->SetSampleInfo (ifd.fSamplesPerPixel,
+							ifd.fBitsPerSample [0]);
+							
+		xmp->SetPhotometricInterpretation (ifd.fPhotometricInterpretation);
+		
+		if (resolution)
+			{
+			xmp->SetResolution (*resolution);
+			}
 		
 		}
 	
@@ -2840,22 +3269,23 @@ void dng_image_writer::WriteTIFF (dng_host &host,
 void dng_image_writer::WriteDNG (dng_host &host,
 							     dng_stream &stream,
 							     const dng_negative &negative,
-							     const dng_image &thumbnail,
+							     const dng_image_preview &thumbnail,
 							     uint32 compression,
-							     const dng_jpeg_preview *preview1,
-							     const dng_jpeg_preview *preview2)
+							     const dng_preview_list *previewList)
 	{
+	
+	uint32 j;
 	
 	// Create the main IFD
 										 
-	tiff_directory mainIFD;
+	dng_tiff_directory mainIFD;
 	
 	// Include DNG version tags.
 	
 	uint8 dngVersion [4];
 	
 	dngVersion [0] = 1;
-	dngVersion [1] = 1;
+	dngVersion [1] = 2;
 	dngVersion [2] = 0;
 	dngVersion [3] = 0;
 	
@@ -2870,32 +3300,17 @@ void dng_image_writer::WriteDNG (dng_host &host,
 	dngVersion2 [2] = 0;
 	dngVersion2 [3] = 0;
 	
+	#if defined(qTestRowInterleave) || defined(qTestSubTileBlockRows) || defined(qTestSubTileBlockCols)
+	dngVersion2 [1] = 2;
+	#endif
+	
 	tag_uint8_ptr tagDNGBackwardVersion (tcDNGBackwardVersion, dngVersion2, 4);
 	
 	mainIFD.Add (&tagDNGBackwardVersion);
 	
 	// The main IFD contains the thumbnail.
-	
-	dng_ifd thmInfo;
-	
-	thmInfo.fNewSubFileType = sfPreviewImage;
-	
-	thmInfo.fImageWidth  = thumbnail.Width  ();
-	thmInfo.fImageLength = thumbnail.Height ();
-	
-	thmInfo.fSamplesPerPixel = thumbnail.Planes ();
-	
-	thmInfo.fPhotometricInterpretation = thumbnail.Planes () == 1 ? piBlackIsZero
-																  : piRGB;
-																  
-	thmInfo.fBitsPerSample [0] = 8;
-	thmInfo.fBitsPerSample [1] = 8;
-	thmInfo.fBitsPerSample [2] = 8;
-	
-	thmInfo.SetSingleStrip ();
-		
-	basic_tag_set thmBasic (mainIFD,
-						    thmInfo);
+								
+	AutoPtr<dng_basic_tag_set> thmBasic (thumbnail.AddTagSet (mainIFD));
 						  
 	// Get the raw image we are writing.
 	
@@ -2920,7 +3335,7 @@ void dng_image_writer::WriteDNG (dng_host &host,
 		
 	// Create the IFD for the raw data.
 
-	tiff_directory rawIFD;
+	dng_tiff_directory rawIFD;
 	
 	// Create a dng_ifd record for the raw image.
 	
@@ -3049,11 +3464,26 @@ void dng_image_writer::WriteDNG (dng_host &host,
 		info.SetSingleStrip ();
 		
 		}
+		
+	#ifdef qTestRowInterleave
+	
+	info.fRowInterleaveFactor = qTestRowInterleave;
+	
+	#endif
+			
+	#if defined(qTestSubTileBlockRows) && defined(qTestSubTileBlockCols)
+	
+	info.fSubTileBlockRows = qTestSubTileBlockRows;
+	info.fSubTileBlockCols = qTestSubTileBlockCols;
+	
+	if (fakeChannels == 2)
+		fakeChannels = 4;
+	
+	#endif
 	
 	// Basic information.
 	
-	basic_tag_set rawBasic (rawIFD,
-						    info);
+	dng_basic_tag_set rawBasic (rawIFD, info);
 						  
 	// DefaultScale tag.
 
@@ -3132,22 +3562,68 @@ void dng_image_writer::WriteDNG (dng_host &host,
 		rawIFD.Add (&tagAntiAliasStrength);
 		
 		}
+		
+	// Profile and other color related tags.
 	
-	// Color matrix and white balance tag set.
+	AutoPtr<profile_tag_set> profileSet;
 	
 	AutoPtr<color_tag_set> colorSet;
+	
+	std::vector<uint32> extraProfileIndex;
 	
 	if (!negative.IsMonochrome ())
 		{
 		
-		const dng_camera_profile &profile (*negative.CameraProfileToEmbed ());
+		const dng_camera_profile &mainProfile (*negative.CameraProfileToEmbed ());
+		
+		profileSet.Reset (new profile_tag_set (mainIFD,
+											   mainProfile));
 		
 		colorSet.Reset (new color_tag_set (mainIFD,
-										   negative,
-										   profile));
+										   negative));
+										   
+		// Build list of profile indices to include in extra profiles tag.
+										   
+		uint32 profileCount = negative.ProfileCount ();
 		
+		for (uint32 index = 0; index < profileCount; index++)
+			{
+			
+			const dng_camera_profile &profile (negative.ProfileByIndex (index));
+			
+			if (&profile != &mainProfile)
+				{
+				
+				if (profile.WasReadFromDNG ())
+					{
+					
+					extraProfileIndex.push_back (index);
+					
+					}
+				
+				}
+				
+			}
+										   
 		}
+		
+	// Extra camera profiles tag.
 	
+	uint32 extraProfileCount = (uint32) extraProfileIndex.size ();
+	
+	dng_memory_data extraProfileOffsets (extraProfileCount * sizeof (uint32));
+	
+	tag_uint32_ptr extraProfileTag (tcExtraCameraProfiles,
+									extraProfileOffsets.Buffer_uint32 (),
+									extraProfileCount);
+									
+	if (extraProfileCount)
+		{
+		
+		mainIFD.Add (&extraProfileTag);
+
+		}
+			
 	// Other tags.
 	
 	tag_uint16 tagOrientation (tcOrientation,
@@ -3164,9 +3640,19 @@ void dng_image_writer::WriteDNG (dng_host &host,
 							        negative.BaselineNoiseR ());
 										  
 	mainIFD.Add (&tagBaselineNoise);
+	
+	tag_urational tagNoiseReductionApplied (tcNoiseReductionApplied,
+											negative.NoiseReductionApplied ());
+											
+	if (negative.NoiseReductionApplied ().IsValid ())
+		{
+		
+		mainIFD.Add (&tagNoiseReductionApplied);
+	
+		}
 
 	tag_urational tagBaselineSharpness (tcBaselineSharpness,
-								       negative.BaselineSharpnessR ());
+								        negative.BaselineSharpnessR ());
 										  
 	mainIFD.Add (&tagBaselineSharpness);
 
@@ -3201,6 +3687,21 @@ void dng_image_writer::WriteDNG (dng_host &host,
 		mainIFD.Add (&tagColorimetricReference);
 		
 		}
+		
+	negative.FindRawImageDigest (host);
+	
+	tag_uint8_ptr tagRawImageDigest (tcRawImageDigest,
+									 negative.RawImageDigest ().data,
+							   		 16);
+							   		  
+	if (negative.RawImageDigest ().IsValid ())
+		{
+							   
+		mainIFD.Add (&tagRawImageDigest);
+		
+		}
+	
+	negative.FindRawDataUniqueID (host);
 	
 	tag_uint8_ptr tagRawDataUniqueID (tcRawDataUniqueID,
 							   		  negative.RawDataUniqueID ().data,
@@ -3224,21 +3725,43 @@ void dng_image_writer::WriteDNG (dng_host &host,
 	
 		}
 		
+	negative.FindOriginalRawFileDigest ();
+		
 	tag_data_ptr tagOriginalRawFileData (tcOriginalRawFileData,
 										 ttUndefined,
 										 negative.OriginalRawFileDataLength (),
 										 negative.OriginalRawFileData       ());
 										 
+	tag_uint8_ptr tagOriginalRawFileDigest (tcOriginalRawFileDigest,
+											negative.OriginalRawFileDigest ().data,
+											16);
+										 
 	if (negative.OriginalRawFileData ())
 		{
 		
 		mainIFD.Add (&tagOriginalRawFileData);
+		
+		mainIFD.Add (&tagOriginalRawFileDigest);
 	
 		}
 
 	// XMP metadata.
 	
-	tag_xmp tagXMP (negative.GetXMP ());
+	AutoPtr<dng_xmp> xmp;
+	
+	if (negative.GetXMP ())
+		{
+		
+		xmp.Reset (new dng_xmp (*negative.GetXMP ()));
+		
+		// Make sure the XMP orientation always matches the
+		// tag orientation.
+		
+		xmp->SetOrientation (negative.Orientation ());
+		
+		}
+	
+	tag_xmp tagXMP (xmp.Get ());
 	
 	if (tagXMP.Count ())
 		{
@@ -3247,6 +3770,8 @@ void dng_image_writer::WriteDNG (dng_host &host,
 		
 		}
 		
+	xmp.Reset ();
+
 	// Exif tags.
 	
 	exif_tag_set exifSet (mainIFD,
@@ -3273,91 +3798,28 @@ void dng_image_writer::WriteDNG (dng_host &host,
 		
 	uint32 subFileCount = 1;
 	
-	// JPEG preview IFD 1
+	// Add previews.
 	
-	AutoPtr<tiff_directory> jpegIFD1;
+	uint32 previewCount = previewList ? previewList->Count () : 0;
 	
-	AutoPtr<jpeg_tag_set> jpegBasic1;
+	AutoPtr<dng_tiff_directory> previewIFD [kMaxDNGPreviews];
 	
-	if (preview1)
+	AutoPtr<dng_basic_tag_set> previewBasic [kMaxDNGPreviews];
+	
+	for (j = 0; j < previewCount; j++)
 		{
 		
-		jpegIFD1.Reset (new tiff_directory);
+		previewIFD [j] . Reset (new dng_tiff_directory);
 		
-		dng_ifd jpegInfo;
-		
-		jpegInfo.fNewSubFileType = sfPreviewImage;
-		
-		jpegInfo.fImageWidth  = preview1->fPreviewSize.h;
-		jpegInfo.fImageLength = preview1->fPreviewSize.v;
-		
-		jpegInfo.fPhotometricInterpretation = preview1->fPhotometricInterpretation;
-		
-		jpegInfo.fBitsPerSample [0] = 8;
-		jpegInfo.fBitsPerSample [1] = 8;
-		jpegInfo.fBitsPerSample [2] = 8;
-		
-		jpegInfo.fSamplesPerPixel = (jpegInfo.fPhotometricInterpretation == piBlackIsZero ? 1 : 3);
+		previewBasic [j] . Reset (previewList->Preview (j).AddTagSet (*previewIFD [j]));
 			
-		jpegInfo.fCompression = ccJPEG;
-		jpegInfo.fPredictor   = cpNullPredictor;
-		
-		jpegInfo.SetSingleStrip ();
-		
-		jpegBasic1.Reset (new jpeg_tag_set (*jpegIFD1.Get (),
-										    jpegInfo,
-										    *preview1));
-			
-		jpegBasic1->SetTileByteCount (0, preview1->fCompressedData->LogicalSize ());
-		
-		subFileCount++;
-		
-		}
-		
-	// JPEG preview IFD 2
-	
-	AutoPtr<tiff_directory> jpegIFD2;
-	
-	AutoPtr<jpeg_tag_set> jpegBasic2;
-	
-	if (preview1 && preview2)
-		{
-		
-		jpegIFD2.Reset (new tiff_directory);
-		
-		dng_ifd jpegInfo;
-		
-		jpegInfo.fNewSubFileType = sfPreviewImage;
-		
-		jpegInfo.fImageWidth  = preview2->fPreviewSize.h;
-		jpegInfo.fImageLength = preview2->fPreviewSize.v;
-		
-		jpegInfo.fPhotometricInterpretation = preview2->fPhotometricInterpretation;
-		
-		jpegInfo.fBitsPerSample [0] = 8;
-		jpegInfo.fBitsPerSample [1] = 8;
-		jpegInfo.fBitsPerSample [2] = 8;
-		
-		jpegInfo.fSamplesPerPixel = (jpegInfo.fPhotometricInterpretation == piBlackIsZero ? 1 : 3);
-			
-		jpegInfo.fCompression = ccJPEG;
-		jpegInfo.fPredictor   = cpNullPredictor;
-		
-		jpegInfo.SetSingleStrip ();
-		
-		jpegBasic2.Reset (new jpeg_tag_set (*jpegIFD2.Get (),
-										    jpegInfo,
-										    *preview2));
-			
-		jpegBasic2->SetTileByteCount (0, preview2->fCompressedData->LogicalSize ());
-		
 		subFileCount++;
 		
 		}
 		
 	// And a link to the raw and JPEG image IFDs.
 	
-	uint32 subFileData [3];
+	uint32 subFileData [kMaxDNGPreviews + 1];
 	
 	tag_uint32_ptr tagSubFile (tcSubIFDs,
 							   subFileData,
@@ -3367,74 +3829,70 @@ void dng_image_writer::WriteDNG (dng_host &host,
 	
 	// Skip past the header and IFDs for now.
 	
-	uint32 offsetMainIFD = 8;
+	uint32 currentOffset = 8;
 	
-	uint32 offsetRawIFD = offsetMainIFD + mainIFD.Size ();
+	currentOffset += mainIFD.Size ();
 	
-	subFileData [0] = offsetRawIFD;
+	subFileData [0] = currentOffset;
 	
-	uint32 offsetJpegIFD1 = offsetRawIFD + rawIFD.Size ();
+	currentOffset += rawIFD.Size ();
 	
-	subFileData [1] = offsetJpegIFD1;
+	for (j = 0; j < previewCount; j++)
+		{
+		
+		subFileData [j + 1] = currentOffset;
 
-	uint32 jpegIFDSize1 = jpegIFD1.Get () ? jpegIFD1->Size () : 0;
+		currentOffset += previewIFD [j]->Size ();
+		
+		}
+		
+	exifSet.Locate (currentOffset);
 	
-	uint32 offsetJpegIFD2 = offsetJpegIFD1 + jpegIFDSize1;
+	currentOffset += exifSet.Size ();
 	
-	subFileData [2] = offsetJpegIFD2;
+	stream.SetWritePosition (currentOffset);
 	
-	uint32 jpegIFDSize2 = jpegIFD2.Get () ? jpegIFD2->Size () : 0;
+	// Write the extra profiles.
 	
-	uint32 offsetExifIFD = offsetJpegIFD2 + jpegIFDSize2;
-	
-	exifSet.Locate (offsetExifIFD);
-	
-	uint32 offsetThumbData = offsetExifIFD + exifSet.Size ();
-
-	stream.SetWritePosition (offsetThumbData);
+	if (extraProfileCount)
+		{
+		
+		for (j = 0; j < extraProfileCount; j++)
+			{
+			
+			extraProfileOffsets.Buffer_uint32 () [j] = (uint32) stream.Position ();
+			
+			uint32 index = extraProfileIndex [j];
+			
+			const dng_camera_profile &profile (negative.ProfileByIndex (index));
+			
+			tiff_dng_extended_color_profile extraWriter (profile);
+			
+			extraWriter.Put (stream, false);
+			
+			}
+		
+		}
 	
 	// Write the thumbnail data.
 	
-	WriteImage (host,
-				thmInfo,
-				thmBasic,
-				stream,
-				thumbnail);
-					
-	// Write the JPEG data 1, if any.
+	thumbnail.WriteData (host,
+						 *this,
+						 *thmBasic,
+						 stream);
 	
-	if (jpegIFD1.Get ())
+	// Write the preview data.
+	
+	for (j = 0; j < previewCount; j++)
 		{
-		
-		jpegBasic1->SetTileOffset (0, stream.Position ());
-		
-		stream.Put (preview1->fCompressedData->Buffer      (),
-					preview1->fCompressedData->LogicalSize ());
 	
-		if (preview1->fCompressedData->LogicalSize () & 1)
-			{
-			stream.Put_uint8 (0);
-			}
+		previewList->Preview (j).WriteData (host,
+							                *this,
+							                *previewBasic [j],
+							                stream);
 			
 		}
-	
-	// Write the JPEG data 2, if any.
-	
-	if (jpegIFD2.Get ())
-		{
 		
-		jpegBasic2->SetTileOffset (0, stream.Position ());
-		
-		stream.Put (preview2->fCompressedData->Buffer      (),
-					preview2->fCompressedData->LogicalSize ());
-	
-		if (preview2->fCompressedData->LogicalSize () & 1)
-			{
-			stream.Put_uint8 (0);
-			}
-			
-		}
-	
 	// Write the raw data.
 	
 	WriteImage (host,
@@ -3465,20 +3923,13 @@ void dng_image_writer::WriteDNG (dng_host &host,
 	
 	rawIFD.Put (stream);
 	
-	if (jpegIFD1.Get ())
+	for (j = 0; j < previewCount; j++)
 		{
 		
-		jpegIFD1->Put (stream);
+		previewIFD [j]->Put (stream);
 		
 		}
-	
-	if (jpegIFD2.Get ())
-		{
 		
-		jpegIFD2->Put (stream);
-		
-		}
-	
 	exifSet.Put (stream);
 	
 	stream.Flush ();

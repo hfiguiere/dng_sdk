@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_parse_utils.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_parse_utils.cpp#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -108,6 +108,7 @@ const char * LookupParentCode (uint32 parentCode)
 		{	tcLeafMOS,					"Leaf MOS"						},
 		{	tcMinoltaMRW,				"Minolta MRW"					},
 		{	tcPanasonicRAW,				"Panasonic RAW"					},
+		{	tcFoveonX3F,				"Foveon X3F"					},
 		{	tcJPEG,						"JPEG"							},
 		{	tcAdobePSD,					"Adobe PSD"						}
 		};
@@ -159,195 +160,222 @@ const char * LookupTagCode (uint32 parentCode,
 	
 	const dng_name_table kTagNames [] =
 		{
-		{	tcNewSubFileType,				"NewSubFileType"				},
-		{	tcSubFileType,					"SubFileType"					},
-		{	tcImageWidth,					"ImageWidth"					},
-		{	tcImageLength,					"ImageLength"					},
-		{	tcBitsPerSample,				"BitsPerSample"					},
-		{	tcCompression,					"Compression"					},
-		{	tcPhotometricInterpretation,	"PhotometricInterpretation"		},
-		{	tcThresholding,					"Thresholding"					},
-		{	tcCellWidth,					"CellWidth"						},
-		{	tcCellLength,					"CellLength"					},
-		{	tcFillOrder,					"FillOrder"						},
-		{	tcImageDescription,				"ImageDescription"				},
-		{	tcMake,							"Make"							},
-		{	tcModel,						"Model"							},
-		{	tcStripOffsets,					"StripOffsets"					},
-		{	tcOrientation,					"Orientation"					},
-		{	tcSamplesPerPixel,				"SamplesPerPixel"				},
-		{	tcRowsPerStrip,					"RowsPerStrip"					},
-		{	tcStripByteCounts,				"StripByteCounts"				},
-		{	tcMinSampleValue,				"MinSampleValue"				},
-		{	tcMaxSampleValue,				"MaxSampleValue"				},
-		{	tcXResolution,					"XResolution"					},
-		{	tcYResolution,					"YResolution"					},
-		{	tcPlanarConfiguration,			"PlanarConfiguration"			},
-		{	tcFreeOffsets,					"FreeOffsets"					},
-		{	tcFreeByteCounts,				"FreeByteCounts"				},
-		{	tcGrayResponseUnit,				"GrayResponseUnit"				},
-		{	tcGrayResponseCurve,			"GrayResponseCurve"				},
-		{	tcResolutionUnit,				"ResolutionUnit"				},
-		{	tcTransferFunction,				"TransferFunction"				},
-		{	tcSoftware,						"Software"						},
-		{	tcDateTime,						"DateTime"						},
-		{	tcArtist,						"Artist"						},
-		{	tcHostComputer,					"HostComputer"					},
-		{	tcWhitePoint,					"WhitePoint"					},
-		{	tcPrimaryChromaticities,		"PrimaryChromaticities"			},
-		{	tcColorMap,						"ColorMap"						},
-		{	tcTileWidth,					"TileWidth"						},
-		{	tcTileLength,					"TileLength"					},
-		{	tcTileOffsets,					"TileOffsets"					},
-		{	tcTileByteCounts,				"TileByteCounts"				},
-		{	tcSubIFDs,						"SubIFDs"						},
-		{	tcExtraSamples,					"ExtraSamples"					},
-		{	tcSampleFormat,					"SampleFormat"					},
-		{	tcJPEGTables,					"JPEGTables"					},
-		{	tcJPEGProc,						"JPEGProc"						},
-		{	tcJPEGInterchangeFormat,		"JPEGInterchangeFormat"			},
-		{	tcJPEGInterchangeFormatLength,	"JPEGInterchangeFormatLength"	},
-		{	tcYCbCrCoefficients,			"YCbCrCoefficients"				},
-		{	tcYCbCrSubSampling,				"YCbCrSubSampling"				},
-		{	tcYCbCrPositioning,				"YCbCrPositioning"				},
-		{	tcReferenceBlackWhite,			"ReferenceBlackWhite"			},
-		{	tcXMP,							"XMP"							},
-		{	tcKodakCameraSerialNumber,		"KodakCameraSerialNumber"		},
-		{	tcCFARepeatPatternDim,			"CFARepeatPatternDim"			},
-		{	tcCFAPattern,					"CFAPattern"					},
-		{	tcBatteryLevel,					"BatteryLevel"					},
-		{	tcKodakDCRPrivateIFD,			"KodakDCRPrivateIFD"			},
-		{	tcCopyright,					"Copyright"						},
-		{	tcExposureTime,					"ExposureTime"					},
-		{	tcFNumber,						"FNumber"						},
-		{	tcIPTC_NAA,						"IPTC/NAA"						},
-		{	tcLeafPKTS,						"LeafPKTS"						},
-		{	tcAdobeData,					"AdobeData"						},
-		{	tcExifIFD,						"ExifIFD"						},
-		{	tcICCProfile,					"ICCProfile"					},
-		{	tcExposureProgram,				"ExposureProgram"				},
-		{	tcSpectralSensitivity,			"SpectralSensitivity"			},
-		{	tcGPSInfo,						"GPSInfo"						},
-		{	tcISOSpeedRatings,				"ISOSpeedRatings"				},
-		{	tcOECF,							"OECF"							},
-		{	tcInterlace,					"Interlace"						},
-		{	tcTimeZoneOffset,				"TimeZoneOffset"				},
-		{	tcSelfTimerMode,				"SelfTimerMode"					},
-		{	tcExifVersion,					"ExifVersion"					},
-		{	tcDateTimeOriginal,				"DateTimeOriginal"				},
-		{	tcDateTimeDigitized,			"DateTimeDigitized"				},
-		{	tcComponentsConfiguration,		"ComponentsConfiguration"		},
-		{	tcCompressedBitsPerPixel,		"CompressedBitsPerPixel"		},
-		{	tcShutterSpeedValue,			"ShutterSpeedValue"				},
-		{	tcApertureValue,				"ApertureValue"					},
-		{	tcBrightnessValue,				"BrightnessValue"				},
-		{	tcExposureBiasValue,			"ExposureBiasValue"				},
-		{	tcMaxApertureValue,				"MaxApertureValue"				},
-		{	tcSubjectDistance,				"SubjectDistance"				},
-		{	tcMeteringMode,					"MeteringMode"					},
-		{	tcLightSource,					"LightSource"					},
-		{	tcFlash,						"Flash"							},
-		{	tcFocalLength,					"FocalLength"					},
-		{	tcFlashEnergy,					"FlashEnergy"					},
-		{	tcSpatialFrequencyResponse,		"SpatialFrequencyResponse"		},
-		{	tcNoise,						"Noise"							},
-		{	tcFocalPlaneXResolution, 		"FocalPlaneXResolution"			},
-		{	tcFocalPlaneYResolution,		"FocalPlaneYResolution"			},
-		{	tcFocalPlaneResolutionUnit,		"FocalPlaneResolutionUnit"		},
-		{	tcImageNumber,					"ImageNumber"					},
-		{	tcSecurityClassification,		"SecurityClassification"		},
-		{	tcImageHistory,					"ImageHistory"					},
-		{	tcSubjectArea,					"SubjectArea"					},
-		{	tcExposureIndex,				"ExposureIndex"					},
-		{	tcTIFF_EP_StandardID,			"TIFF/EPStandardID"				},
-		{	tcSensingMethod,				"SensingMethod"					},
-		{	tcMakerNote,					"MakerNote"						},
-		{	tcUserComment,					"UserComment"					},
-		{	tcSubsecTime,					"SubsecTime"					},
-		{	tcSubsecTimeOriginal,			"SubsecTimeOriginal"			},
-		{	tcSubsecTimeDigitized,			"SubsecTimeDigitized"			},
-		{	tcFlashPixVersion,				"FlashPixVersion"				},
-		{	tcColorSpace,					"ColorSpace"					},
-		{	tcPixelXDimension,				"PixelXDimension"				},
-		{	tcPixelYDimension,				"PixelYDimension"				},
-		{	tcRelatedSoundFile,				"RelatedSoundFile"				},
-		{	tcInteroperabilityIFD,			"InteroperabilityIFD"			},
-		{	tcFlashEnergyExif,				"FlashEnergyExif"				},
-		{	tcSpatialFrequencyResponseExif, "SpatialFrequencyResponseExif"	},
-		{	tcFocalPlaneXResolutionExif,	"FocalPlaneXResolutionExif"		},
-		{	tcFocalPlaneYResolutionExif,	"FocalPlaneYResolutionExif"		},
-		{	tcFocalPlaneResolutionUnitExif,	"FocalPlaneResolutionUnitExif"	},
-		{	tcSubjectLocation,				"SubjectLocation"				},
-		{	tcExposureIndexExif,			"ExposureIndexExif"				},
-		{	tcSensingMethodExif,			"SensingMethodExif"				},
-		{	tcFileSource,					"FileSource"					},
-		{	tcSceneType,					"SceneType"						},
-		{	tcCFAPatternExif,				"CFAPatternExif"				},
-		{	tcCustomRendered,				"CustomRendered"				},
-		{	tcExposureMode,					"ExposureMode"					},
-		{	tcWhiteBalance,					"WhiteBalance"					},
-		{	tcDigitalZoomRatio,				"DigitalZoomRatio"				},
-		{	tcFocalLengthIn35mmFilm,		"FocalLengthIn35mmFilm"			},
-		{	tcSceneCaptureType,				"SceneCaptureType"				},
-		{	tcGainControl,					"GainControl"					},
-		{	tcContrast,						"Contrast"						},
-		{	tcSaturation,					"Saturation"					},
-		{	tcSharpness,					"Sharpness"						},
-		{	tcDeviceSettingDescription,		"DeviceSettingDescription"		},
-		{	tcSubjectDistanceRange,			"SubjectDistanceRange"			},
-		{	tcImageUniqueID,				"ImageUniqueID"					},
-		{	tcGamma,						"Gamma"							},
-		{	tcPrintImageMatchingInfo,		"PrintImageMatchingInfo"		},
-		{	tcDNGVersion,					"DNGVersion"					},
-		{	tcDNGBackwardVersion,			"DNGBackwardVersion"			},
-		{	tcUniqueCameraModel,			"UniqueCameraModel"				},
-		{	tcLocalizedCameraModel,			"LocalizedCameraModel"			},
-		{	tcCFAPlaneColor,				"CFAPlaneColor"					},
-		{	tcCFALayout,					"CFALayout"						},
-		{	tcLinearizationTable,			"LinearizationTable"			},
-		{	tcBlackLevelRepeatDim,			"BlackLevelRepeatDim"			},
-		{	tcBlackLevel,					"BlackLevel"					},
-		{	tcBlackLevelDeltaH,				"BlackLevelDeltaH"				},
-		{	tcBlackLevelDeltaV,				"BlackLevelDeltaV"				},
-		{	tcWhiteLevel,					"WhiteLevel"					},
-		{	tcDefaultScale,					"DefaultScale"					},
-		{	tcDefaultCropOrigin,			"DefaultCropOrigin"				},
-		{	tcDefaultCropSize,				"DefaultCropSize"				},
-		{	tcColorMatrix1,					"ColorMatrix1"					},
-		{	tcColorMatrix2,					"ColorMatrix2"					},
-		{	tcCameraCalibration1,			"CameraCalibration1"			},
-		{	tcCameraCalibration2,			"CameraCalibration2"			},
-		{	tcReductionMatrix1,				"ReductionMatrix1"				},
-		{	tcReductionMatrix2,				"ReductionMatrix2"				},
-		{	tcAnalogBalance,				"AnalogBalance"					},
-		{	tcAsShotNeutral,				"AsShotNeutral"					},
-		{	tcAsShotWhiteXY,				"AsShotWhiteXY"					},
-		{	tcBaselineExposure,				"BaselineExposure"				},
-		{	tcBaselineNoise,				"BaselineNoise"					},
-		{	tcBaselineSharpness,			"BaselineSharpness"				},
-		{	tcBayerGreenSplit,				"BayerGreenSplit"				},
-		{	tcLinearResponseLimit,			"LinearResponseLimit"			},
-		{	tcCameraSerialNumber,			"CameraSerialNumber"			},
-		{	tcLensInfo,						"LensInfo"						},
-		{	tcChromaBlurRadius,				"ChromaBlurRadius"				},
-		{	tcAntiAliasStrength,			"AntiAliasStrength"				},
-		{	tcShadowScale,					"ShadowScale"					},
-		{	tcDNGPrivateData,				"DNGPrivateData"				},
-		{	tcMakerNoteSafety,				"MakerNoteSafety"				},
-		{	tcCalibrationIlluminant1,		"CalibrationIlluminant1"		},
-		{	tcCalibrationIlluminant2,		"CalibrationIlluminant2"		},
-		{	tcBestQualityScale,				"BestQualityScale"				},
-		{	tcRawDataUniqueID,				"RawDataUniqueID"				},
-		{	tcOriginalRawFileName,			"OriginalRawFileName"			},
-		{	tcOriginalRawFileData,			"OriginalRawFileData"			},
-		{	tcActiveArea,					"ActiveArea"					},
-		{	tcMaskedAreas,					"MaskedAreas"					},
-		{	tcAsShotICCProfile,				"AsShotICCProfile"				},
-		{	tcAsShotPreProfileMatrix,		"AsShotPreProfileMatrix"		},
-		{	tcCurrentICCProfile,			"CurrentICCProfile"				},
-		{	tcCurrentPreProfileMatrix,		"CurrentPreProfileMatrix"		},
-		{	tcColorimetricReference,		"ColorimetricReference"			},
-		{	tcKodakKDCPrivateIFD,			"KodakKDCPrivateIFD"			}
+		{	tcNewSubFileType,					"NewSubFileType"				},
+		{	tcSubFileType,						"SubFileType"					},
+		{	tcImageWidth,						"ImageWidth"					},
+		{	tcImageLength,						"ImageLength"					},
+		{	tcBitsPerSample,					"BitsPerSample"					},
+		{	tcCompression,						"Compression"					},
+		{	tcPhotometricInterpretation,		"PhotometricInterpretation"		},
+		{	tcThresholding,						"Thresholding"					},
+		{	tcCellWidth,						"CellWidth"						},
+		{	tcCellLength,						"CellLength"					},
+		{	tcFillOrder,						"FillOrder"						},
+		{	tcImageDescription,					"ImageDescription"				},
+		{	tcMake,								"Make"							},
+		{	tcModel,							"Model"							},
+		{	tcStripOffsets,						"StripOffsets"					},
+		{	tcOrientation,						"Orientation"					},
+		{	tcSamplesPerPixel,					"SamplesPerPixel"				},
+		{	tcRowsPerStrip,						"RowsPerStrip"					},
+		{	tcStripByteCounts,					"StripByteCounts"				},
+		{	tcMinSampleValue,					"MinSampleValue"				},
+		{	tcMaxSampleValue,					"MaxSampleValue"				},
+		{	tcXResolution,						"XResolution"					},
+		{	tcYResolution,						"YResolution"					},
+		{	tcPlanarConfiguration,				"PlanarConfiguration"			},
+		{	tcFreeOffsets,						"FreeOffsets"					},
+		{	tcFreeByteCounts,					"FreeByteCounts"				},
+		{	tcGrayResponseUnit,					"GrayResponseUnit"				},
+		{	tcGrayResponseCurve,				"GrayResponseCurve"				},
+		{	tcResolutionUnit,					"ResolutionUnit"				},
+		{	tcTransferFunction,					"TransferFunction"				},
+		{	tcSoftware,							"Software"						},
+		{	tcDateTime,							"DateTime"						},
+		{	tcArtist,							"Artist"						},
+		{	tcHostComputer,						"HostComputer"					},
+		{	tcWhitePoint,						"WhitePoint"					},
+		{	tcPrimaryChromaticities,			"PrimaryChromaticities"			},
+		{	tcColorMap,							"ColorMap"						},
+		{	tcTileWidth,						"TileWidth"						},
+		{	tcTileLength,						"TileLength"					},
+		{	tcTileOffsets,						"TileOffsets"					},
+		{	tcTileByteCounts,					"TileByteCounts"				},
+		{	tcSubIFDs,							"SubIFDs"						},
+		{	tcExtraSamples,						"ExtraSamples"					},
+		{	tcSampleFormat,						"SampleFormat"					},
+		{	tcJPEGTables,						"JPEGTables"					},
+		{	tcJPEGProc,							"JPEGProc"						},
+		{	tcJPEGInterchangeFormat,			"JPEGInterchangeFormat"			},
+		{	tcJPEGInterchangeFormatLength,		"JPEGInterchangeFormatLength"	},
+		{	tcYCbCrCoefficients,				"YCbCrCoefficients"				},
+		{	tcYCbCrSubSampling,					"YCbCrSubSampling"				},
+		{	tcYCbCrPositioning,					"YCbCrPositioning"				},
+		{	tcReferenceBlackWhite,				"ReferenceBlackWhite"			},
+		{	tcXMP,								"XMP"							},
+		{	tcKodakCameraSerialNumber,			"KodakCameraSerialNumber"		},
+		{	tcCFARepeatPatternDim,				"CFARepeatPatternDim"			},
+		{	tcCFAPattern,						"CFAPattern"					},
+		{	tcBatteryLevel,						"BatteryLevel"					},
+		{	tcKodakDCRPrivateIFD,				"KodakDCRPrivateIFD"			},
+		{	tcCopyright,						"Copyright"						},
+		{	tcExposureTime,						"ExposureTime"					},
+		{	tcFNumber,							"FNumber"						},
+		{	tcIPTC_NAA,							"IPTC/NAA"						},
+		{	tcLeafPKTS,							"LeafPKTS"						},
+		{	tcAdobeData,						"AdobeData"						},
+		{	tcExifIFD,							"ExifIFD"						},
+		{	tcICCProfile,						"ICCProfile"					},
+		{	tcExposureProgram,					"ExposureProgram"				},
+		{	tcSpectralSensitivity,				"SpectralSensitivity"			},
+		{	tcGPSInfo,							"GPSInfo"						},
+		{	tcISOSpeedRatings,					"ISOSpeedRatings"				},
+		{	tcOECF,								"OECF"							},
+		{	tcInterlace,						"Interlace"						},
+		{	tcTimeZoneOffset,					"TimeZoneOffset"				},
+		{	tcSelfTimerMode,					"SelfTimerMode"					},
+		{	tcExifVersion,						"ExifVersion"					},
+		{	tcDateTimeOriginal,					"DateTimeOriginal"				},
+		{	tcDateTimeDigitized,				"DateTimeDigitized"				},
+		{	tcComponentsConfiguration,			"ComponentsConfiguration"		},
+		{	tcCompressedBitsPerPixel,			"CompressedBitsPerPixel"		},
+		{	tcShutterSpeedValue,				"ShutterSpeedValue"				},
+		{	tcApertureValue,					"ApertureValue"					},
+		{	tcBrightnessValue,					"BrightnessValue"				},
+		{	tcExposureBiasValue,				"ExposureBiasValue"				},
+		{	tcMaxApertureValue,					"MaxApertureValue"				},
+		{	tcSubjectDistance,					"SubjectDistance"				},
+		{	tcMeteringMode,						"MeteringMode"					},
+		{	tcLightSource,						"LightSource"					},
+		{	tcFlash,							"Flash"							},
+		{	tcFocalLength,						"FocalLength"					},
+		{	tcFlashEnergy,						"FlashEnergy"					},
+		{	tcSpatialFrequencyResponse,			"SpatialFrequencyResponse"		},
+		{	tcNoise,							"Noise"							},
+		{	tcFocalPlaneXResolution,			"FocalPlaneXResolution"			},
+		{	tcFocalPlaneYResolution,			"FocalPlaneYResolution"			},
+		{	tcFocalPlaneResolutionUnit,			"FocalPlaneResolutionUnit"		},
+		{	tcImageNumber,						"ImageNumber"					},
+		{	tcSecurityClassification,			"SecurityClassification"		},
+		{	tcImageHistory,						"ImageHistory"					},
+		{	tcSubjectArea,						"SubjectArea"					},
+		{	tcExposureIndex,					"ExposureIndex"					},
+		{	tcTIFF_EP_StandardID,				"TIFF/EPStandardID"				},
+		{	tcSensingMethod,					"SensingMethod"					},
+		{	tcMakerNote,						"MakerNote"						},
+		{	tcUserComment,						"UserComment"					},
+		{	tcSubsecTime,						"SubsecTime"					},
+		{	tcSubsecTimeOriginal,				"SubsecTimeOriginal"			},
+		{	tcSubsecTimeDigitized,				"SubsecTimeDigitized"			},
+		{	tcAdobeLayerData,					"AdobeLayerData"				},
+		{	tcFlashPixVersion,					"FlashPixVersion"				},
+		{	tcColorSpace,						"ColorSpace"					},
+		{	tcPixelXDimension,					"PixelXDimension"				},
+		{	tcPixelYDimension,					"PixelYDimension"				},
+		{	tcRelatedSoundFile,					"RelatedSoundFile"				},
+		{	tcInteroperabilityIFD,				"InteroperabilityIFD"			},
+		{	tcFlashEnergyExif,					"FlashEnergyExif"				},
+		{	tcSpatialFrequencyResponseExif,		"SpatialFrequencyResponseExif"	},
+		{	tcFocalPlaneXResolutionExif,		"FocalPlaneXResolutionExif"		},
+		{	tcFocalPlaneYResolutionExif,		"FocalPlaneYResolutionExif"		},
+		{	tcFocalPlaneResolutionUnitExif,		"FocalPlaneResolutionUnitExif"	},
+		{	tcSubjectLocation,					"SubjectLocation"				},
+		{	tcExposureIndexExif,				"ExposureIndexExif"				},
+		{	tcSensingMethodExif,				"SensingMethodExif"				},
+		{	tcFileSource,						"FileSource"					},
+		{	tcSceneType,						"SceneType"						},
+		{	tcCFAPatternExif,					"CFAPatternExif"				},
+		{	tcCustomRendered,					"CustomRendered"				},
+		{	tcExposureMode,						"ExposureMode"					},
+		{	tcWhiteBalance,						"WhiteBalance"					},
+		{	tcDigitalZoomRatio,					"DigitalZoomRatio"				},
+		{	tcFocalLengthIn35mmFilm,			"FocalLengthIn35mmFilm"			},
+		{	tcSceneCaptureType,					"SceneCaptureType"				},
+		{	tcGainControl,						"GainControl"					},
+		{	tcContrast,							"Contrast"						},
+		{	tcSaturation,						"Saturation"					},
+		{	tcSharpness,						"Sharpness"						},
+		{	tcDeviceSettingDescription,			"DeviceSettingDescription"		},
+		{	tcSubjectDistanceRange,				"SubjectDistanceRange"			},
+		{	tcImageUniqueID,					"ImageUniqueID"					},
+		{	tcGamma,							"Gamma"							},
+		{	tcPrintImageMatchingInfo,			"PrintImageMatchingInfo"		},
+		{	tcDNGVersion,						"DNGVersion"					},
+		{	tcDNGBackwardVersion,				"DNGBackwardVersion"			},
+		{	tcUniqueCameraModel,				"UniqueCameraModel"				},
+		{	tcLocalizedCameraModel,				"LocalizedCameraModel"			},
+		{	tcCFAPlaneColor,					"CFAPlaneColor"					},
+		{	tcCFALayout,						"CFALayout"						},
+		{	tcLinearizationTable,				"LinearizationTable"			},
+		{	tcBlackLevelRepeatDim,				"BlackLevelRepeatDim"			},
+		{	tcBlackLevel,						"BlackLevel"					},
+		{	tcBlackLevelDeltaH,					"BlackLevelDeltaH"				},
+		{	tcBlackLevelDeltaV,					"BlackLevelDeltaV"				},
+		{	tcWhiteLevel,						"WhiteLevel"					},
+		{	tcDefaultScale,						"DefaultScale"					},
+		{	tcDefaultCropOrigin,				"DefaultCropOrigin"				},
+		{	tcDefaultCropSize,					"DefaultCropSize"				},
+		{	tcColorMatrix1,						"ColorMatrix1"					},
+		{	tcColorMatrix2,						"ColorMatrix2"					},
+		{	tcCameraCalibration1,				"CameraCalibration1"			},
+		{	tcCameraCalibration2,				"CameraCalibration2"			},
+		{	tcReductionMatrix1,					"ReductionMatrix1"				},
+		{	tcReductionMatrix2,					"ReductionMatrix2"				},
+		{	tcAnalogBalance,					"AnalogBalance"					},
+		{	tcAsShotNeutral,					"AsShotNeutral"					},
+		{	tcAsShotWhiteXY,					"AsShotWhiteXY"					},
+		{	tcBaselineExposure,					"BaselineExposure"				},
+		{	tcBaselineNoise,					"BaselineNoise"					},
+		{	tcBaselineSharpness,				"BaselineSharpness"				},
+		{	tcBayerGreenSplit,					"BayerGreenSplit"				},
+		{	tcLinearResponseLimit,				"LinearResponseLimit"			},
+		{	tcCameraSerialNumber,				"CameraSerialNumber"			},
+		{	tcLensInfo,							"LensInfo"						},
+		{	tcChromaBlurRadius,					"ChromaBlurRadius"				},
+		{	tcAntiAliasStrength,				"AntiAliasStrength"				},
+		{	tcShadowScale,						"ShadowScale"					},
+		{	tcDNGPrivateData,					"DNGPrivateData"				},
+		{	tcMakerNoteSafety,					"MakerNoteSafety"				},
+		{	tcCalibrationIlluminant1,			"CalibrationIlluminant1"		},
+		{	tcCalibrationIlluminant2,			"CalibrationIlluminant2"		},
+		{	tcBestQualityScale,					"BestQualityScale"				},
+		{	tcRawDataUniqueID,					"RawDataUniqueID"				},
+		{	tcOriginalRawFileName,				"OriginalRawFileName"			},
+		{	tcOriginalRawFileData,				"OriginalRawFileData"			},
+		{	tcActiveArea,						"ActiveArea"					},
+		{	tcMaskedAreas,						"MaskedAreas"					},
+		{	tcAsShotICCProfile,					"AsShotICCProfile"				},
+		{	tcAsShotPreProfileMatrix,			"AsShotPreProfileMatrix"		},
+		{	tcCurrentICCProfile,				"CurrentICCProfile"				},
+		{	tcCurrentPreProfileMatrix,			"CurrentPreProfileMatrix"		},
+		{	tcColorimetricReference,			"ColorimetricReference"			},
+		{	tcCameraCalibrationSignature,		"CameraCalibrationSignature"	},
+		{	tcProfileCalibrationSignature,		"ProfileCalibrationSignature"	},
+		{	tcExtraCameraProfiles,				"ExtraCameraProfiles"			},
+		{	tcAsShotProfileName,				"AsShotProfileName"				},
+		{	tcNoiseReductionApplied,			"NoiseReductionApplied"			},
+		{	tcProfileName,						"ProfileName"					},
+		{	tcProfileHueSatMapDims,				"ProfileHueSatMapDims"			},
+		{	tcProfileHueSatMapData1,			"ProfileHueSatMapData1"			},
+		{	tcProfileHueSatMapData2,			"ProfileHueSatMapData2"			},
+		{	tcProfileToneCurve,					"ProfileToneCurve"				},
+		{	tcProfileEmbedPolicy,				"ProfileEmbedPolicy"			},
+		{	tcProfileCopyright,					"ProfileCopyright"				},
+		{	tcForwardMatrix1,					"ForwardMatrix1"				},
+		{	tcForwardMatrix2,					"ForwardMatrix2"				},
+		{	tcPreviewApplicationName,			"PreviewApplicationName"		},
+		{	tcPreviewApplicationVersion,		"PreviewApplicationVersion"		},
+		{	tcPreviewSettingsName,				"PreviewSettingsName"		    },
+		{	tcPreviewSettingsDigest,			"PreviewSettingsDigest"		    },
+		{	tcPreviewColorSpace,				"PreviewColorSpace"				},
+		{	tcPreviewDateTime,					"PreviewDateTime"				},
+		{	tcRawImageDigest,					"RawImageDigest"				},
+		{	tcOriginalRawFileDigest,			"OriginalRawFileDigest"			},
+		{	tcSubTileBlockSize,					"SubTileBlockSize"				},
+		{	tcRowInterleaveFactor,				"RowInterleaveFactor"			},
+		{	tcProfileLookTableDims,				"ProfileLookTableDims"			},
+		{	tcProfileLookTableData,				"ProfileLookTableData"			},
+		{	tcKodakKDCPrivateIFD,				"KodakKDCPrivateIFD"			}
 		};
 
 	const dng_name_table kGPSTagNames [] =
@@ -559,8 +587,9 @@ const char * LookupNewSubFileType (uint32 key)
 	
 	const dng_name_table kNewSubFileTypeNames [] =
 		{
-		{	0, "Main Image"		},
-		{	1, "Preview Image"	}
+		{	sfMainImage		 , "Main Image"			},
+		{	sfPreviewImage	 , "Preview Image"		},
+		{	sfAltPreviewImage, "Alt Preview Image"	}
 		};
 
 	const char *name = LookupName (key,
@@ -1404,6 +1433,38 @@ const char * LookupColorimetricReference (uint32 key)
 
 /*****************************************************************************/
 
+const char * LookupPreviewColorSpace (uint32 key)
+	{
+	
+	const dng_name_table kPreviewColorSpaceNames [] =
+		{
+		{	previewColorSpace_Unknown    ,	"Unknown"			},
+		{	previewColorSpace_GrayGamma22,	"Gray Gamma 2.2"	},
+		{	previewColorSpace_sRGB       ,	"sRGB"				},
+		{	previewColorSpace_AdobeRGB   ,	"Adobe RGB (1998)"	},
+		{	previewColorSpace_ProPhotoRGB,	"Pro Photo RGB"	    }
+		};
+
+	const char *name = LookupName (key,
+								   kPreviewColorSpaceNames,
+								   sizeof (kPreviewColorSpaceNames    ) /
+								   sizeof (kPreviewColorSpaceNames [0]));
+								   
+	if (name)
+		{
+		return name;
+		}
+		
+	static char s [32];
+		
+	sprintf (s, "%u", (unsigned) key);
+		
+	return s;
+
+	}
+
+/*****************************************************************************/
+
 const char * LookupJPEGMarker (uint32 key)
 	{
 	
@@ -2072,7 +2133,103 @@ void DumpExposureTime (real64 x)
 		}
 		
 	}
+
+/*****************************************************************************/
+
+void DumpFingerprint (const dng_fingerprint &p)
+	{
 	
+	printf ("<");
+	
+	for (uint32 j = 0; j < 16; j++)
+		{
+		printf ("%02x", p.data [j]);
+		}
+
+	printf (">");
+	
+	}
+
+/*****************************************************************************/
+
+void DumpHueSatMap (dng_stream &stream,
+				    uint32 hues,
+					uint32 sats,
+					uint32 vals,
+					bool skipSat0)
+	{
+	
+	uint32 doneLines = 0;
+	uint32 skipLines = 0;
+	
+	for (uint32 v = 0; v < vals; v++)
+		{
+		
+		for (uint32 h = 0; h < hues; h++)
+			{
+			
+			for (uint32 s = skipSat0 ? 1 : 0; s < sats; s++)
+				{
+				
+				real32 dh = stream.Get_real32 ();
+				real32 ds = stream.Get_real32 ();
+				real32 dv = stream.Get_real32 ();
+				
+				if (gDumpLineLimit == 0 ||
+					gDumpLineLimit > doneLines)
+					{
+					
+					doneLines++;
+					
+					if (vals == 1)
+						{
+					
+						printf ("    h [%2u] s [%2u]:  h=%8.4f s=%6.4f v=%6.4f\n",
+								(unsigned) h,
+								(unsigned) s,
+								(double) dh,
+								(double) ds,
+								(double) dv);
+								
+						}
+						
+					else
+						{
+					
+						printf ("    v [%2u] h [%2u] s [%2u]:  h=%8.4f s=%6.4f v=%6.4f\n",
+								(unsigned) v,
+								(unsigned) h,
+								(unsigned) s,
+								(double) dh,
+								(double) ds,
+								(double) dv);
+								
+						}
+					
+					}
+					
+				else
+					{
+					
+					skipLines++;
+					
+					}
+				
+				}
+				
+			}
+			
+		}
+		
+	if (skipLines > 0)
+		{
+		
+		printf ("    ... %u more entries\n", (unsigned) skipLines);
+				
+		}
+	
+	}
+
 /*****************************************************************************/
 
 #endif
@@ -2369,16 +2526,21 @@ void ParseStringTag (dng_stream &stream,
 				     bool isASCII)
 	{
 	
+	if (tagCount == 0 ||
+		tagCount == 0xFFFFFFFF)
+		{
+		
+		s.Clear ();
+		
+		return;
+		
+		}
+	
 	dng_memory_data temp_buffer (tagCount + 1);
 	
 	char *buffer = temp_buffer.Buffer_char ();
 	
-	if (tagCount > 0)
-		{
-	
-		stream.Get (buffer, tagCount);
-		
-		}
+	stream.Get (buffer, tagCount);
 			
 	// Make sure the string is null terminated.
 	
@@ -2483,16 +2645,22 @@ void ParseDualStringTag (dng_stream &stream,
 				     	 dng_string &s2)
 	{
 	
+	if (tagCount == 0 ||
+		tagCount == 0xFFFFFFFF)
+		{
+		
+		s1.Clear ();
+		s2.Clear ();
+		
+		return;
+		
+		}
+	
 	dng_memory_data temp_buffer (tagCount + 1);
 	
 	char *buffer = temp_buffer.Buffer_char ();
 	
-	if (tagCount > 0)
-		{
-	
-		stream.Get (buffer, tagCount);
-		
-		}
+	stream.Get (buffer, tagCount);
 			
 	// Make sure the string is null terminated.
 	
@@ -2741,6 +2909,16 @@ void ParseEncodedStringTag (dng_stream &stream,
 	else
 		{
 	
+		uint32 aChars = tagCount - 8;
+		
+		dng_memory_data temp_buffer (aChars + 1);
+		
+		char *buffer = temp_buffer.Buffer_char ();
+		
+		stream.Get (buffer, aChars);
+		
+		buffer [aChars] = 0;
+		
 		enum dng_encoding
 			{
 			dng_encoding_ascii,
@@ -2775,15 +2953,23 @@ void ParseEncodedStringTag (dng_stream &stream,
 				
 			if (memcmp (label, "\000\000\000\000\000\000\000\000\000", 8) == 0)
 				{
-					
-				char message [256];
 				
-				sprintf (message,
-						 "%s %s has unknown encoding",
-						 LookupParentCode (parentCode),
-						 LookupTagCode (parentCode, tagCode));
-						 
-				ReportWarning (message);
+				// Many camera makes store null tags with all zero encoding, so
+				// don't report a warning message for null strings.
+				
+				if (buffer [0] != 0)
+					{
+					
+					char message [256];
+					
+					sprintf (message,
+							 "%s %s has unknown encoding",
+							 LookupParentCode (parentCode),
+							 LookupTagCode (parentCode, tagCode));
+							 
+					ReportWarning (message);
+					
+					}
 							 
 				}
 				
@@ -2804,16 +2990,6 @@ void ParseEncodedStringTag (dng_stream &stream,
 			#endif
 			
 			}
-		
-		uint32 aChars = tagCount - 8;
-		
-		dng_memory_data temp_buffer (aChars + 1);
-		
-		char *buffer = temp_buffer.Buffer_char ();
-		
-		stream.Get (buffer, aChars);
-		
-		buffer [aChars] = 0;
 		
 		// If text encoding was unknown, and the text is anything
 		// other than pure ASCII, then ignore it.
@@ -2977,7 +3153,14 @@ bool ParseDateTimeTag (dng_stream &stream,
 		return false;
 		}
 		
-	if (!CheckTagCount (parentCode, tagCode, tagCount, 20))
+	// Kludge: Some versions of PaintShop Pro write these fields
+	// with a length of 21 rather than 20.  Otherwise they are
+	// correctly formated.  So relax this test and allow these
+	// these longer than standard tags to be parsed.
+		
+	(void) CheckTagCount (parentCode, tagCode, tagCount, 20);
+		
+	if (tagCount < 20)
 		{
 		return false;
 		}

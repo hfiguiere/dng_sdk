@@ -1,10 +1,33 @@
 
 <!-- Begin Footer -->
-</td>
-<td width="20">&nbsp;&nbsp;</td>
+</td></tr>
 </table>
-
-<div id="footerrow"><!--give footer 25px of white above--></div><div id="footer" title="footer: links to copyright and other legal information"><p><a href="licenses.html" class="el">Copyright &copy; 2005 Adobe Systems Incorporated</a></p><ul id="list1"><!-- due to a rendering error in IE, these links should all be on one line without returns --><li id="terms"><a title="Terms of Use" href="http://www.adobe.com/misc/copyright.html">Terms of Use</a></li><li><a title="Privacy Policy" href="http://www.adobe.com/misc/privacy.html">Privacy Policy</a></li><li><a href="http://access.adobe.com">Accessibility</a></li><li><a title="Avoid software piracy" href="http://www.adobe.com/aboutadobe/antipiracy/main.html">Avoid software piracy</a></li></ul><!--two lists because of quirks mode--><ul id="list2"><li id="tms"><a title="Permissions and trademarks" href="http://www.adobe.com/misc/agreement.html">Permissions and trademarks</a></li><li><a title="Product License Agreements" href="http://www.adobe.com/products/eulas/main.html">Product License Agreements</a></li></ul><a title="Reviewed by TRUSTe: site privacy statement" href="http://www.adobe.com/misc/privacy.html"><img id="privacyicon" src="http://www.adobe.com/images/finalmark.gif" alt="Reviewed by TRUSTe: site privacy statement" height="31" width="116" border="0"/></a></div>
-
+</div> <!-- content -->
+<div class='footerdiv'>
+    <div id='footersub'>
+        <ul>
+            <li><a href="http://www.adobe.com/go/gftray_foot_aboutadobe">Company</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_contact_adobe">Contact Us</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_accessibility">Accessibility</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_report_piracy">Report Piracy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_permissions_trademarks">Permissions &amp; Trademarks</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_product_license_agreements">Product License Agreements</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_feedback">Send Feedback</a></li>
+        </ul>
+        <div>
+            <p>Copyright &#169; 2006-2008 Adobe Systems Incorporated.</p>
+            <p>Use of this website signifies your agreement to the <a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a> and <a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>.</p>
+            <p>Search powered by <a href="http://www.google.com/" target="new">Google</a></p>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+_uacct = "UA-396569-1";
+urchinTracker();
+</script>
 </body>
 </html>

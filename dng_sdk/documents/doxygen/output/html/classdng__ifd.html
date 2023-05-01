@@ -1,111 +1,121 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <!--
-/*
-    Copyright 2005-2006 Adobe Systems Incorporated
+    Copyright 2005-2007 Adobe Systems Incorporated
     Distributed under the MIT License (see accompanying file LICENSE_1_0_0.txt
-    or a copy at http://opensource.adobe.com/licenses.html)
-*/
-Some files are held under additional license. Please see "licenses.html" for more information.
+    or a copy at http://stlab.adobe.com/licenses.html)
+
+    Some files are held under additional license.
+    Please see "http://stlab.adobe.com/licenses.html" for more information.
 -->
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-    <TITLE>DNG SDK: dng_ifd Class Reference</TITLE>
+    <TITLE>DNG SDK 1.2: dng_ifd Class Reference</TITLE>
     <META HTTP-EQUIV="content-type" CONTENT="text/html;charset=ISO-8859-1"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/basic.css"/>
-    <STYLE TYPE="text/css" MEDIA="all"><!--
-        @import url("http://www.adobe.com/ssi/css/modern.css");
-    --></STYLE>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/print.css" MEDIA="print"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/mainnav.css"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="stlab.css"/>
-    <LINK REL="alternate" TITLE="opensource.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
-</HEAD>
-
-<body bgcolor="white">
-
-<div id="mainnav" width="100%">
-<table width="100%" border="0"><tr><td width="50%">
-<a title="Adobe Systems home page" href="http://www.adobe.com/" tabindex="2"><img src="http://www.adobe.com/images/logo.gif" alt="Adobe Systems, Inc." height="80" width="150"/></a>
-</td><td align="right" valign="top">
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="+2" color="black">Adobe Open Source</font></a><br/>
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="-2" color="black">opensource.adobe.com</font></a>
-</td></tr></table>
-</div>
-<br/>
-<table border="0" cellspacing="0" cellpadding="0" width="100%">
-<tr><td width="10" nowrap="1"> </td>
+    <LINK TYPE="text/css" REL="stylesheet" HREF="adobe_source.css"/>
+    <LINK REL="alternate" TITLE="stlab.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+</head>
+<body>
+<div id='content'>
+<table><tr>
+<td colspan='5'>
+    <div id='opensource_banner'>
+    <table style='width: 100%; padding: 5px;'><tr>
+    <td>
+        <span style='font-size: 30px'><a href='index.html' style='color: black; border: none'>stlab.adobe.com</a></span>
+    </td>
+    <td align='right'>
+        <a href='http://www.adobe.com' style='border: none'><img src='adobe_hlogo.gif' alt="Adobe Systems Incorporated"/></a>
+    </td>
+    </tr></table>
+    </div>
+</td></tr><tr>
 <td valign="top">
-    <table border="0" cellpadding="5">
-    <tr><td nowrap="1">
-        <h3 class="navbar">Information</h3>
-        <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="group__asl__overview.html">Overview</a></li>
-            <li><a href="asl_toc.html">Documentation</a></li>
-            <li><a href="asl_readme.html">Getting Started</a></li>
-            <li><a href="asl_release_notes.html">Release Notes</a></li>
-            <li><a href="http://opensource.adobe.com/twiki/bin/view/AdobeSource">ASL Wiki</a></li>
-            <li><a href="licenses.html">License</a></li>
-            <li><a href="asl_indices.html">Indices</a></li>
-        </ul>
-        <h3 class="navbar">Media</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a></li>
-            <li><a href="asl_download_cvs.html">ASL CVS Repository</a></li>
-            <li><a href="http://cvs.sourceforge.net/viewcvs.py/adobe-source/">View CVS Repository</a></li>
-        </ul>
-        <h3 class="navbar">Support</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a></li>
-            <li><a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a></li>
-            <li><a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a></li>
-            <li><a href="asl_contributing.html">Contributing to ASL</a></li>
-        </ul>
-        <h3 class="navbar">RSS</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a></li>
-        </ul>
-        <h3 class="navbar">Other Resources</h3>
-        <ul>
-            <li><a href="http://boost.org">Boost</a></li>
-            <li><a href="http://www.sgi.com/tech/stl">SGI STL</a></li>
-        </ul>
-        <h3 class="navbar">Other Adobe Projects</h3>
-        <ul>
-            <li><a href="http://www.adobe.com/products/xmp/">Adobe XMP</a></li>
-        </ul>
-    </td></tr>
-    </table>
+    <div id='navtable' height='100%'>
+    <div style='margin: 5px'>
+        <h4>Documentation</h4>
+
+        <a href="group__asl__overview.html">Overview</a><br/>
+        <a href="asl_readme.html">Building ASL</a><br/>
+        <a href="asl_toc.html">Documentation</a><br/>
+        <a href="http://stlab.adobe.com/wiki/index.php/Supplementary_ASL_Documentation">Library Wiki Docs</a><br/>
+        <a href="asl_indices.html">Indices</a><br/>
+        <a href="http://stlab.adobe.com/perforce/">Browse Perforce</a><br/>
+
+        <h4>More Info</h4>
+
+        <a href="asl_release_notes.html">Release Notes</a><br/>
+        <a href="http://stlab.adobe.com/wiki/">Wiki</a><br/>
+        <a href="asl_search.html">Site Search</a><br/>
+        <a href="licenses.html">License</a><br/>
+        <a href="success_stories.html">Success Stories</a><br/>
+        <a href="asl_contributors.html">Contributors</a><br/>
+
+        <h4>Media</h4>
+
+        <a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a><br/>
+        <a href="asl_download_perforce.html">Perforce Depots</a><br/>
+
+        <h4>Support</h4>
+
+        <a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a><br/>
+        <a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a><br/>
+        <a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a><br/>
+        <a href="asl_contributing.html">Contribute to ASL</a><br/>
+
+        <h4>RSS</h4>
+
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a><br/>
+
+        <h4>Other Adobe Projects</h4>
+
+        <a href="adobe_apollo.html">Adobe Air</a><br/>
+        <a href="http://stlab.adobe.com/gil/">Adobe GIL</a><br/>
+        <a href="http://labs.adobe.com">Adobe Labs</a><br/>
+        <a href="http://stlab.adobe.com/amg/">Adobe Media Gallery</a><br/>
+        <a href="http://www.adobe.com/products/xmp/">Adobe XMP</a><br/>
+        <a href="http://www.mozilla.org/projects/tamarin">Tamarin project<br/>(Mozilla Foundation)</a><br/>
+
+        <h4>Other Resources</h4>
+
+        <a href="http://boost.org">Boost</a><br/>
+        <a href="http://www.riaforge.com/">RIAForge</a><br/>
+        <a href="http://www.sgi.com/tech/stl">SGI STL</a><br/>
+    </div>
+    </div>
 </td>
-<td width="10" nowrap="1"> </td>
-<td width="100%" valign="top">
+<td id='maintable' width="100%" valign="top">
 
 <!-- End Header -->
-
-<!-- Generated by Doxygen 1.4.6-NO -->
-<div class="tabs">
-  <ul>
-    <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-    <li id="current"><a href="annotated.html"><span>Classes</span></a></li>
-    <li><a href="files.html"><span>Files</span></a></li>
-    <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
-  </ul></div>
-<div class="tabs">
-  <ul>
-    <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
-    <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
-    <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
-  </ul></div>
+<!-- Generated by Doxygen 1.5.5 -->
+<div class="navigation" id="top">
+  <div class="tabs">
+    <ul>
+      <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
+      <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="files.html"><span>Files</span></a></li>
+    </ul>
+  </div>
+  <div class="tabs">
+    <ul>
+      <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
+      <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
+      <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
+    </ul>
+  </div>
+</div>
+<div class="contents">
 <h1>dng_ifd Class Reference</h1><!-- doxytag: class="dng_ifd" -->Container for a single image file directory of a digital negative.  
 <a href="#_details">More...</a>
 <p>
 <code>#include &lt;<a class="el" href="dng__ifd_8h-source.html">dng_ifd.h</a>&gt;</code>
+<p>
+
 <p>
 <a href="classdng__ifd-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
@@ -114,8 +124,8 @@ Some files are held under additional license. Please see "licenses.html" for mor
  }</td></tr>
 
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="790597bb080cbbf6470ec2f61fa8658d"></a><!-- doxytag: member="dng_ifd::ParseTag" ref="790597bb080cbbf6470ec2f61fa8658d" args="(dng_stream &amp;stream, uint32 parentCode, uint32 tagCode, uint32 tagType, uint32 tagCount, uint32 tagOffset)" -->
-virtual bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>ParseTag</b> (<a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, uint32 parentCode, uint32 tagCode, uint32 tagType, uint32 tagCount, uint32 tagOffset)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="56bf8d3bf5ab41362aa27d87fecf7899"></a><!-- doxytag: member="dng_ifd::ParseTag" ref="56bf8d3bf5ab41362aa27d87fecf7899" args="(dng_stream &amp;stream, uint32 parentCode, uint32 tagCode, uint32 tagType, uint32 tagCount, uint64 tagOffset)" -->
+virtual bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>ParseTag</b> (<a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, uint32 parentCode, uint32 tagCode, uint32 tagType, uint32 tagCount, uint64 tagOffset)</td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d1cf4652789f075d3fef8431b0a0a6de"></a><!-- doxytag: member="dng_ifd::PostParse" ref="d1cf4652789f075d3fef8431b0a0a6de" args="()" -->
 virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><b>PostParse</b> ()</td></tr>
@@ -193,6 +203,15 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fFillOrder</b></td>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="48ec42646f9752ee8a5b95efeaaa9f62"></a><!-- doxytag: member="dng_ifd::fOrientation" ref="48ec42646f9752ee8a5b95efeaaa9f62" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fOrientation</b></td></tr>
 
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4740411dccc521d640d1af4fb54032ee"></a><!-- doxytag: member="dng_ifd::fOrientationType" ref="4740411dccc521d640d1af4fb54032ee" args="" -->
+uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fOrientationType</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3384c4e243db12301f4096a8cd8076d1"></a><!-- doxytag: member="dng_ifd::fOrientationOffset" ref="3384c4e243db12301f4096a8cd8076d1" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fOrientationOffset</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="1835d892430cabbcacfce56d8dd67134"></a><!-- doxytag: member="dng_ifd::fOrientationBigEndian" ref="1835d892430cabbcacfce56d8dd67134" args="" -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>fOrientationBigEndian</b></td></tr>
+
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3e80b0bf92ae2e522dfe88cbd20fd4ff"></a><!-- doxytag: member="dng_ifd::fSamplesPerPixel" ref="3e80b0bf92ae2e522dfe88cbd20fd4ff" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSamplesPerPixel</b></td></tr>
 
@@ -226,11 +245,11 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileOffsetsType</b
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3cf197876d054f6546fb87eb80057742"></a><!-- doxytag: member="dng_ifd::fTileOffsetsCount" ref="3cf197876d054f6546fb87eb80057742" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileOffsetsCount</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="edaabe034234d45e28a93f5ef112f531"></a><!-- doxytag: member="dng_ifd::fTileOffsetsOffset" ref="edaabe034234d45e28a93f5ef112f531" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileOffsetsOffset</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="414d3afe72a798fc470d3a217f539a2b"></a><!-- doxytag: member="dng_ifd::fTileOffsetsOffset" ref="414d3afe72a798fc470d3a217f539a2b" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileOffsetsOffset</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ae5be6c2fe54e01a9bfd40af86056735"></a><!-- doxytag: member="dng_ifd::fTileOffset" ref="ae5be6c2fe54e01a9bfd40af86056735" args="[kMaxTileInfo]" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileOffset</b> [kMaxTileInfo]</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="204fc7577bb94793766b6c5c1471825c"></a><!-- doxytag: member="dng_ifd::fTileOffset" ref="204fc7577bb94793766b6c5c1471825c" args="[kMaxTileInfo]" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileOffset</b> [kMaxTileInfo]</td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="36c9b8750a6ff2b05040d9cd688ddb19"></a><!-- doxytag: member="dng_ifd::fTileByteCountsType" ref="36c9b8750a6ff2b05040d9cd688ddb19" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileByteCountsType</b></td></tr>
@@ -238,8 +257,8 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileByteCountsType
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="cde4d05b9fa316006c5f839ca244e5bd"></a><!-- doxytag: member="dng_ifd::fTileByteCountsCount" ref="cde4d05b9fa316006c5f839ca244e5bd" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileByteCountsCount</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="98d4b03288346cfe176b181f379d6b76"></a><!-- doxytag: member="dng_ifd::fTileByteCountsOffset" ref="98d4b03288346cfe176b181f379d6b76" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileByteCountsOffset</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ccba96f3e2eaf88774d6252a3fb5fdbb"></a><!-- doxytag: member="dng_ifd::fTileByteCountsOffset" ref="ccba96f3e2eaf88774d6252a3fb5fdbb" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileByteCountsOffset</b></td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a6c62e370b77c1a8dd11f33366b4f140"></a><!-- doxytag: member="dng_ifd::fTileByteCount" ref="a6c62e370b77c1a8dd11f33366b4f140" args="[kMaxTileInfo]" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileByteCount</b> [kMaxTileInfo]</td></tr>
@@ -247,8 +266,8 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTileByteCount</b> 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6dc7c7714d9c0df71a175a6b582e19fa"></a><!-- doxytag: member="dng_ifd::fSubIFDsCount" ref="6dc7c7714d9c0df71a175a6b582e19fa" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSubIFDsCount</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9fbe63fec5910cb97b6f2e3c5e149625"></a><!-- doxytag: member="dng_ifd::fSubIFDsOffset" ref="9fbe63fec5910cb97b6f2e3c5e149625" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSubIFDsOffset</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3d379f270be4ed8c83f5f03a97153e4b"></a><!-- doxytag: member="dng_ifd::fSubIFDsOffset" ref="3d379f270be4ed8c83f5f03a97153e4b" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSubIFDsOffset</b></td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6ada11da4c6480a3a5fe1eb68d3b7cfb"></a><!-- doxytag: member="dng_ifd::fExtraSamplesCount" ref="6ada11da4c6480a3a5fe1eb68d3b7cfb" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fExtraSamplesCount</b></td></tr>
@@ -262,11 +281,11 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSampleFormat</b> [
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f31a125c30262ebe96109ef1d95a3ba9"></a><!-- doxytag: member="dng_ifd::fJPEGTablesCount" ref="f31a125c30262ebe96109ef1d95a3ba9" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fJPEGTablesCount</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="0bb6d6cc692ec422b16a82146cdffd1f"></a><!-- doxytag: member="dng_ifd::fJPEGTablesOffset" ref="0bb6d6cc692ec422b16a82146cdffd1f" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fJPEGTablesOffset</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e9598a3fad12d4e71f07dcae14020aa3"></a><!-- doxytag: member="dng_ifd::fJPEGTablesOffset" ref="e9598a3fad12d4e71f07dcae14020aa3" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fJPEGTablesOffset</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f7bec947d515d393f773e5c7583e261f"></a><!-- doxytag: member="dng_ifd::fJPEGInterchangeFormat" ref="f7bec947d515d393f773e5c7583e261f" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fJPEGInterchangeFormat</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a01210b09703d79546cc58b5d63a417d"></a><!-- doxytag: member="dng_ifd::fJPEGInterchangeFormat" ref="a01210b09703d79546cc58b5d63a417d" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fJPEGInterchangeFormat</b></td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a3fad78e5cd50f8b65cae17bf5152f90"></a><!-- doxytag: member="dng_ifd::fJPEGInterchangeFormatLength" ref="a3fad78e5cd50f8b65cae17bf5152f90" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fJPEGInterchangeFormatLength</b></td></tr>
@@ -313,8 +332,8 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fLinearizationTable
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="37cdf3436695e932adc2a757b2d6745d"></a><!-- doxytag: member="dng_ifd::fLinearizationTableCount" ref="37cdf3436695e932adc2a757b2d6745d" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fLinearizationTableCount</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9905db95b0f5c6d3d0860ff865cd09f5"></a><!-- doxytag: member="dng_ifd::fLinearizationTableOffset" ref="9905db95b0f5c6d3d0860ff865cd09f5" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fLinearizationTableOffset</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="bfb7546f7e3d19643f8c2523bd24158e"></a><!-- doxytag: member="dng_ifd::fLinearizationTableOffset" ref="bfb7546f7e3d19643f8c2523bd24158e" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fLinearizationTableOffset</b></td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="01ff7700f78315b07ca83c0cc4dc53ab"></a><!-- doxytag: member="dng_ifd::fBlackLevelRepeatRows" ref="01ff7700f78315b07ca83c0cc4dc53ab" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelRepeatRows</b></td></tr>
@@ -331,8 +350,8 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaHTy
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3ba7e1fa832fc3c8a7542fe850ce58c7"></a><!-- doxytag: member="dng_ifd::fBlackLevelDeltaHCount" ref="3ba7e1fa832fc3c8a7542fe850ce58c7" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaHCount</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="83428704b7ee04b1bdc9480b8dc5a91a"></a><!-- doxytag: member="dng_ifd::fBlackLevelDeltaHOffset" ref="83428704b7ee04b1bdc9480b8dc5a91a" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaHOffset</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d6eb8ea00ee3a3ee8c084be48cf9022a"></a><!-- doxytag: member="dng_ifd::fBlackLevelDeltaHOffset" ref="d6eb8ea00ee3a3ee8c084be48cf9022a" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaHOffset</b></td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="95b664853f9870958781f627f6dba50b"></a><!-- doxytag: member="dng_ifd::fBlackLevelDeltaVType" ref="95b664853f9870958781f627f6dba50b" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaVType</b></td></tr>
@@ -340,8 +359,8 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaVTy
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e9f637681ec3650c48d14f7cf4611d02"></a><!-- doxytag: member="dng_ifd::fBlackLevelDeltaVCount" ref="e9f637681ec3650c48d14f7cf4611d02" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaVCount</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f09cc8d864fe3b2c3e0962517191befa"></a><!-- doxytag: member="dng_ifd::fBlackLevelDeltaVOffset" ref="f09cc8d864fe3b2c3e0962517191befa" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaVOffset</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e3b0cf83647f6a2d011cbf86322eee03"></a><!-- doxytag: member="dng_ifd::fBlackLevelDeltaVOffset" ref="e3b0cf83647f6a2d011cbf86322eee03" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fBlackLevelDeltaVOffset</b></td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fe663bd80f2500af0ed2167c462d4b1e"></a><!-- doxytag: member="dng_ifd::fWhiteLevel" ref="fe663bd80f2500af0ed2167c462d4b1e" args="[kMaxSamplesPerPixel]" -->
 real64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fWhiteLevel</b> [<a class="el" href="dng__sdk__limits_8h.html#bff3ca1460f2b6425d8dfa1f371437ef">kMaxSamplesPerPixel</a>]</td></tr>
@@ -385,17 +404,29 @@ uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fMaskedAreaCount</b
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7fa8bdc3ca86a7abd3f1e2cc0b08d1e0"></a><!-- doxytag: member="dng_ifd::fMaskedArea" ref="7fa8bdc3ca86a7abd3f1e2cc0b08d1e0" args="[kMaxMaskedAreas]" -->
 dng_rect&nbsp;</td><td class="memItemRight" valign="bottom"><b>fMaskedArea</b> [<a class="el" href="dng__sdk__limits_8h.html#1ba4f3365d6a8ef242e9126c7b97da3f">kMaxMaskedAreas</a>]</td></tr>
 
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8cf32e76db47b21ea8f7928391a43111"></a><!-- doxytag: member="dng_ifd::fRowInterleaveFactor" ref="8cf32e76db47b21ea8f7928391a43111" args="" -->
+uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fRowInterleaveFactor</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4bf55bbff1dd99fe83243a32532f1cbf"></a><!-- doxytag: member="dng_ifd::fSubTileBlockRows" ref="4bf55bbff1dd99fe83243a32532f1cbf" args="" -->
+uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSubTileBlockRows</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="180e5dab8101a4d26ba0f7ea2e9a6a28"></a><!-- doxytag: member="dng_ifd::fSubTileBlockCols" ref="180e5dab8101a4d26ba0f7ea2e9a6a28" args="" -->
+uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSubTileBlockCols</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f483137aa2099a7711e027e05e8cccfe"></a><!-- doxytag: member="dng_ifd::fPreviewInfo" ref="f483137aa2099a7711e027e05e8cccfe" args="" -->
+dng_preview_info&nbsp;</td><td class="memItemRight" valign="bottom"><b>fPreviewInfo</b></td></tr>
+
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b4a38f411e7d9f1595b246b1d3419f08"></a><!-- doxytag: member="dng_ifd::fLosslessJPEGBug16" ref="b4a38f411e7d9f1595b246b1d3419f08" args="" -->
 bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>fLosslessJPEGBug16</b></td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c5e2b76a93106732284d0b3b8e3da2d1"></a><!-- doxytag: member="dng_ifd::fSampleBitShift" ref="c5e2b76a93106732284d0b3b8e3da2d1" args="" -->
 uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSampleBitShift</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fe233df16becedd721390cd3fe675290"></a><!-- doxytag: member="dng_ifd::fThisIFD" ref="fe233df16becedd721390cd3fe675290" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fThisIFD</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5b853af80334a9dfeccdbdc42b5d4dfb"></a><!-- doxytag: member="dng_ifd::fThisIFD" ref="5b853af80334a9dfeccdbdc42b5d4dfb" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fThisIFD</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ec9f025eb1890eb6dd4350626b406807"></a><!-- doxytag: member="dng_ifd::fNextIFD" ref="ec9f025eb1890eb6dd4350626b406807" args="" -->
-uint32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fNextIFD</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="cd99874aff56d8bc21113912427d40ed"></a><!-- doxytag: member="dng_ifd::fNextIFD" ref="cd99874aff56d8bc21113912427d40ed" args="" -->
+uint64&nbsp;</td><td class="memItemRight" valign="bottom"><b>fNextIFD</b></td></tr>
 
 <tr><td colspan="2"><br><h2>Protected Member Functions</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e24ea711d0fed8b9272b974d9cbd9187"></a><!-- doxytag: member="dng_ifd::IsValidCFA" ref="e24ea711d0fed8b9272b974d9cbd9187" args="(dng_shared &amp;shared, uint32 parentCode)" -->
@@ -405,17 +436,39 @@ virtual bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>IsValidCFA</b
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 Container for a single image file directory of a digital negative. 
 <p>
-See <a class="el" href="index.html#spec_dng">DNG 1.1.0 specification</a> for documentation of specific tags. 
-<p>
-<hr>The documentation for this class was generated from the following files:<ul>
-<li>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/<a class="el" href="dng__ifd_8h-source.html">dng_ifd.h</a><li>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/dng_ifd.cpp</ul>
+See <a class="el" href="index.html#spec_dng">DNG 1.1.0 specification</a> for documentation of specific tags. <hr>The documentation for this class was generated from the following files:<ul>
+<li><a class="el" href="dng__ifd_8h-source.html">dng_ifd.h</a><li>dng_ifd.cpp</ul>
+</div>
 
 <!-- Begin Footer -->
-</td>
-<td width="20">&nbsp;&nbsp;</td>
+</td></tr>
 </table>
-
-<div id="footerrow"><!--give footer 25px of white above--></div><div id="footer" title="footer: links to copyright and other legal information"><p><a href="licenses.html" class="el">Copyright &copy; 2005 Adobe Systems Incorporated</a></p><ul id="list1"><!-- due to a rendering error in IE, these links should all be on one line without returns --><li id="terms"><a title="Terms of Use" href="http://www.adobe.com/misc/copyright.html">Terms of Use</a></li><li><a title="Privacy Policy" href="http://www.adobe.com/misc/privacy.html">Privacy Policy</a></li><li><a href="http://access.adobe.com">Accessibility</a></li><li><a title="Avoid software piracy" href="http://www.adobe.com/aboutadobe/antipiracy/main.html">Avoid software piracy</a></li></ul><!--two lists because of quirks mode--><ul id="list2"><li id="tms"><a title="Permissions and trademarks" href="http://www.adobe.com/misc/agreement.html">Permissions and trademarks</a></li><li><a title="Product License Agreements" href="http://www.adobe.com/products/eulas/main.html">Product License Agreements</a></li></ul><a title="Reviewed by TRUSTe: site privacy statement" href="http://www.adobe.com/misc/privacy.html"><img id="privacyicon" src="http://www.adobe.com/images/finalmark.gif" alt="Reviewed by TRUSTe: site privacy statement" height="31" width="116" border="0"/></a></div>
-
+</div> <!-- content -->
+<div class='footerdiv'>
+    <div id='footersub'>
+        <ul>
+            <li><a href="http://www.adobe.com/go/gftray_foot_aboutadobe">Company</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_contact_adobe">Contact Us</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_accessibility">Accessibility</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_report_piracy">Report Piracy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_permissions_trademarks">Permissions &amp; Trademarks</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_product_license_agreements">Product License Agreements</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_feedback">Send Feedback</a></li>
+        </ul>
+        <div>
+            <p>Copyright &#169; 2006-2008 Adobe Systems Incorporated.</p>
+            <p>Use of this website signifies your agreement to the <a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a> and <a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>.</p>
+            <p>Search powered by <a href="http://www.google.com/" target="new">Google</a></p>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+_uacct = "UA-396569-1";
+urchinTracker();
+</script>
 </body>
 </html>

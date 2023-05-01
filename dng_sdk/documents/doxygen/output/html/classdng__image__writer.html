@@ -1,118 +1,131 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <!--
-/*
-    Copyright 2005-2006 Adobe Systems Incorporated
+    Copyright 2005-2007 Adobe Systems Incorporated
     Distributed under the MIT License (see accompanying file LICENSE_1_0_0.txt
-    or a copy at http://opensource.adobe.com/licenses.html)
-*/
-Some files are held under additional license. Please see "licenses.html" for more information.
+    or a copy at http://stlab.adobe.com/licenses.html)
+
+    Some files are held under additional license.
+    Please see "http://stlab.adobe.com/licenses.html" for more information.
 -->
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-    <TITLE>DNG SDK: dng_image_writer Class Reference</TITLE>
+    <TITLE>DNG SDK 1.2: dng_image_writer Class Reference</TITLE>
     <META HTTP-EQUIV="content-type" CONTENT="text/html;charset=ISO-8859-1"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/basic.css"/>
-    <STYLE TYPE="text/css" MEDIA="all"><!--
-        @import url("http://www.adobe.com/ssi/css/modern.css");
-    --></STYLE>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/print.css" MEDIA="print"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/mainnav.css"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="stlab.css"/>
-    <LINK REL="alternate" TITLE="opensource.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
-</HEAD>
-
-<body bgcolor="white">
-
-<div id="mainnav" width="100%">
-<table width="100%" border="0"><tr><td width="50%">
-<a title="Adobe Systems home page" href="http://www.adobe.com/" tabindex="2"><img src="http://www.adobe.com/images/logo.gif" alt="Adobe Systems, Inc." height="80" width="150"/></a>
-</td><td align="right" valign="top">
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="+2" color="black">Adobe Open Source</font></a><br/>
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="-2" color="black">opensource.adobe.com</font></a>
-</td></tr></table>
-</div>
-<br/>
-<table border="0" cellspacing="0" cellpadding="0" width="100%">
-<tr><td width="10" nowrap="1"> </td>
+    <LINK TYPE="text/css" REL="stylesheet" HREF="adobe_source.css"/>
+    <LINK REL="alternate" TITLE="stlab.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+</head>
+<body>
+<div id='content'>
+<table><tr>
+<td colspan='5'>
+    <div id='opensource_banner'>
+    <table style='width: 100%; padding: 5px;'><tr>
+    <td>
+        <span style='font-size: 30px'><a href='index.html' style='color: black; border: none'>stlab.adobe.com</a></span>
+    </td>
+    <td align='right'>
+        <a href='http://www.adobe.com' style='border: none'><img src='adobe_hlogo.gif' alt="Adobe Systems Incorporated"/></a>
+    </td>
+    </tr></table>
+    </div>
+</td></tr><tr>
 <td valign="top">
-    <table border="0" cellpadding="5">
-    <tr><td nowrap="1">
-        <h3 class="navbar">Information</h3>
-        <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="group__asl__overview.html">Overview</a></li>
-            <li><a href="asl_toc.html">Documentation</a></li>
-            <li><a href="asl_readme.html">Getting Started</a></li>
-            <li><a href="asl_release_notes.html">Release Notes</a></li>
-            <li><a href="http://opensource.adobe.com/twiki/bin/view/AdobeSource">ASL Wiki</a></li>
-            <li><a href="licenses.html">License</a></li>
-            <li><a href="asl_indices.html">Indices</a></li>
-        </ul>
-        <h3 class="navbar">Media</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a></li>
-            <li><a href="asl_download_cvs.html">ASL CVS Repository</a></li>
-            <li><a href="http://cvs.sourceforge.net/viewcvs.py/adobe-source/">View CVS Repository</a></li>
-        </ul>
-        <h3 class="navbar">Support</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a></li>
-            <li><a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a></li>
-            <li><a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a></li>
-            <li><a href="asl_contributing.html">Contributing to ASL</a></li>
-        </ul>
-        <h3 class="navbar">RSS</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a></li>
-        </ul>
-        <h3 class="navbar">Other Resources</h3>
-        <ul>
-            <li><a href="http://boost.org">Boost</a></li>
-            <li><a href="http://www.sgi.com/tech/stl">SGI STL</a></li>
-        </ul>
-        <h3 class="navbar">Other Adobe Projects</h3>
-        <ul>
-            <li><a href="http://www.adobe.com/products/xmp/">Adobe XMP</a></li>
-        </ul>
-    </td></tr>
-    </table>
+    <div id='navtable' height='100%'>
+    <div style='margin: 5px'>
+        <h4>Documentation</h4>
+
+        <a href="group__asl__overview.html">Overview</a><br/>
+        <a href="asl_readme.html">Building ASL</a><br/>
+        <a href="asl_toc.html">Documentation</a><br/>
+        <a href="http://stlab.adobe.com/wiki/index.php/Supplementary_ASL_Documentation">Library Wiki Docs</a><br/>
+        <a href="asl_indices.html">Indices</a><br/>
+        <a href="http://stlab.adobe.com/perforce/">Browse Perforce</a><br/>
+
+        <h4>More Info</h4>
+
+        <a href="asl_release_notes.html">Release Notes</a><br/>
+        <a href="http://stlab.adobe.com/wiki/">Wiki</a><br/>
+        <a href="asl_search.html">Site Search</a><br/>
+        <a href="licenses.html">License</a><br/>
+        <a href="success_stories.html">Success Stories</a><br/>
+        <a href="asl_contributors.html">Contributors</a><br/>
+
+        <h4>Media</h4>
+
+        <a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a><br/>
+        <a href="asl_download_perforce.html">Perforce Depots</a><br/>
+
+        <h4>Support</h4>
+
+        <a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a><br/>
+        <a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a><br/>
+        <a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a><br/>
+        <a href="asl_contributing.html">Contribute to ASL</a><br/>
+
+        <h4>RSS</h4>
+
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a><br/>
+
+        <h4>Other Adobe Projects</h4>
+
+        <a href="adobe_apollo.html">Adobe Air</a><br/>
+        <a href="http://stlab.adobe.com/gil/">Adobe GIL</a><br/>
+        <a href="http://labs.adobe.com">Adobe Labs</a><br/>
+        <a href="http://stlab.adobe.com/amg/">Adobe Media Gallery</a><br/>
+        <a href="http://www.adobe.com/products/xmp/">Adobe XMP</a><br/>
+        <a href="http://www.mozilla.org/projects/tamarin">Tamarin project<br/>(Mozilla Foundation)</a><br/>
+
+        <h4>Other Resources</h4>
+
+        <a href="http://boost.org">Boost</a><br/>
+        <a href="http://www.riaforge.com/">RIAForge</a><br/>
+        <a href="http://www.sgi.com/tech/stl">SGI STL</a><br/>
+    </div>
+    </div>
 </td>
-<td width="10" nowrap="1"> </td>
-<td width="100%" valign="top">
+<td id='maintable' width="100%" valign="top">
 
 <!-- End Header -->
-
-<!-- Generated by Doxygen 1.4.6-NO -->
-<div class="tabs">
-  <ul>
-    <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-    <li id="current"><a href="annotated.html"><span>Classes</span></a></li>
-    <li><a href="files.html"><span>Files</span></a></li>
-    <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
-  </ul></div>
-<div class="tabs">
-  <ul>
-    <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
-    <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
-    <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
-  </ul></div>
-<h1>dng_image_writer Class Reference</h1><!-- doxytag: class="dng_image_writer" -->Support for writing <a class="el" href="classdng__image.html">dng_image</a> or <a class="el" href="classdng__negative.html">dng_negative</a> instances to a <a class="el" href="classdng__stream.html">dng_stream</a> in TIFF or DNG format.  
+<!-- Generated by Doxygen 1.5.5 -->
+<div class="navigation" id="top">
+  <div class="tabs">
+    <ul>
+      <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
+      <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="files.html"><span>Files</span></a></li>
+    </ul>
+  </div>
+  <div class="tabs">
+    <ul>
+      <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
+      <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
+      <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
+    </ul>
+  </div>
+</div>
+<div class="contents">
+<h1>dng_image_writer Class Reference</h1><!-- doxytag: class="dng_image_writer" -->Support for writing <a class="el" href="classdng__image.html" title="Base class for holding image data in DNG SDK. See dng_simple_image for derived class...">dng_image</a> or <a class="el" href="classdng__negative.html" title="Main class for holding DNG image data and associated metadata.">dng_negative</a> instances to a <a class="el" href="classdng__stream.html">dng_stream</a> in TIFF or DNG format.  
 <a href="#_details">More...</a>
 <p>
 <code>#include &lt;<a class="el" href="dng__image__writer_8h-source.html">dng_image_writer.h</a>&gt;</code>
 <p>
+
+<p>
 <a href="classdng__image__writer-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7b612adaed808383bee93a0278f24b96"></a><!-- doxytag: member="dng_image_writer::WriteImage" ref="7b612adaed808383bee93a0278f24b96" args="(dng_host &amp;host, const dng_ifd &amp;ifd, dng_basic_tag_set &amp;basic, dng_stream &amp;stream, const dng_image &amp;image, bool mapRange=false, uint32 fakeChannels=1)" -->
+virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><b>WriteImage</b> (<a class="el" href="classdng__host.html">dng_host</a> &amp;host, const <a class="el" href="classdng__ifd.html">dng_ifd</a> &amp;ifd, dng_basic_tag_set &amp;basic, <a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, const <a class="el" href="classdng__image.html">dng_image</a> &amp;image, bool mapRange=false, uint32 fakeChannels=1)</td></tr>
+
 <tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__image__writer.html#3b8402c9bb2c1c7d4212291baf953e34">WriteTIFF</a> (<a class="el" href="classdng__host.html">dng_host</a> &amp;host, <a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, const <a class="el" href="classdng__image.html">dng_image</a> &amp;image, uint32 photometricInterpretation=piBlackIsZero, uint32 compression=ccUncompressed, const <a class="el" href="classdng__negative.html">dng_negative</a> *negative=NULL, const <a class="el" href="classdng__color__space.html">dng_color_space</a> *space=NULL, const dng_resolution *resolution=NULL, const dng_jpeg_preview *thumbnail=NULL, const <a class="el" href="classdng__memory__block.html">dng_memory_block</a> *imageResources=NULL)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__image__writer.html#4edc3932f3e6d29b7b2d750578ccd4b2">WriteDNG</a> (<a class="el" href="classdng__host.html">dng_host</a> &amp;host, <a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, const <a class="el" href="classdng__negative.html">dng_negative</a> &amp;negative, const <a class="el" href="classdng__image.html">dng_image</a> &amp;thumbnail, uint32 compression=ccJPEG, const dng_jpeg_preview *preview1=NULL, const dng_jpeg_preview *preview2=NULL)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__image__writer.html#2e0f165c3399b9711923026fd0cd9bf1">WriteDNG</a> (<a class="el" href="classdng__host.html">dng_host</a> &amp;host, <a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, const <a class="el" href="classdng__negative.html">dng_negative</a> &amp;negative, const dng_image_preview &amp;thumbnail, uint32 compression=ccJPEG, const dng_preview_list *previewList=NULL)</td></tr>
 
 <tr><td colspan="2"><br><h2>Protected Types</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">enum &nbsp;</td><td class="memItemRight" valign="bottom">{ <b>kImageBufferSize</b> =  128 * 1024
@@ -128,14 +141,14 @@ virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><b>EncodePredict
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3210cc4fb763c12a3b35920b16dbb824"></a><!-- doxytag: member="dng_image_writer::ByteSwapBuffer" ref="3210cc4fb763c12a3b35920b16dbb824" args="(dng_host &amp;host, dng_pixel_buffer &amp;buffer)" -->
 virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><b>ByteSwapBuffer</b> (<a class="el" href="classdng__host.html">dng_host</a> &amp;host, <a class="el" href="classdng__pixel__buffer.html">dng_pixel_buffer</a> &amp;buffer)</td></tr>
 
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c0a024ca92b728d33303507a46d8a71e"></a><!-- doxytag: member="dng_image_writer::ReorderSubTileBlocks" ref="c0a024ca92b728d33303507a46d8a71e" args="(const dng_ifd &amp;ifd, dng_pixel_buffer &amp;buffer)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><b>ReorderSubTileBlocks</b> (const <a class="el" href="classdng__ifd.html">dng_ifd</a> &amp;ifd, <a class="el" href="classdng__pixel__buffer.html">dng_pixel_buffer</a> &amp;buffer)</td></tr>
+
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c1730b73dcab3b7f9c7d0b598c8e43d2"></a><!-- doxytag: member="dng_image_writer::WriteData" ref="c1730b73dcab3b7f9c7d0b598c8e43d2" args="(dng_host &amp;host, const dng_ifd &amp;ifd, dng_stream &amp;stream, dng_pixel_buffer &amp;buffer)" -->
 virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><b>WriteData</b> (<a class="el" href="classdng__host.html">dng_host</a> &amp;host, const <a class="el" href="classdng__ifd.html">dng_ifd</a> &amp;ifd, <a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, <a class="el" href="classdng__pixel__buffer.html">dng_pixel_buffer</a> &amp;buffer)</td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="66876fc26847192feb1437ae859fb931"></a><!-- doxytag: member="dng_image_writer::WriteTile" ref="66876fc26847192feb1437ae859fb931" args="(dng_host &amp;host, const dng_ifd &amp;ifd, dng_stream &amp;stream, const dng_image &amp;image, const dng_rect &amp;tileArea, bool mapRange, uint32 fakeChannels)" -->
 virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><b>WriteTile</b> (<a class="el" href="classdng__host.html">dng_host</a> &amp;host, const <a class="el" href="classdng__ifd.html">dng_ifd</a> &amp;ifd, <a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, const <a class="el" href="classdng__image.html">dng_image</a> &amp;image, const dng_rect &amp;tileArea, bool mapRange, uint32 fakeChannels)</td></tr>
-
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8e778d323a569228c88dd1b8c5aa79dc"></a><!-- doxytag: member="dng_image_writer::WriteImage" ref="8e778d323a569228c88dd1b8c5aa79dc" args="(dng_host &amp;host, const dng_ifd &amp;ifd, basic_tag_set &amp;basic, dng_stream &amp;stream, const dng_image &amp;image, bool mapRange=false, uint32 fakeChannels=1)" -->
-virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><b>WriteImage</b> (<a class="el" href="classdng__host.html">dng_host</a> &amp;host, const <a class="el" href="classdng__ifd.html">dng_ifd</a> &amp;ifd, basic_tag_set &amp;basic, <a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, const <a class="el" href="classdng__image.html">dng_image</a> &amp;image, bool mapRange=false, uint32 fakeChannels=1)</td></tr>
 
 <tr><td colspan="2"><br><h2>Protected Attributes</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fe20b3d39f0adbdeeca2096c2f93fc96"></a><!-- doxytag: member="dng_image_writer::fCompressedBuffer" ref="fe20b3d39f0adbdeeca2096c2f93fc96" args="" -->
@@ -144,172 +157,87 @@ virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><b>WriteImage</b
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="1ccb440a9cb960f3fa070e16b74d6951"></a><!-- doxytag: member="dng_image_writer::fUncompressedBuffer" ref="1ccb440a9cb960f3fa070e16b74d6951" args="" -->
 <a class="el" href="class_auto_ptr.html">AutoPtr</a>&lt; <a class="el" href="classdng__memory__block.html">dng_memory_block</a> &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>fUncompressedBuffer</b></td></tr>
 
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e908fb68afbf88a2572da2032d5eba84"></a><!-- doxytag: member="dng_image_writer::fSubTileBlockBuffer" ref="e908fb68afbf88a2572da2032d5eba84" args="" -->
+<a class="el" href="class_auto_ptr.html">AutoPtr</a>&lt; <a class="el" href="classdng__memory__block.html">dng_memory_block</a> &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>fSubTileBlockBuffer</b></td></tr>
+
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-Support for writing <a class="el" href="classdng__image.html">dng_image</a> or <a class="el" href="classdng__negative.html">dng_negative</a> instances to a <a class="el" href="classdng__stream.html">dng_stream</a> in TIFF or DNG format. 
-<p>
-<hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="4edc3932f3e6d29b7b2d750578ccd4b2"></a><!-- doxytag: member="dng_image_writer::WriteDNG" ref="4edc3932f3e6d29b7b2d750578ccd4b2" args="(dng_host &amp;host, dng_stream &amp;stream, const dng_negative &amp;negative, const dng_image &amp;thumbnail, uint32 compression=ccJPEG, const dng_jpeg_preview *preview1=NULL, const dng_jpeg_preview *preview2=NULL)" --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
+Support for writing <a class="el" href="classdng__image.html" title="Base class for holding image data in DNG SDK. See dng_simple_image for derived class...">dng_image</a> or <a class="el" href="classdng__negative.html" title="Main class for holding DNG image data and associated metadata.">dng_negative</a> instances to a <a class="el" href="classdng__stream.html">dng_stream</a> in TIFF or DNG format. <hr><h2>Member Function Documentation</h2>
+<a class="anchor" name="3b8402c9bb2c1c7d4212291baf953e34"></a><!-- doxytag: member="dng_image_writer::WriteTIFF" ref="3b8402c9bb2c1c7d4212291baf953e34" args="(dng_host &amp;host, dng_stream &amp;stream, const dng_image &amp;image, uint32 photometricInterpretation=piBlackIsZero, uint32 compression=ccUncompressed, const dng_negative *negative=NULL, const dng_color_space *space=NULL, const dng_resolution *resolution=NULL, const dng_jpeg_preview *thumbnail=NULL, const dng_memory_block *imageResources=NULL)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
         <tr>
-          <td class="md" nowrap valign="top">void dng_image_writer::WriteDNG           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="md" nowrap valign="top"><a class="el" href="classdng__host.html">dng_host</a> &amp;&nbsp;</td>
-          <td class="mdname" nowrap> <em>host</em>, </td>
+          <td class="memname">void dng_image_writer::WriteTIFF           </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdng__host.html">dng_host</a> &amp;&nbsp;</td>
+          <td class="paramname"> <em>host</em>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap><a class="el" href="classdng__stream.html">dng_stream</a> &amp;&nbsp;</td>
-          <td class="mdname" nowrap> <em>stream</em>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdng__stream.html">dng_stream</a> &amp;&nbsp;</td>
+          <td class="paramname"> <em>stream</em>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const <a class="el" href="classdng__negative.html">dng_negative</a> &amp;&nbsp;</td>
-          <td class="mdname" nowrap> <em>negative</em>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdng__image.html">dng_image</a> &amp;&nbsp;</td>
+          <td class="paramname"> <em>image</em>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const <a class="el" href="classdng__image.html">dng_image</a> &amp;&nbsp;</td>
-          <td class="mdname" nowrap> <em>thumbnail</em>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32&nbsp;</td>
+          <td class="paramname"> <em>photometricInterpretation</em> = <code>piBlackIsZero</code>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>uint32&nbsp;</td>
-          <td class="mdname" nowrap> <em>compression</em> = <code>ccJPEG</code>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32&nbsp;</td>
+          <td class="paramname"> <em>compression</em> = <code>ccUncompressed</code>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const dng_jpeg_preview *&nbsp;</td>
-          <td class="mdname" nowrap> <em>preview1</em> = <code>NULL</code>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdng__negative.html">dng_negative</a> *&nbsp;</td>
+          <td class="paramname"> <em>negative</em> = <code>NULL</code>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const dng_jpeg_preview *&nbsp;</td>
-          <td class="mdname" nowrap> <em>preview2</em> = <code>NULL</code></td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdng__color__space.html">dng_color_space</a> *&nbsp;</td>
+          <td class="paramname"> <em>space</em> = <code>NULL</code>, </td>
         </tr>
         <tr>
-          <td class="md"></td>
-          <td class="md">)&nbsp;</td>
-          <td class="md" colspan="2"><code> [virtual]</code></td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
-
-<p>
-Write a <a class="el" href="classdng__image.html">dng_image</a> to a <a class="el" href="classdng__stream.html">dng_stream</a> in DNG format. <dl compact><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>host</em>&nbsp;</td><td>Host interface used for progress updates, abort testing, buffer allocation, etc. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>stream</em>&nbsp;</td><td>The <a class="el" href="classdng__stream.html">dng_stream</a> on which to write the TIFF. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>negative</em>&nbsp;</td><td>The image data and metadata (EXIF, IPTC, XMP) to be written. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>thumbnail</em>&nbsp;</td><td>Thumbanil image. Must be provided. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>compression</em>&nbsp;</td><td>Either ccUncompressed or ccJPEG for lossless JPEG. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>preview1</em>&nbsp;</td><td>First preview image to write. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>preview2</em>&nbsp;</td><td>Second preview image to write. Ignored if preview1 is NULL. </td></tr>
-  </table>
-</dl>
-    </td>
-  </tr>
-</table>
-<a class="anchor" name="3b8402c9bb2c1c7d4212291baf953e34"></a><!-- doxytag: member="dng_image_writer::WriteTIFF" ref="3b8402c9bb2c1c7d4212291baf953e34" args="(dng_host &amp;host, dng_stream &amp;stream, const dng_image &amp;image, uint32 photometricInterpretation=piBlackIsZero, uint32 compression=ccUncompressed, const dng_negative *negative=NULL, const dng_color_space *space=NULL, const dng_resolution *resolution=NULL, const dng_jpeg_preview *thumbnail=NULL, const dng_memory_block *imageResources=NULL)" --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td class="md" nowrap valign="top">void dng_image_writer::WriteTIFF           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="md" nowrap valign="top"><a class="el" href="classdng__host.html">dng_host</a> &amp;&nbsp;</td>
-          <td class="mdname" nowrap> <em>host</em>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const dng_resolution *&nbsp;</td>
+          <td class="paramname"> <em>resolution</em> = <code>NULL</code>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap><a class="el" href="classdng__stream.html">dng_stream</a> &amp;&nbsp;</td>
-          <td class="mdname" nowrap> <em>stream</em>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const dng_jpeg_preview *&nbsp;</td>
+          <td class="paramname"> <em>thumbnail</em> = <code>NULL</code>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const <a class="el" href="classdng__image.html">dng_image</a> &amp;&nbsp;</td>
-          <td class="mdname" nowrap> <em>image</em>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdng__memory__block.html">dng_memory_block</a> *&nbsp;</td>
+          <td class="paramname"> <em>imageResources</em> = <code>NULL</code></td><td>&nbsp;</td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>uint32&nbsp;</td>
-          <td class="mdname" nowrap> <em>photometricInterpretation</em> = <code>piBlackIsZero</code>, </td>
-        </tr>
-        <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>uint32&nbsp;</td>
-          <td class="mdname" nowrap> <em>compression</em> = <code>ccUncompressed</code>, </td>
-        </tr>
-        <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const <a class="el" href="classdng__negative.html">dng_negative</a> *&nbsp;</td>
-          <td class="mdname" nowrap> <em>negative</em> = <code>NULL</code>, </td>
-        </tr>
-        <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const <a class="el" href="classdng__color__space.html">dng_color_space</a> *&nbsp;</td>
-          <td class="mdname" nowrap> <em>space</em> = <code>NULL</code>, </td>
-        </tr>
-        <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const dng_resolution *&nbsp;</td>
-          <td class="mdname" nowrap> <em>resolution</em> = <code>NULL</code>, </td>
-        </tr>
-        <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const dng_jpeg_preview *&nbsp;</td>
-          <td class="mdname" nowrap> <em>thumbnail</em> = <code>NULL</code>, </td>
-        </tr>
-        <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>const <a class="el" href="classdng__memory__block.html">dng_memory_block</a> *&nbsp;</td>
-          <td class="mdname" nowrap> <em>imageResources</em> = <code>NULL</code></td>
-        </tr>
-        <tr>
-          <td class="md"></td>
-          <td class="md">)&nbsp;</td>
-          <td class="md" colspan="2"><code> [virtual]</code></td>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td width="100%"><code> [virtual]</code></td>
         </tr>
       </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
+</div>
+<div class="memdoc">
 
 <p>
-Write a <a class="el" href="classdng__image.html">dng_image</a> to a <a class="el" href="classdng__stream.html">dng_stream</a> in TIFF format. <dl compact><dt><b>Parameters:</b></dt><dd>
+Write a <a class="el" href="classdng__image.html" title="Base class for holding image data in DNG SDK. See dng_simple_image for derived class...">dng_image</a> to a <a class="el" href="classdng__stream.html">dng_stream</a> in TIFF format. <dl compact><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>host</em>&nbsp;</td><td>Host interface used for progress updates, abort testing, buffer allocation, etc. </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>stream</em>&nbsp;</td><td>The <a class="el" href="classdng__stream.html">dng_stream</a> on which to write the TIFF. </td></tr>
@@ -323,18 +251,110 @@ Write a <a class="el" href="classdng__image.html">dng_image</a> to a <a class="e
     <tr><td valign="top"></td><td valign="top"><em>imageResources</em>&nbsp;</td><td>If non-NULL, will image resources be stored in TIFF as well. </td></tr>
   </table>
 </dl>
-    </td>
-  </tr>
-</table>
+
+<p>References <a class="el" href="dng__stream_8cpp-source.html#l00125">dng_stream::BigEndian()</a>, <a class="el" href="dng__image_8h-source.html#l00192">dng_image::Bounds()</a>, <a class="el" href="dng__ifd_8h-source.html#l00080">dng_ifd::fBitsPerSample</a>, <a class="el" href="dng__ifd_8h-source.html#l00082">dng_ifd::fCompression</a>, <a class="el" href="dng__ifd_8h-source.html#l00128">dng_ifd::fExtraSamplesCount</a>, <a class="el" href="dng__ifd_8h-source.html#l00078">dng_ifd::fImageLength</a>, <a class="el" href="dng__ifd_8h-source.html#l00077">dng_ifd::fImageWidth</a>, <a class="el" href="dng__ifd_8cpp-source.html#l03624">dng_ifd::FindStripSize()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00338">dng_stream::Flush()</a>, <a class="el" href="dng__ifd_8h-source.html#l00075">dng_ifd::fNewSubFileType</a>, <a class="el" href="dng__ifd_8h-source.html#l00086">dng_ifd::fPhotometricInterpretation</a>, <a class="el" href="dng__ifd_8h-source.html#l00084">dng_ifd::fPredictor</a>, <a class="el" href="dng__ifd_8h-source.html#l00131">dng_ifd::fSampleFormat</a>, <a class="el" href="dng__ifd_8h-source.html#l00095">dng_ifd::fSamplesPerPixel</a>, <a class="el" href="dng__auto__ptr_8h-source.html#l00061">AutoPtr&lt; T &gt;::Get()</a>, <a class="el" href="dng__negative_8h-source.html#l01075">dng_negative::GetExif()</a>, <a class="el" href="dng__negative_8h-source.html#l01127">dng_negative::GetXMP()</a>, <a class="el" href="dng__negative_8cpp-source.html#l01085">dng_negative::IPTCData()</a>, <a class="el" href="dng__negative_8cpp-source.html#l01133">dng_negative::IPTCDigest()</a>, <a class="el" href="dng__negative_8cpp-source.html#l01101">dng_negative::IPTCLength()</a>, <a class="el" href="dng__negative_8h-source.html#l01046">dng_negative::IsMakerNoteSafe()</a>, <a class="el" href="dng__negative_8h-source.html#l01061">dng_negative::MakerNoteData()</a>, <a class="el" href="dng__negative_8h-source.html#l01067">dng_negative::MakerNoteLength()</a>, <a class="el" href="dng__image_8h-source.html#l00229">dng_image::PixelType()</a>, <a class="el" href="dng__image_8h-source.html#l00220">dng_image::Planes()</a>, <a class="el" href="dng__stream_8h-source.html#l00187">dng_stream::Position()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00470">dng_stream::Put_uint16()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00506">dng_stream::Put_uint32()</a>, <a class="el" href="dng__auto__ptr_8h-source.html#l00119">AutoPtr&lt; T &gt;::Reset()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00362">dng_stream::SetLength()</a>, <a class="el" href="dng__ifd_8cpp-source.html#l03574">dng_ifd::SetSingleStrip()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00329">dng_stream::SetWritePosition()</a>, and <a class="el" href="dng__image_8h-source.html#l00199">dng_image::Size()</a>.</p>
+
+</div>
+</div><p>
+<a class="anchor" name="2e0f165c3399b9711923026fd0cd9bf1"></a><!-- doxytag: member="dng_image_writer::WriteDNG" ref="2e0f165c3399b9711923026fd0cd9bf1" args="(dng_host &amp;host, dng_stream &amp;stream, const dng_negative &amp;negative, const dng_image_preview &amp;thumbnail, uint32 compression=ccJPEG, const dng_preview_list *previewList=NULL)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void dng_image_writer::WriteDNG           </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdng__host.html">dng_host</a> &amp;&nbsp;</td>
+          <td class="paramname"> <em>host</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdng__stream.html">dng_stream</a> &amp;&nbsp;</td>
+          <td class="paramname"> <em>stream</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdng__negative.html">dng_negative</a> &amp;&nbsp;</td>
+          <td class="paramname"> <em>negative</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const dng_image_preview &amp;&nbsp;</td>
+          <td class="paramname"> <em>thumbnail</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32&nbsp;</td>
+          <td class="paramname"> <em>compression</em> = <code>ccJPEG</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const dng_preview_list *&nbsp;</td>
+          <td class="paramname"> <em>previewList</em> = <code>NULL</code></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td width="100%"><code> [virtual]</code></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Write a <a class="el" href="classdng__image.html" title="Base class for holding image data in DNG SDK. See dng_simple_image for derived class...">dng_image</a> to a <a class="el" href="classdng__stream.html">dng_stream</a> in DNG format. <dl compact><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>host</em>&nbsp;</td><td>Host interface used for progress updates, abort testing, buffer allocation, etc. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>stream</em>&nbsp;</td><td>The <a class="el" href="classdng__stream.html">dng_stream</a> on which to write the TIFF. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>negative</em>&nbsp;</td><td>The image data and metadata (EXIF, IPTC, XMP) to be written. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>thumbnail</em>&nbsp;</td><td>Thumbanil image. Must be provided. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>compression</em>&nbsp;</td><td>Either ccUncompressed or ccJPEG for lossless JPEG. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>previewCount</em>&nbsp;</td><td>The number of previews (not counting thumbnail). </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>preview</em>&nbsp;</td><td>Array of previewCount dng_preview pointers. </td></tr>
+  </table>
+</dl>
+
+<p>References <a class="el" href="dng__negative_8h-source.html#l00695">dng_negative::AntiAliasStrength()</a>, <a class="el" href="dng__negative_8h-source.html#l00639">dng_negative::BaselineExposureR()</a>, <a class="el" href="dng__negative_8h-source.html#l00604">dng_negative::BaselineNoiseR()</a>, <a class="el" href="dng__negative_8h-source.html#l00660">dng_negative::BaselineSharpnessR()</a>, <a class="el" href="dng__negative_8h-source.html#l00490">dng_negative::BestQualityScale()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00125">dng_stream::BigEndian()</a>, <a class="el" href="dng__memory_8h-source.html#l00151">dng_memory_data::Buffer_uint32()</a>, <a class="el" href="dng__negative_8cpp-source.html#l00585">dng_negative::CameraProfileToEmbed()</a>, <a class="el" href="dng__negative_8h-source.html#l00681">dng_negative::ChromaBlurRadius()</a>, <a class="el" href="dng__negative_8h-source.html#l00746">dng_negative::ColorimetricReference()</a>, <a class="el" href="dng__fingerprint_8h-source.html#l00038">dng_fingerprint::data</a>, <a class="el" href="dng__negative_8h-source.html#l00446">dng_negative::DefaultCropOriginH()</a>, <a class="el" href="dng__negative_8h-source.html#l00453">dng_negative::DefaultCropOriginV()</a>, <a class="el" href="dng__negative_8h-source.html#l00401">dng_negative::DefaultCropSizeH()</a>, <a class="el" href="dng__negative_8h-source.html#l00408">dng_negative::DefaultCropSizeV()</a>, <a class="el" href="dng__negative_8h-source.html#l00469">dng_negative::DefaultScaleH()</a>, <a class="el" href="dng__negative_8h-source.html#l00476">dng_negative::DefaultScaleV()</a>, <a class="el" href="dng__ifd_8h-source.html#l00080">dng_ifd::fBitsPerSample</a>, <a class="el" href="dng__mosaic__info_8h-source.html#l00044">dng_mosaic_info::fCFAPatternSize</a>, <a class="el" href="dng__ifd_8h-source.html#l00082">dng_ifd::fCompression</a>, <a class="el" href="dng__ifd_8h-source.html#l00078">dng_ifd::fImageLength</a>, <a class="el" href="dng__ifd_8h-source.html#l00077">dng_ifd::fImageWidth</a>, <a class="el" href="dng__negative_8cpp-source.html#l00834">dng_negative::FindOriginalRawFileDigest()</a>, <a class="el" href="dng__negative_8cpp-source.html#l00811">dng_negative::FindRawDataUniqueID()</a>, <a class="el" href="dng__negative_8cpp-source.html#l00656">dng_negative::FindRawImageDigest()</a>, <a class="el" href="dng__ifd_8cpp-source.html#l03587">dng_ifd::FindTileSize()</a>, <a class="el" href="dng__linearization__info_8h-source.html#l00069">dng_linearization_info::fLinearizationTable</a>, <a class="el" href="dng__stream_8cpp-source.html#l00338">dng_stream::Flush()</a>, <a class="el" href="dng__ifd_8h-source.html#l00086">dng_ifd::fPhotometricInterpretation</a>, <a class="el" href="dng__ifd_8h-source.html#l00200">dng_ifd::fRowInterleaveFactor</a>, <a class="el" href="dng__ifd_8h-source.html#l00095">dng_ifd::fSamplesPerPixel</a>, <a class="el" href="dng__ifd_8h-source.html#l00203">dng_ifd::fSubTileBlockCols</a>, <a class="el" href="dng__ifd_8h-source.html#l00202">dng_ifd::fSubTileBlockRows</a>, <a class="el" href="dng__auto__ptr_8h-source.html#l00061">AutoPtr&lt; T &gt;::Get()</a>, <a class="el" href="dng__negative_8h-source.html#l01075">dng_negative::GetExif()</a>, <a class="el" href="dng__negative_8h-source.html#l01144">dng_negative::GetLinearizationInfo()</a>, <a class="el" href="dng__negative_8h-source.html#l01201">dng_negative::GetMosaicInfo()</a>, <a class="el" href="dng__negative_8h-source.html#l01127">dng_negative::GetXMP()</a>, <a class="el" href="dng__negative_8h-source.html#l00960">dng_negative::HasOriginalRawFileName()</a>, <a class="el" href="dng__mosaic__info_8h-source.html#l00101">dng_mosaic_info::IsColorFilterArray()</a>, <a class="el" href="dng__negative_8h-source.html#l01046">dng_negative::IsMakerNoteSafe()</a>, <a class="el" href="dng__negative_8h-source.html#l00774">dng_negative::IsMonochrome()</a>, <a class="el" href="dng__fingerprint_8h-source.html#l00050">dng_fingerprint::IsValid()</a>, <a class="el" href="dng__sdk__limits_8h-source.html#l00032">kMaxDNGPreviews</a>, <a class="el" href="dng__negative_8h-source.html#l00349">dng_negative::LocalName()</a>, <a class="el" href="dng__negative_8h-source.html#l01061">dng_negative::MakerNoteData()</a>, <a class="el" href="dng__negative_8h-source.html#l01067">dng_negative::MakerNoteLength()</a>, <a class="el" href="dng__negative_8h-source.html#l00335">dng_negative::ModelName()</a>, <a class="el" href="dng__negative_8h-source.html#l00625">dng_negative::NoiseReductionApplied()</a>, <a class="el" href="dng__negative_8cpp-source.html#l00155">dng_negative::Orientation()</a>, <a class="el" href="dng__negative_8h-source.html#l00987">dng_negative::OriginalRawFileData()</a>, <a class="el" href="dng__negative_8h-source.html#l00993">dng_negative::OriginalRawFileDataLength()</a>, <a class="el" href="dng__negative_8h-source.html#l01006">dng_negative::OriginalRawFileDigest()</a>, <a class="el" href="dng__negative_8h-source.html#l00965">dng_negative::OriginalRawFileName()</a>, <a class="el" href="dng__stream_8h-source.html#l00187">dng_stream::Position()</a>, <a class="el" href="dng__negative_8h-source.html#l01027">dng_negative::PrivateData()</a>, <a class="el" href="dng__negative_8h-source.html#l01033">dng_negative::PrivateLength()</a>, <a class="el" href="dng__negative_8cpp-source.html#l00477">dng_negative::ProfileByIndex()</a>, <a class="el" href="dng__negative_8cpp-source.html#l00468">dng_negative::ProfileCount()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00470">dng_stream::Put_uint16()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00506">dng_stream::Put_uint32()</a>, <a class="el" href="dng__negative_8h-source.html#l00946">dng_negative::RawDataUniqueID()</a>, <a class="el" href="dng__negative_8cpp-source.html#l02274">dng_negative::RawImage()</a>, <a class="el" href="dng__negative_8h-source.html#l00930">dng_negative::RawImageDigest()</a>, <a class="el" href="dng__auto__ptr_8h-source.html#l00119">AutoPtr&lt; T &gt;::Reset()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00362">dng_stream::SetLength()</a>, <a class="el" href="dng__ifd_8cpp-source.html#l03574">dng_ifd::SetSingleStrip()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00329">dng_stream::SetWritePosition()</a>, <a class="el" href="dng__negative_8h-source.html#l00727">dng_negative::ShadowScaleR()</a>, <a class="el" href="dng__exceptions_8h-source.html#l00110">ThrowProgramError()</a>, and <a class="el" href="dng__camera__profile_8h-source.html#l00555">dng_camera_profile::WasReadFromDNG()</a>.</p>
+
+</div>
+</div><p>
 <hr>The documentation for this class was generated from the following files:<ul>
-<li>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/<a class="el" href="dng__image__writer_8h-source.html">dng_image_writer.h</a><li>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/dng_image_writer.cpp</ul>
+<li><a class="el" href="dng__image__writer_8h-source.html">dng_image_writer.h</a><li>dng_image_writer.cpp</ul>
+</div>
 
 <!-- Begin Footer -->
-</td>
-<td width="20">&nbsp;&nbsp;</td>
+</td></tr>
 </table>
-
-<div id="footerrow"><!--give footer 25px of white above--></div><div id="footer" title="footer: links to copyright and other legal information"><p><a href="licenses.html" class="el">Copyright &copy; 2005 Adobe Systems Incorporated</a></p><ul id="list1"><!-- due to a rendering error in IE, these links should all be on one line without returns --><li id="terms"><a title="Terms of Use" href="http://www.adobe.com/misc/copyright.html">Terms of Use</a></li><li><a title="Privacy Policy" href="http://www.adobe.com/misc/privacy.html">Privacy Policy</a></li><li><a href="http://access.adobe.com">Accessibility</a></li><li><a title="Avoid software piracy" href="http://www.adobe.com/aboutadobe/antipiracy/main.html">Avoid software piracy</a></li></ul><!--two lists because of quirks mode--><ul id="list2"><li id="tms"><a title="Permissions and trademarks" href="http://www.adobe.com/misc/agreement.html">Permissions and trademarks</a></li><li><a title="Product License Agreements" href="http://www.adobe.com/products/eulas/main.html">Product License Agreements</a></li></ul><a title="Reviewed by TRUSTe: site privacy statement" href="http://www.adobe.com/misc/privacy.html"><img id="privacyicon" src="http://www.adobe.com/images/finalmark.gif" alt="Reviewed by TRUSTe: site privacy statement" height="31" width="116" border="0"/></a></div>
-
+</div> <!-- content -->
+<div class='footerdiv'>
+    <div id='footersub'>
+        <ul>
+            <li><a href="http://www.adobe.com/go/gftray_foot_aboutadobe">Company</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_contact_adobe">Contact Us</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_accessibility">Accessibility</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_report_piracy">Report Piracy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_permissions_trademarks">Permissions &amp; Trademarks</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_product_license_agreements">Product License Agreements</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_feedback">Send Feedback</a></li>
+        </ul>
+        <div>
+            <p>Copyright &#169; 2006-2008 Adobe Systems Incorporated.</p>
+            <p>Use of this website signifies your agreement to the <a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a> and <a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>.</p>
+            <p>Search powered by <a href="http://www.google.com/" target="new">Google</a></p>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+_uacct = "UA-396569-1";
+urchinTracker();
+</script>
 </body>
 </html>

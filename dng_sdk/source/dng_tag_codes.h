@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_tag_codes.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_tag_codes.h#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -37,7 +37,19 @@
 // TIFF compression numbers 34892 through 34895 registered at:
 // http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
 // on 2003-11-04, purpose "Digital Negative".
-	
+
+// TIFF tags numbers 50931 through 50942 registered at:
+// http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
+// on 2007-04-30, purpose "Digital Negative".
+
+// TIFF tags numbers 50964 through 50975 registered at:
+// http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
+// on 2007-12-17, purpose "Digital Negative".
+
+// TIFF tags numbers 50981 through 50982 registered at:
+// http://partners.adobe.com/asn/tech/tiff/tiffregister.jsp
+// on 2008-04-01, purpose "Digital Negative".
+
 /*****************************************************************************/
 
 // TIFF, DNG, TIFF/EP, and Exif tag codes all share the main TIFF tag code
@@ -155,6 +167,7 @@ enum
 	tcSubsecTime					= 37520,
 	tcSubsecTimeOriginal			= 37521,
 	tcSubsecTimeDigitized			= 37522,
+	tcAdobeLayerData				= 37724,
 	tcFlashPixVersion				= 40960,
 	tcColorSpace					= 40961,
 	tcPixelXDimension				= 40962,
@@ -236,6 +249,32 @@ enum
 	tcCurrentICCProfile				= 50833,
 	tcCurrentPreProfileMatrix		= 50834,
 	tcColorimetricReference			= 50879,
+	tcCameraCalibrationSignature	= 50931,
+	tcProfileCalibrationSignature  	= 50932,
+	tcExtraCameraProfiles			= 50933,
+	tcAsShotProfileName				= 50934,
+	tcNoiseReductionApplied			= 50935,
+	tcProfileName					= 50936,
+	tcProfileHueSatMapDims			= 50937,
+	tcProfileHueSatMapData1			= 50938,
+	tcProfileHueSatMapData2			= 50939,
+	tcProfileToneCurve				= 50940,
+	tcProfileEmbedPolicy			= 50941,
+	tcProfileCopyright				= 50942,
+	tcForwardMatrix1				= 50964,
+	tcForwardMatrix2				= 50965,
+	tcPreviewApplicationName		= 50966,
+	tcPreviewApplicationVersion		= 50967,
+	tcPreviewSettingsName			= 50968,
+	tcPreviewSettingsDigest			= 50969,
+	tcPreviewColorSpace				= 50970,
+	tcPreviewDateTime				= 50971,
+	tcRawImageDigest				= 50972,
+	tcOriginalRawFileDigest			= 50973,
+	tcSubTileBlockSize				= 50974,
+	tcRowInterleaveFactor			= 50975,
+	tcProfileLookTableDims			= 50981,
+	tcProfileLookTableData			= 50982,
 	tcKodakKDCPrivateIFD			= 65024
 	};
 
@@ -294,6 +333,7 @@ enum
 	tcLeafMOS,
 	tcMinoltaMRW,
 	tcPanasonicRAW,
+	tcFoveonX3F,
 	tcJPEG,
 	tcAdobePSD
 	

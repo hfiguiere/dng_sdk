@@ -1,21 +1,24 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_color_space.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_color_space.cpp#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 #include "dng_color_space.h"
 
 #include "dng_1d_table.h"
+#include "dng_exceptions.h"
+#include "dng_flags.h"
 #include "dng_matrix.h"
 #include "dng_spline.h"
+#include "dng_utils.h"
 #include "dng_xy_coord.h"
 
 /*****************************************************************************/
@@ -1039,6 +1042,28 @@ const dng_color_space & dng_space_GrayGamma22::Get ()
 	{
 	
 	static dng_space_GrayGamma22 static_space;
+	
+	return static_space;
+	
+	}
+	
+/*****************************************************************************/
+
+dng_space_fakeRGB::dng_space_fakeRGB ()
+	{
+	
+	SetMatrixToPCS (dng_matrix_3by3 (0.6097, 0.2053, 0.1492,
+				  				 	 0.3111, 0.6257, 0.0632,
+				  				 	 0.0195, 0.0609, 0.7446));
+
+	}
+
+/*****************************************************************************/
+
+const dng_color_space & dng_space_fakeRGB::Get ()
+	{
+	
+	static dng_space_fakeRGB static_space;
 	
 	return static_space;
 	

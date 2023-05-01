@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_fingerprint.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_fingerprint.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -128,7 +128,7 @@ uint32 dng_fingerprint::Collapse32 () const
 
 /******************************************************************************/
 
-MD5Fingerprint::MD5Fingerprint ()
+dng_md5_printer::dng_md5_printer ()
 
 	:	final  (false)
 	,	result ()
@@ -141,7 +141,7 @@ MD5Fingerprint::MD5Fingerprint ()
 								
 /******************************************************************************/
 
-void MD5Fingerprint::Reset ()
+void dng_md5_printer::Reset ()
 	{
 	
 	// No bits processed yet.
@@ -164,11 +164,11 @@ void MD5Fingerprint::Reset ()
 
 /******************************************************************************/
 
-void MD5Fingerprint::Process (const void *data,
-					  		  uint32 inputLen)
+void dng_md5_printer::Process (const void *data,
+					  		   uint32 inputLen)
 	{
 	
-	ASSERT (!final, "Fingerprint already finalized!");
+	DNG_ASSERT (!final, "Fingerprint already finalized!");
 	
 	const uint8 *input = (const uint8 *) data;
 	
@@ -221,7 +221,7 @@ void MD5Fingerprint::Process (const void *data,
 		
 /******************************************************************************/
 
-const dng_fingerprint & MD5Fingerprint::Result ()
+const dng_fingerprint & dng_md5_printer::Result ()
 	{
 	
 	if (!final)
@@ -271,9 +271,9 @@ const dng_fingerprint & MD5Fingerprint::Result ()
 // Encodes input (uint32) into output (uint8). Assumes len is
 // a multiple of 4.
 
-void MD5Fingerprint::Encode (uint8 *output,
-							 const uint32 *input,
-							 uint32 len)
+void dng_md5_printer::Encode (uint8 *output,
+							  const uint32 *input,
+							  uint32 len)
 	{
 
 	uint32 i, j;
@@ -293,9 +293,9 @@ void MD5Fingerprint::Encode (uint8 *output,
 // Decodes input (uint8) into output (uint32). Assumes len is
 // a multiple of 4.
 
-void MD5Fingerprint::Decode (uint32 *output,
-							 const uint8 *input,
-							 uint32 len)
+void dng_md5_printer::Decode (uint32 *output,
+							  const uint8 *input,
+							  uint32 len)
 	{
 	
 	// Check for non-aligned case.
@@ -358,8 +358,8 @@ void MD5Fingerprint::Decode (uint32 *output,
 
 // MD5 basic transformation. Transforms state based on block.
 
-void MD5Fingerprint::MD5Transform (uint32 state [4],
-								   const uint8 block [64])
+void dng_md5_printer::MD5Transform (uint32 state [4],
+								    const uint8 block [64])
 	{
 	
 	enum

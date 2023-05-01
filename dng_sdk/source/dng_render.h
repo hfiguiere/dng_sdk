@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_render.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_render.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Classes for conversion of RAW data to final image.
@@ -23,7 +23,9 @@
 /*****************************************************************************/
 
 #include "dng_1d_function.h"
+#include "dng_auto_ptr.h"
 #include "dng_classes.h"
+#include "dng_spline.h"
 #include "dng_xy_coord.h"
 
 /******************************************************************************/
@@ -33,7 +35,7 @@
 class dng_function_exposure_ramp: public dng_1d_function
 	{
 	
-	protected:
+	public:
 	
 		real64 fSlope;		// Slope of straight segment.
 		
@@ -146,6 +148,10 @@ class dng_render
 		uint32 fFinalPixelType;
 		
 		uint32 fMaximumSize;
+		
+	private:
+	
+		AutoPtr<dng_spline_solver> fProfileToneCurve;
 		
 	public:
 	

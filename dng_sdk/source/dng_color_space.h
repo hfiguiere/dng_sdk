@@ -6,10 +6,10 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_color_space.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_color_space.h#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
+/* $Author: tknoll $ */
 
 /** \file
  *  Standard gamma functions and color spaces used within the DNG SDK.
@@ -83,7 +83,7 @@ class dng_function_GammaEncode_2_2: public dng_1d_function
 class dng_color_space
 	{
 	
-	private:
+	protected:
 	
 		dng_matrix fMatrixToPCS;
 		
@@ -186,7 +186,6 @@ class dng_space_sRGB: public dng_color_space
 	};
 
 /*****************************************************************************/
-
 
 /// \brief Singleton class for AdobeRGB color space.
 
@@ -321,6 +320,21 @@ class dng_space_GrayGamma22: public dng_color_space
 								 const uint8 *&data) const;
 		
 		/// Static method for getting single global instance of this color space.
+
+		static const dng_color_space & Get ();
+	
+	};
+
+/*****************************************************************************/
+
+class dng_space_fakeRGB: public dng_color_space
+	{
+	
+	protected:
+	
+		dng_space_fakeRGB ();
+		
+	public:
 
 		static const dng_color_space & Get ();
 	

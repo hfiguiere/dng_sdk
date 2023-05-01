@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_info.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_info.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Class for holding top-level information about a DNG image.
@@ -41,7 +41,9 @@ class dng_info
 	
 	public:
 	
-		uint32 fTIFFBlockOffset;
+		uint64 fTIFFBlockOffset;
+		
+		uint64 fTIFFBlockOriginalOffset;
 	
 		bool fBigEndian;
 		
@@ -100,44 +102,44 @@ class dng_info
 						 	   uint32 tagCode,
 						 	   uint32 tagType,
 						 	   uint32 tagCount,
-						 	   uint32 tagOffset,
-						 	   int32 offsetDelta);
+						 	   uint64 tagOffset,
+						 	   int64 offsetDelta);
 
 		virtual bool ValidateIFD (dng_stream &stream,
-						 	      uint32 ifdOffset,
-						 	      int32 offsetDelta);
+						 	      uint64 ifdOffset,
+						 	      int64 offsetDelta);
 
 		virtual void ParseIFD (dng_host &host,
 							   dng_stream &stream,
 							   dng_exif *exif,
 						 	   dng_shared *shared,
 						 	   dng_ifd *ifd,
-						 	   uint32 ifdOffset,
-						 	   int32 offsetDelta,
+						 	   uint64 ifdOffset,
+						 	   int64 offsetDelta,
 						 	   uint32 parentCode);
 
 		virtual bool ParseMakerNoteIFD (dng_host &host,
 										dng_stream &stream,
-										uint32 ifdSize,
-								 	    uint32 ifdOffset,
-								 	    int32 offsetDelta,
-								 	    uint32 minOffset,
-								 	    uint32 maxOffset,
+										uint64 ifdSize,
+								 	    uint64 ifdOffset,
+								 	    int64 offsetDelta,
+								 	    uint64 minOffset,
+								 	    uint64 maxOffset,
 								 	    uint32 parentCode);
 
 		virtual void ParseMakerNote (dng_host &host,
 									 dng_stream &stream,
 							   		 uint32 makerNoteCount,
-							   		 uint32 makerNoteOffset,
-							   		 int32 offsetDelta,
-							   		 uint32 minOffset,
-							   		 uint32 maxOffset);
+							   		 uint64 makerNoteOffset,
+							   		 int64 offsetDelta,
+							   		 uint64 minOffset,
+							   		 uint64 maxOffset);
 							   		 
 		virtual void ParseSonyPrivateData (dng_host &host,
 										   dng_stream &stream,
 										   uint32 count,
-										   uint32 oldOffset,
-										   uint32 newOffset);
+										   uint64 oldOffset,
+										   uint64 newOffset);
 							   		 
 		virtual void ParseDNGPrivateData (dng_host &host,
 										  dng_stream &stream);

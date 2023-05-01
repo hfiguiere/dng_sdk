@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_simple_image.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_simple_image.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /*****************************************************************************/
 
@@ -45,6 +45,14 @@ class dng_simple_image : public dng_image
 		
 		virtual ~dng_simple_image ();
 	
+		/// Setter for pixel type.
+		
+		virtual void SetPixelType (uint32 pixelType);
+		
+		/// Setter for pixel range.
+		
+		virtual void SetPixelRange (uint32 pixelRange);
+
 		/// Trim image data outside of given bounds. Memory is not reallocated or freed.
 
 		virtual void Trim (const dng_rect &r);
@@ -52,11 +60,20 @@ class dng_simple_image : public dng_image
 		/// Rotate image according to orientation.
 		
 		virtual void Rotate (const dng_orientation &orientation);
+		
+		/// Get the buffer for direct processing. (Unique to dng_simple_image.)
+		
+		void GetPixelBuffer (dng_pixel_buffer &buffer)
+			{
+			
+			buffer = fBuffer;
+			
+			}
 
 	protected:
 	
-		virtual void AcquireTileBuffer (dng_pixel_buffer &buffer,
-										const dng_rect &tile,
+		virtual void AcquireTileBuffer (dng_tile_buffer &buffer,
+										const dng_rect &area,
 										bool dirty) const;
 		
 	};

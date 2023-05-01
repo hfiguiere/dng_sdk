@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_lossless_jpeg.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_lossless_jpeg.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
  
 /*****************************************************************************/
@@ -60,6 +60,15 @@
 // at the expense of slight code size increases.
 
 #include "dng_fast_module.h"
+
+/*****************************************************************************/
+
+// The qSupportCanon_sRAW stuff not actually required for DNG support, but
+// only included so to allow this code to be using on Canon sRAW files.
+
+#ifndef qSupportCanon_sRAW
+#define qSupportCanon_sRAW 1
+#endif
 
 /*****************************************************************************/
 
@@ -558,7 +567,7 @@ void dng_lossless_decoder::GetDht ()
 	
     int32 length = Get2bytes () - 2;
     
-    while (length)
+    while (length > 0)
     	{
 
 		int32 index = GetJpegChar ();
@@ -1123,20 +1132,41 @@ void dng_lossless_decoder::DecoderStructInit ()
 	
 	int32 ci;
 	
-    // Check sampling factor validity.
-
-    for (ci = 0; ci < info.numComponents; ci++)
-    	{
-    	
-		JpegComponentInfo *compPtr = &info.compInfo [ci];
-		
-		if (compPtr->hSampFactor != 1 ||
-		    compPtr->vSampFactor != 1) 
-			{
-	   		ThrowBadFormat ();
-			}
+	#if qSupportCanon_sRAW
 	
-    	}
+	bool canon_sRAW = (info.numComponents == 3) &&
+					  (info.compInfo [0].hSampFactor == 2) &&
+					  (info.compInfo [1].hSampFactor == 1) &&
+					  (info.compInfo [2].hSampFactor == 1) &&
+					  (info.compInfo [0].vSampFactor == 1) &&
+					  (info.compInfo [1].vSampFactor == 1) &&
+					  (info.compInfo [2].vSampFactor == 1) &&
+					  (info.dataPrecision == 15) &&
+					  (info.Ss == 1) &&
+					  ((info.imageWidth & 1) == 0);
+					  
+	if (!canon_sRAW)
+	
+	#endif
+	
+		{
+	
+		// Check sampling factor validity.
+
+		for (ci = 0; ci < info.numComponents; ci++)
+			{
+			
+			JpegComponentInfo *compPtr = &info.compInfo [ci];
+			
+			if (compPtr->hSampFactor != 1 ||
+				compPtr->vSampFactor != 1) 
+				{
+				ThrowBadFormat ();
+				}
+		
+			}
+			
+		}
 	
     // Prepare array describing MCU composition.
 
@@ -1212,6 +1242,11 @@ void dng_lossless_decoder::HuffDecoderInit ()
 		JpegComponentInfo *compptr = info.curCompInfo [ci];
 		
 		// Make sure requested tables are present
+		
+		if (compptr->dcTblNo < 0 || compptr->dcTblNo > 3)
+			{
+			ThrowBadFormat ();
+			}
 
 		if (info.dcHuffTblPtrs [compptr->dcTblNo] == NULL) 
 			{ 
@@ -1748,7 +1783,7 @@ void dng_lossless_decoder::DecodeImage ()
 	#define swap(type,a,b) {type c; c=(a); (a)=(b); (b)=c;}
 
     int32 numCOL      = info.imageWidth;
-    int32 numROW		= info.imageHeight;
+    int32 numROW	  = info.imageHeight;
     int32 compsInScan = info.compsInScan;
     
     // Precompute the decoding table for each table.
@@ -1765,7 +1800,179 @@ void dng_lossless_decoder::DecodeImage ()
         ht [curComp] = info.dcHuffTblPtrs [compptr->dcTblNo];
 
    		}
-    
+		
+	MCU *prevRowBuf = mcuROW1;
+	MCU *curRowBuf  = mcuROW2;
+	
+	#if qSupportCanon_sRAW
+		
+	// Canon sRAW support
+	
+	if (info.compInfo [0].hSampFactor == 2)
+		{
+	
+		for (int32 row = 0; row < numROW; row++)
+			{
+			
+			// Initialize predictors.
+			
+			int32 p0;
+			int32 p1;
+			int32 p2;
+			
+			if (row == 0)
+				{
+				p0 = 1 << 14;
+				p1 = 1 << 14;
+				p2 = 1 << 14;
+				}
+				
+			else
+				{
+				p0 = prevRowBuf [0] [0];
+				p1 = prevRowBuf [0] [1];
+				p2 = prevRowBuf [0] [2];
+				}
+			
+			for (int32 col = 0; col < numCOL; col += 2)
+				{
+				
+				// Read first luminance component.
+				
+					{
+				
+					int32 d = 0;
+				
+					int32 s = HuffDecode (ht [0]);
+					
+					if (s)
+						{
+
+						if (s == 16)
+							{
+							d = -32768;
+							}
+						
+						else
+							{
+							d = get_bits (s);
+							HuffExtend (d, s);
+							}
+
+						}
+						
+					p0 += d;
+					
+					curRowBuf [col] [0] = (ComponentType) p0;
+				
+					}
+				
+				// Read second luminance component.
+				
+					{
+				
+					int32 d = 0;
+				
+					int32 s = HuffDecode (ht [0]);
+					
+					if (s)
+						{
+
+						if (s == 16)
+							{
+							d = -32768;
+							}
+						
+						else
+							{
+							d = get_bits (s);
+							HuffExtend (d, s);
+							}
+
+						}
+						
+					p0 += d;
+					
+					curRowBuf [col + 1] [0] = (ComponentType) p0;
+				
+					}
+				
+				// Read first chroma component.
+				
+					{
+				
+					int32 d = 0;
+				
+					int32 s = HuffDecode (ht [1]);
+					
+					if (s)
+						{
+
+						if (s == 16)
+							{
+							d = -32768;
+							}
+						
+						else
+							{
+							d = get_bits (s);
+							HuffExtend (d, s);
+							}
+
+						}
+						
+					p1 += d;
+					
+					curRowBuf [col    ] [1] = (ComponentType) p1;
+					curRowBuf [col + 1] [1] = (ComponentType) p1;
+				
+					}
+				
+				// Read second chroma component.
+				
+					{
+				
+					int32 d = 0;
+				
+					int32 s = HuffDecode (ht [2]);
+					
+					if (s)
+						{
+
+						if (s == 16)
+							{
+							d = -32768;
+							}
+						
+						else
+							{
+							d = get_bits (s);
+							HuffExtend (d, s);
+							}
+
+						}
+						
+					p2 += d;
+					
+					curRowBuf [col    ] [2] = (ComponentType) p2;
+					curRowBuf [col + 1] [2] = (ComponentType) p2;
+				
+					}
+								
+				}
+			
+			PmPutRow (curRowBuf, compsInScan, numCOL, row);
+
+			swap (MCU *, prevRowBuf, curRowBuf);
+			
+			}
+			
+		return;
+		
+		}
+		
+	#endif
+	
     // Decode the first row of image. Output the row and
     // turn this row into a previous row for later predictor
     // calculation.
@@ -1774,9 +1981,6 @@ void dng_lossless_decoder::DecodeImage ()
     
     PmPutRow (mcuROW1, compsInScan, numCOL, 0);
     
-	MCU *prevRowBuf = mcuROW1;
-	MCU *curRowBuf  = mcuROW2;
-	
 	// Process each row.
 
     for (int32 row = 1; row < numROW; row++)
@@ -1966,7 +2170,7 @@ void dng_lossless_decoder::DecodeImage ()
     	}
     	
     #undef swap
-
+	
 	}
 
 /*****************************************************************************/
@@ -2197,7 +2401,7 @@ inline void dng_lossless_encoder::EmitByte (uint8 value)
 inline void dng_lossless_encoder::EmitBits (int code, int size)
 	{
 	
-    ASSERT (size != 0, "Bad Huffman table entry");
+    DNG_ASSERT (size != 0, "Bad Huffman table entry");
 
     int putBits   = size;
 	int putBuffer = code;
@@ -2398,7 +2602,9 @@ void dng_lossless_encoder::FreqCountSet ()
     
 	memset (freqCount, 0, sizeof (freqCount));
 	
-    for (uint32 row = 0; row < fSrcRows; row++)
+	DNG_ASSERT ((int32)fSrcRows >= 0, "dng_lossless_encoder::FreqCountSet: fSrcRpws too large.");
+
+    for (int32 row = 0; row < (int32)fSrcRows; row++)
     	{
     	
 		const uint16 *sPtr = fSrcData + row * fSrcRowStep;
@@ -2407,7 +2613,7 @@ void dng_lossless_encoder::FreqCountSet ()
 		
 		int32 predictor [4];
 		
-		for (uint32 channel = 0; channel < fSrcChannels; channel++)
+		for (int32 channel = 0; channel < (int32)fSrcChannels; channel++)
 			{
 			
 			if (row == 0)
@@ -2502,7 +2708,9 @@ void dng_lossless_encoder::FreqCountSet ()
 void dng_lossless_encoder::HuffEncode ()
 	{
     
-    for (uint32 row = 0; row < fSrcRows; row++)
+	DNG_ASSERT ((int32)fSrcRows >= 0, "dng_lossless_encoder::HuffEncode: fSrcRows too large.");
+
+	for (int32 row = 0; row < (int32)fSrcRows; row++)
     	{
     	
 		const uint16 *sPtr = fSrcData + row * fSrcRowStep;
@@ -2511,7 +2719,7 @@ void dng_lossless_encoder::HuffEncode ()
 		
 		int32 predictor [4];
 		
-		for (uint32 channel = 0; channel < fSrcChannels; channel++)
+		for (int32 channel = 0; channel < (int32)fSrcChannels; channel++)
 			{
 			
 			if (row == 0)
@@ -2722,7 +2930,7 @@ void dng_lossless_encoder::GenHuffCoding (HuffmanTable *htbl, uint32 *freq)
 			if (codesize [i] > MAX_CLEN)
 				{
        
-       			ASSERT (false, "Huffman code size table overflow");
+       			DNG_REPORT ("Huffman code size table overflow");
        			
        			ThrowProgramError ();
        			
@@ -2755,7 +2963,7 @@ void dng_lossless_encoder::GenHuffCoding (HuffmanTable *htbl, uint32 *freq)
 			// data, so just throw an error if we get here and revert to a
 			// default table.	 - tknoll 12/1/03.
 			
-       		ASSERT (false, "Info: Optimal huffman table bigger than 16 bits");
+       		DNG_REPORT ("Info: Optimal huffman table bigger than 16 bits");
         	
  			ThrowProgramError ();
 			
@@ -2860,7 +3068,7 @@ void dng_lossless_encoder::HuffOptimize ()
         catch (...)
         	{
         	
-        	ASSERT (false, "Info: Reverting to default huffman table");
+        	DNG_REPORT ("Info: Reverting to default huffman table");
         	
         	for (uint32 j = 0; j <= 256; j++)
         		{
@@ -3155,7 +3363,7 @@ void dng_lossless_encoder::WriteFileTrailer ()
 void dng_lossless_encoder::Encode ()
 	{
 	
-	ASSERT (fSrcChannels <= 4, "Too many components in scan");
+	DNG_ASSERT (fSrcChannels <= 4, "Too many components in scan");
     
 	// Count the times each difference category occurs. 
 	// Construct the optimal Huffman table.

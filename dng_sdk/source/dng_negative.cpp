@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_negative.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_negative.cpp#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -39,53 +39,63 @@ dng_negative::dng_negative (dng_memory_allocator &allocator)
 
 	:	fAllocator (allocator)
 	
-	,	fModelName		    	()
-	,	fLocalName		    	()
-	,	fHasBaseOrientation 	(false)
-	,	fBaseOrientation    	()
-	,	fDefaultCropSizeH   	()
-	,	fDefaultCropSizeV		()
-	,	fDefaultCropOriginH 	(0, 1)
-	,	fDefaultCropOriginV 	(0, 1)
-	,	fDefaultScaleH      	(1, 1)
-	,	fDefaultScaleV			(1, 1)
-	,	fBestQualityScale		(1, 1)
-	,	fRawToFullScaleH		(1.0)
-	,	fRawToFullScaleV		(1.0)
-	,	fBaselineNoise	    	(100, 100)
-	,	fBaselineExposure		(  0, 100)
-	,	fBaselineSharpness		(100, 100)
-	,	fChromaBlurRadius		()
-	,	fAntiAliasStrength		(100, 100)
-	,	fLinearResponseLimit	(100, 100)
-	,	fShadowScale			(1, 1)
-	,	fColorimetricReference  (crSceneReferred)
-	,	fColorChannels			(0)
-	,	fAnalogBalance			()
-	,	fCameraNeutral			()
-	,	fCameraWhiteXY			()
-	,	fEmbeddedCameraProfile	()
-	,	fRawDataUniqueID    	()
-	,	fOriginalRawFileName	()
-	,	fHasOriginalRawFileData (false)
-	,	fOriginalRawFileData    ()
-	,	fDNGPrivateData			()
-	,	fIsMakerNoteSafe		(false)
-	,	fMakerNote				()
-	,	fExif			    	()
-	,	fIPTCBlock          	()
-	,	fIPTCOffset				(dng_stream::kInvalidOffset)
-	,	fXMP			    	()
-	,	fXMPinSidecar	    	(false)
-	,	fXMPisNewer		    	(false)
-	,	fLinearizationInfo  	()
-	,	fMosaicInfo         	()
-	,	fStage1Image        	()
-	,	fStage2Image        	()
-	,	fStage3Image        	()
-	,	fStage3Gain				(1.0)
-	,	fIsPreview				(false)
-	
+	,	fModelName		    		()
+	,	fLocalName		    		()
+	,	fHasBaseOrientation 		(false)
+	,	fBaseOrientation    		()
+	,	fDefaultCropSizeH   		()
+	,	fDefaultCropSizeV			()
+	,	fDefaultCropOriginH 		(0, 1)
+	,	fDefaultCropOriginV 		(0, 1)
+	,	fDefaultScaleH      		(1, 1)
+	,	fDefaultScaleV				(1, 1)
+	,	fBestQualityScale			(1, 1)
+	,	fRawToFullScaleH			(1.0)
+	,	fRawToFullScaleV			(1.0)
+	,	fBaselineNoise	    		(100, 100)
+	,	fNoiseReductionApplied		(0, 0)
+	,	fBaselineExposure			(  0, 100)
+	,	fBaselineSharpness			(100, 100)
+	,	fChromaBlurRadius			()
+	,	fAntiAliasStrength			(100, 100)
+	,	fLinearResponseLimit		(100, 100)
+	,	fShadowScale				(1, 1)
+	,	fColorimetricReference  	(crSceneReferred)
+	,	fColorChannels				(0)
+	,	fAnalogBalance				()
+	,	fCameraNeutral				()
+	,	fCameraWhiteXY				()
+	,	fCameraCalibration1			()
+	,	fCameraCalibration2			()
+	,	fCameraCalibrationSignature ()
+	,	fCameraProfile				()
+	,	fAsShotProfileName			()
+	,	fRawImageDigest				()
+	,	fRawDataUniqueID    		()
+	,	fOriginalRawFileName		()
+	,	fHasOriginalRawFileData 	(false)
+	,	fOriginalRawFileData    	()
+	,	fOriginalRawFileDigest		()
+	,	fDNGPrivateData				()
+	,	fIsMakerNoteSafe			(false)
+	,	fMakerNote					()
+	,	fExif			    		()
+	,	fOriginalExif				()
+	,	fIPTCBlock          		()
+	,	fIPTCOffset					(kDNGStreamInvalidOffset)
+	,	fXMP			    		()
+	,	fValidEmbeddedXMP       	(false)
+	,	fXMPinSidecar	    		(false)
+	,	fXMPisNewer		    		(false)
+	,	fLinearizationInfo  		()
+	,	fMosaicInfo         		()
+	,	fStage1Image        		()
+	,	fStage2Image        		()
+	,	fStage3Image        		()
+	,	fStage3Gain					(1.0)
+	,	fIsPreview					(false)
+	,	fIsDamaged					(false)
+
 	{
 
 	}
@@ -95,6 +105,10 @@ dng_negative::dng_negative (dng_memory_allocator &allocator)
 dng_negative::~dng_negative ()
 	{
 	
+	// Delete any camera profiles owned by this negative.
+	
+	ClearProfiles ();
+		
 	}
 
 /******************************************************************************/
@@ -189,7 +203,7 @@ void dng_negative::SetAnalogBalance (const dng_vector &b)
 real64 dng_negative::AnalogBalance (uint32 channel) const
 	{
 	
-	ASSERT (channel < ColorChannels (), "Channel out of bounds");
+	DNG_ASSERT (channel < ColorChannels (), "Channel out of bounds");
 	
 	if (channel < fAnalogBalance.Count ())
 		{
@@ -282,7 +296,7 @@ void dng_negative::SetCameraWhiteXY (const dng_xy_coord &coord)
 const dng_xy_coord & dng_negative::CameraWhiteXY () const
 	{
 	
-	ASSERT (HasCameraWhiteXY (), "Using undefined CameraWhiteXY");
+	DNG_ASSERT (HasCameraWhiteXY (), "Using undefined CameraWhiteXY");
 
 	return fCameraWhiteXY;
 	
@@ -303,40 +317,331 @@ void dng_negative::GetCameraWhiteXY (dng_urational &x,
 		
 /*****************************************************************************/
 
-void dng_negative::SetEmbeddedCameraProfile (AutoPtr<dng_camera_profile> &profile)
+void dng_negative::SetCameraCalibration1 (const dng_matrix &m)
 	{
 	
-	fEmbeddedCameraProfile.Reset (profile.Release ());
+	fCameraCalibration1 = m;
 	
-	fEmbeddedCameraProfile->SetName (kProfileName_Embedded);
+	fCameraCalibration1.Round (10000);
 	
+	}
+
+/******************************************************************************/
+
+void dng_negative::SetCameraCalibration2 (const dng_matrix &m)
+	{
+	
+	fCameraCalibration2 = m;
+	
+	fCameraCalibration2.Round (10000);
+		
+	}
+
+/******************************************************************************/
+
+void dng_negative::AddProfile (AutoPtr<dng_camera_profile> &profile)
+	{
+	
+	// Make sure we have a profile to add.
+	
+	if (!profile.Get ())
+		{
+		
+		return;
+		
+		}
+	
+	// We must have some profile name.  Use "embedded" if nothing else.
+	
+	if (profile->Name ().IsEmpty ())
+		{
+		
+		profile->SetName (kProfileName_Embedded);
+		
+		}
+		
+	// Special case support for reading older DNG files which did not store
+	// the profile name in the main IFD profile.
+	
+	if (fCameraProfile.size ())
+		{
+		
+		// See the first profile has a default "embedded" name, and has
+		// the same data as the profile we are adding.
+		
+		if (fCameraProfile [0]->NameIsEmbedded () &&
+			fCameraProfile [0]->EqualData (*profile.Get ()))
+			{
+			
+			// If the profile we are deleting was read from DNG
+			// then the new profile should be marked as such also.
+			
+			if (fCameraProfile [0]->WasReadFromDNG ())
+				{
+				
+				profile->SetWasReadFromDNG ();
+				
+				}
+				
+			// Delete the profile with default name.
+			
+			delete fCameraProfile [0];
+			
+			fCameraProfile [0] = NULL;
+			
+			fCameraProfile.erase (fCameraProfile.begin ());
+			
+			}
+		
+		}
+		
+	// Duplicate detection logic.  We give a preference to last added profile
+	// so the profiles end up in a more consistent order no matter what profiles
+	// happen to be embedded in the DNG.
+	
+	for (uint32 index = 0; index < (uint32) fCameraProfile.size (); index++)
+		{
+		
+		if (fCameraProfile [index]->Fingerprint () == profile->Fingerprint ())
+			{
+			
+			// If the profile we are deleting was read from DNG
+			// then the new profile should be marked as such also.
+			
+			if (fCameraProfile [index]->WasReadFromDNG ())
+				{
+				
+				profile->SetWasReadFromDNG ();
+				
+				}
+				
+			// Delete the profile with default name.
+			
+			delete fCameraProfile [index];
+			
+			fCameraProfile [index] = NULL;
+			
+			fCameraProfile.erase (fCameraProfile.begin () + index);
+			
+			break;
+			
+			}
+			
+		}
+		
+	// Now add to profile list.
+	
+	fCameraProfile.push_back (NULL);
+	
+	fCameraProfile [fCameraProfile.size () - 1] = profile.Release ();
+	
+	}
+			
+/******************************************************************************/
+
+void dng_negative::ClearProfiles ()
+	{
+	
+	// Delete any camera profiles owned by this negative.
+	
+	for (uint32 index = 0; index < (uint32) fCameraProfile.size (); index++)
+		{
+		
+		if (fCameraProfile [index])
+			{
+			
+			delete fCameraProfile [index];
+			
+			fCameraProfile [index] = NULL;
+			
+			}
+		
+		}
+		
+	// Now empty list.
+	
+	fCameraProfile.clear ();
+	
+	}
+
+/******************************************************************************/
+
+uint32 dng_negative::ProfileCount () const
+	{
+	
+	return (uint32) fCameraProfile.size ();
+	
+	}
+		
+/******************************************************************************/
+
+const dng_camera_profile & dng_negative::ProfileByIndex (uint32 index) const
+	{
+	
+	DNG_ASSERT (index < ProfileCount (),
+				"Invalid index for ProfileByIndex");
+				
+	return *fCameraProfile [index];
+		
 	}
 		
 /*****************************************************************************/
 
-void dng_negative::ClearEmbeddedCameraProfile ()
+const dng_camera_profile * dng_negative::ProfileByID (const dng_camera_profile_id &id,
+													  bool useDefaultIfNoMatch) const
 	{
 	
-	fEmbeddedCameraProfile.Reset ();
+	// If this negative does not have any profiles, we are not going to
+	// find a match.
 	
+	uint32 profileCount = ProfileCount ();
+	
+	if (profileCount == 0)
+		{
+		return NULL;
+		}
+		
+	// If we have both a profile name and fingerprint, try matching both.
+	
+	if (id.Name ().NotEmpty () && id.Fingerprint ().IsValid ())
+		{
+		
+		for (uint32 index = 0; index < profileCount; index++)
+			{
+			
+			const dng_camera_profile &profile = ProfileByIndex (index);
+			
+			if (id.Name        () == profile.Name        () &&
+				id.Fingerprint () == profile.Fingerprint ())
+				{
+				
+				return &profile;
+				
+				}
+			
+			}
+
+		}
+		
+	// If we have a name, try matching that.
+	
+	if (id.Name ().NotEmpty ())
+		{
+		
+		for (uint32 index = 0; index < profileCount; index++)
+			{
+			
+			const dng_camera_profile &profile = ProfileByIndex (index);
+			
+			if (id.Name () == profile.Name ())
+				{
+				
+				return &profile;
+				
+				}
+			
+			}
+
+		}
+		
+	// If we have a valid fingerprint, try matching that.
+		
+	if (id.Fingerprint ().IsValid ())
+		{
+		
+		for (uint32 index = 0; index < profileCount; index++)
+			{
+			
+			const dng_camera_profile &profile = ProfileByIndex (index);
+			
+			if (id.Fingerprint () == profile.Fingerprint ())
+				{
+				
+				return &profile;
+				
+				}
+			
+			}
+
+		}
+		
+	// Did not find a match either way.  See if we should return a default
+	// value.
+	
+	if (useDefaultIfNoMatch)
+		{
+		
+		return &ProfileByIndex (0);
+		
+		}
+		
+	// Found nothing.
+	
+	return NULL;
+		
 	}
-							   
+
 /*****************************************************************************/
 
 const dng_camera_profile * dng_negative::CameraProfileToEmbed () const
 	{
 	
-	return EmbeddedCameraProfile ();
+	uint32 index;
+	
+	uint32 count = ProfileCount ();
+	
+	if (count == 0)
+		{
+		
+		return NULL;
+		
+		}
+		
+	// First try to look for the first profile that was already in the DNG
+	// when we read it.
+	
+	for (index = 0; index < count; index++)
+		{
+		
+		const dng_camera_profile &profile (ProfileByIndex (index));
+		
+		if (profile.WasReadFromDNG ())
+			{
+			
+			return &profile;
+			
+			}
+		
+		}
+		
+	// Next we look for the first profile that is legal to embed.
+	
+	for (index = 0; index < count; index++)
+		{
+		
+		const dng_camera_profile &profile (ProfileByIndex (index));
+		
+		if (profile.IsLegalToEmbed ())
+			{
+			
+			return &profile;
+			
+			}
+		
+		}
+		
+	// Else just return the first profile.
+	
+	return fCameraProfile [0];
 	
 	}
 							   
 /*****************************************************************************/
 
-dng_color_spec * dng_negative::MakeColorSpec (const char * /* name */) const
+dng_color_spec * dng_negative::MakeColorSpec (const dng_camera_profile_id &id) const
 	{
-	
-	dng_color_spec *spec = new dng_color_spec (*this,
-											   EmbeddedCameraProfile ());
+
+	dng_color_spec *spec = new dng_color_spec (*this, ProfileByID (id));
 											   
 	if (!spec)
 		{
@@ -349,32 +654,36 @@ dng_color_spec * dng_negative::MakeColorSpec (const char * /* name */) const
 							   
 /*****************************************************************************/
 
-// If the raw data unique ID is missing, compute one based on a MD5 hash of
-// the stage 1 image.
-
-void dng_negative::FindRawDataUniqueID (dng_host &host)
+void dng_negative::FindRawImageDigest (dng_host &host) const
 	{
 	
-	const dng_image *image = fStage1Image.Get ();
-	
-	ASSERT (image, "FindRawDataUniqueID without stage 1 image");
-		
-	if (fRawDataUniqueID.IsNull () && image)
+	if (fRawImageDigest.IsNull ())
 		{
 		
-		MD5Fingerprint printer;
+		const dng_image &image = RawImage ();
+	
+		dng_md5_printer printer;
 		
 		dng_pixel_buffer buffer;
 		
 		buffer.fPlane  = 0;
-		buffer.fPlanes = image->Planes ();
+		buffer.fPlanes = image.Planes ();
 		
-		buffer.fRowStep   = image->Planes () * image->Width ();
-		buffer.fColStep   = image->Planes ();
+		buffer.fRowStep   = image.Planes () * image.Width ();
+		buffer.fColStep   = image.Planes ();
 		buffer.fPlaneStep = 1;
 		
-		buffer.fPixelType = image->PixelType ();
-		buffer.fPixelSize = image->PixelSize ();
+		buffer.fPixelType = image.PixelType ();
+		buffer.fPixelSize = image.PixelSize ();
+		
+		// Sometimes we expand 8-bit data to 16-bit data while reading or
+		// writing, so always compute the digest of 8-bit data as 16-bits.
+		
+		if (buffer.fPixelType == ttByte)
+			{
+			buffer.fPixelType = ttShort;
+			buffer.fPixelSize = 2;
+			}
 		
 		const uint32 kBufferRows = 16;
 		
@@ -387,8 +696,8 @@ void dng_negative::FindRawDataUniqueID (dng_host &host)
 		dng_rect area;
 		
 		dng_tile_iterator iter (dng_point (kBufferRows,
-										   image->Width ()),
-								image->Bounds ());
+										   image.Width ()),
+								image.Bounds ());
 								
 		while (iter.GetOneTile (area))
 			{
@@ -397,26 +706,229 @@ void dng_negative::FindRawDataUniqueID (dng_host &host)
 			
 			buffer.fArea = area;
 			
-			image->Get (buffer);
+			image.Get (buffer);
 			
 			uint32 count = buffer.fArea.H () *
 						   buffer.fRowStep *
 						   buffer.fPixelSize;
+						   
+			#if qDNGBigEndian
+			
+			// We need to use the same byte order to compute
+			// the digest, no matter the native order.  Little-endian
+			// is more common now, so use that.
+			
+			switch (buffer.fPixelSize)
+				{
+				
+				case 1:
+					break;
+				
+				case 2:
+					{
+					DoSwapBytes16 ((uint16 *) buffer.fData, count >> 1);
+					break;
+					}
+				
+				case 4:
+					{
+					DoSwapBytes32 ((uint32 *) buffer.fData, count >> 2);
+					break;
+					}
+					
+				default:
+					{
+					DNG_REPORT ("Unexpected pixel size");
+					break;
+					}
+				
+				}
+			
+			#endif
 
 			printer.Process (buffer.fData,
 							 count);
 			
 			}
 			
+		fRawImageDigest = printer.Result ();
+	
+		}
+	
+	}
+							   
+/*****************************************************************************/
+
+void dng_negative::ValidateRawImageDigest (dng_host &host)
+	{
+	
+	if (Stage1Image () && !IsPreview () && fRawImageDigest.IsValid ())
+		{
+		
+		dng_fingerprint oldDigest = fRawImageDigest;
+		
+		try
+			{
+			
+			fRawImageDigest.Clear ();
+			
+			FindRawImageDigest (host);
+			
+			}
+			
+		catch (...)
+			{
+			
+			fRawImageDigest = oldDigest;
+			
+			throw;
+			
+			}
+		
+		if (oldDigest != fRawImageDigest)
+			{
+			
+			#if qDNGValidate
+			
+			ReportError ("RawImageDigest does not match raw image");
+			
+			#else
+			
+			#if 0		// FIX_ME_TFK: Disable for now so the warning code get more testing.
+			
+			// Note that Lightroom 1.4 Windows had a bug that corrupts the
+			// first four bytes of the RawImageDigest tag.  So if the last
+			// twelve bytes match, this is very likely the result of the
+			// bug, and not an actual corrupt file.  So don't report this
+			// to the user--just fix it.
+			
+				{
+			
+				bool matchLast12 = true;
+				
+				for (uint32 j = 4; j < 16; j++)
+					{
+					matchLast12 = matchLast12 && (oldDigest.data [j] == fRawImageDigest.data [j]);
+					}
+					
+				if (matchLast12)
+					{
+					return;
+					}
+					
+				}
+				
+			#endif
+			
+			SetIsDamaged (true);
+			
+			#endif
+			
+			}
+			
+		}
+	
+	}
+							   
+/*****************************************************************************/
+
+// If the raw data unique ID is missing, compute one based on a MD5 hash of
+// the raw image data and the model name.
+
+void dng_negative::FindRawDataUniqueID (dng_host &host) const
+	{
+	
+	if (fRawDataUniqueID.IsNull ())
+		{
+		
+		FindRawImageDigest (host);
+		
+		dng_md5_printer printer;
+		
+		printer.Process (fRawImageDigest.data, 16);
+					
 		printer.Process (ModelName ().Get    (),
-						 ModelName ().Length () + 1);
+						 ModelName ().Length ());
 		
 		fRawDataUniqueID = printer.Result ();
 	
 		}
 	
 	}
+		
+/******************************************************************************/
 
+void dng_negative::FindOriginalRawFileDigest () const
+	{
+
+	if (fOriginalRawFileDigest.IsNull () && fOriginalRawFileData.Get ())
+		{
+		
+		dng_md5_printer printer;
+		
+		printer.Process (fOriginalRawFileData->Buffer      (),
+						 fOriginalRawFileData->LogicalSize ());
+					
+		fOriginalRawFileDigest = printer.Result ();
+	
+		}
+
+	}
+		
+/*****************************************************************************/
+
+void dng_negative::ValidateOriginalRawFileDigest ()
+	{
+	
+	if (fOriginalRawFileDigest.IsValid () && fOriginalRawFileData.Get ())
+		{
+		
+		dng_fingerprint oldDigest = fOriginalRawFileDigest;
+		
+		try
+			{
+			
+			fOriginalRawFileDigest.Clear ();
+			
+			FindOriginalRawFileDigest ();
+			
+			}
+			
+		catch (...)
+			{
+			
+			fOriginalRawFileDigest = oldDigest;
+			
+			throw;
+			
+			}
+		
+		if (oldDigest != fOriginalRawFileDigest)
+			{
+			
+			#if qDNGValidate
+			
+			ReportError ("OriginalRawFileDigest does not match OriginalRawFileData");
+			
+			#else
+			
+			SetIsDamaged (true);
+			
+			#endif
+			
+			// Don't "repair" the original image data digest.  Once it is
+			// bad, it stays bad.  The user cannot tell by looking at the image
+			// whether the damage is acceptable and can be ignored in the
+			// future.
+			
+			fOriginalRawFileDigest = oldDigest;
+			
+			}
+			
+		}
+		
+	}
+							   
 /******************************************************************************/
 
 dng_rect dng_negative::DefaultCropArea (real64 scaleH,
@@ -425,7 +937,7 @@ dng_rect dng_negative::DefaultCropArea (real64 scaleH,
 	
 	const dng_image *image = Stage3Image ();
 	
-	ASSERT (image, "DefaultCropArea on NULL image");
+	DNG_ASSERT (image, "DefaultCropArea on NULL image");
 	
 	dng_point scaledSize;
 	
@@ -495,7 +1007,7 @@ dng_memory_block * dng_negative::BuildExifBlock (const dng_resolution *resolutio
 	
 		// Create the main IFD
 											 
-		tiff_directory mainIFD;
+		dng_tiff_directory mainIFD;
 		
 		// Optionally include the resolution tags.
 		
@@ -573,7 +1085,7 @@ dng_memory_block * dng_negative::BuildExifBlock (const dng_resolution *resolutio
 			
 /******************************************************************************/
 
-void dng_negative::SetIPTC (AutoPtr<dng_memory_block> &block, uint32 offset)
+void dng_negative::SetIPTC (AutoPtr<dng_memory_block> &block, uint64 offset)
 	{
 	
 	fIPTCBlock.Reset (block.Release ());
@@ -587,7 +1099,7 @@ void dng_negative::SetIPTC (AutoPtr<dng_memory_block> &block, uint32 offset)
 void dng_negative::SetIPTC (AutoPtr<dng_memory_block> &block)
 	{
 	
-	SetIPTC (block, dng_stream::kInvalidOffset);
+	SetIPTC (block, kDNGStreamInvalidOffset);
 	
 	}
 					  
@@ -598,7 +1110,7 @@ void dng_negative::ClearIPTC ()
 	
 	fIPTCBlock.Reset ();
 	
-	fIPTCOffset = dng_stream::kInvalidOffset;
+	fIPTCOffset = kDNGStreamInvalidOffset;
 	
 	}
 					  
@@ -636,7 +1148,7 @@ uint32 dng_negative::IPTCLength () const
 		
 /*****************************************************************************/
 
-uint32 dng_negative::IPTCOffset () const
+uint64 dng_negative::IPTCOffset () const
 	{
 	
 	if (fIPTCBlock.Get ())
@@ -646,7 +1158,7 @@ uint32 dng_negative::IPTCOffset () const
 		
 		}
 		
-	return dng_stream::kInvalidOffset;
+	return kDNGStreamInvalidOffset;
 	
 	}
 		
@@ -658,7 +1170,7 @@ dng_fingerprint dng_negative::IPTCDigest () const
 	if (IPTCLength ())
 		{
 		
-		MD5Fingerprint printer;
+		dng_md5_printer printer;
 		
 		const uint8 *data = (const uint8 *) IPTCData ();
 		
@@ -775,7 +1287,7 @@ void dng_negative::SetMaskedAreas (uint32 count,
 							 	   const dng_rect *area)
 	{
 	
-	ASSERT (count <= kMaxMaskedAreas, "Too many masked areas");
+	DNG_ASSERT (count <= kMaxMaskedAreas, "Too many masked areas");
 	
 	NeedLinearizationInfo ();
 	
@@ -956,7 +1468,7 @@ uint32 dng_negative::WhiteLevel (uint32 plane) const
 									    
 		}
 		
-	return LinearRange16 ();
+	return 0x0FFFF;
 	
 	}
 							
@@ -1298,6 +1810,10 @@ void dng_negative::Parse (dng_host &host,
 
 	SetBaselineNoise (shared.fBaselineNoise.As_real64 ());
 	
+	// NoiseReductionApplied.
+	
+	SetNoiseReductionApplied (shared.fNoiseReductionApplied);
+	
 	// Baseline exposure.
 	
 	SetBaselineExposure (shared.fBaselineExposure.As_real64 ());
@@ -1328,7 +1844,7 @@ void dng_negative::Parse (dng_host &host,
 	
 	// Color channels.
 		
-	SetColorChannels (shared.fColorPlanes);
+	SetColorChannels (shared.fCameraProfile.fColorPlanes);
 	
 	// Analog balance.
 	
@@ -1338,17 +1854,134 @@ void dng_negative::Parse (dng_host &host,
 		SetAnalogBalance (shared.fAnalogBalance);
 		
 		}
-		
-	// Embedded camera profile.
-	
-	if (host.NeedsMeta () && shared.fColorPlanes > 1)
+
+	// Camera calibration matrices
+
+	if (shared.fCameraCalibration1.NotEmpty ())
 		{
 		
-		AutoPtr<dng_camera_profile> profile (new dng_camera_profile ());
+		SetCameraCalibration1 (shared.fCameraCalibration1);
 		
-		profile->Parse (host, stream, info);
+		}
 		
-		SetEmbeddedCameraProfile (profile);
+	if (shared.fCameraCalibration2.NotEmpty ())
+		{
+		
+		SetCameraCalibration2 (shared.fCameraCalibration2);
+		
+		}
+		
+	if (shared.fCameraCalibration1.NotEmpty () ||
+		shared.fCameraCalibration2.NotEmpty ())
+		{
+		
+		SetCameraCalibrationSignature (shared.fCameraCalibrationSignature.Get ());
+		
+		}
+
+	// Embedded camera profiles.
+	
+	if (shared.fCameraProfile.fColorPlanes > 1)
+		{
+	
+		if (qDNGValidate || host.NeedsMeta () || host.NeedsImage ())
+			{
+			
+			// Add profile from main IFD.
+			
+				{
+			
+				AutoPtr<dng_camera_profile> profile (new dng_camera_profile ());
+				
+				dng_camera_profile_info &profileInfo = shared.fCameraProfile;
+				
+				profile->Parse (stream, profileInfo);
+				
+				// The main embedded profile must be valid.
+				
+				if (!profile->IsValid (shared.fCameraProfile.fColorPlanes))
+					{
+					
+					ThrowBadFormat ();
+					
+					}
+				
+				profile->SetWasReadFromDNG ();
+				
+				AddProfile (profile);
+				
+				}
+				
+			// Extra profiles.
+
+			for (uint32 index = 0; index < (uint32) shared.fExtraCameraProfiles.size (); index++)
+				{
+				
+				try
+					{
+
+					AutoPtr<dng_camera_profile> profile (new dng_camera_profile ());
+					
+					dng_camera_profile_info &profileInfo = shared.fExtraCameraProfiles [index];
+					
+					profile->Parse (stream, profileInfo);
+					
+					if (!profile->IsValid (shared.fCameraProfile.fColorPlanes))
+						{
+						
+						ThrowBadFormat ();
+						
+						}
+					
+					profile->SetWasReadFromDNG ();
+					
+					AddProfile (profile);
+
+					}
+					
+				catch (dng_exception &except)
+					{
+					
+					// Don't ignore transient errors.
+					
+					if (host.IsTransientError (except.ErrorCode ()))
+						{
+						
+						throw;
+						
+						}
+				
+					// Eat other parsing errors.
+			
+					#if qDNGValidate
+					
+					ReportWarning ("Unable to parse extra profile");
+					
+					#endif
+					
+					}
+			
+				}
+			
+			}
+			
+		// As shot profile name.
+		
+		if (shared.fAsShotProfileName.NotEmpty ())
+			{
+			
+			SetAsShotProfileName (shared.fAsShotProfileName.Get ());
+			
+			}
+			
+		}
+		
+	// Raw image data digest.
+	
+	if (shared.fRawImageDigest.IsValid ())
+		{
+		
+		SetRawImageDigest (shared.fRawImageDigest);
 		
 		}
 			
@@ -1389,6 +2022,10 @@ void dng_negative::Parse (dng_host &host,
 			stream.Get (block->Buffer (), count);
 						
 			SetOriginalRawFileData (block);
+			
+			SetOriginalRawFileDigest (shared.fOriginalRawFileDigest);
+			
+			ValidateOriginalRawFileDigest ();
 			
 			}
 			
@@ -1487,7 +2124,7 @@ void dng_negative::PostParse (dng_host &host,
 			
 			stream.SetReadPosition (shared.fIPTC_NAA_Offset);
 			
-			uint32 iptcOffset = stream.PositionInOriginalFile();
+			uint64 iptcOffset = stream.PositionInOriginalFile();
 			
 			stream.Get (block->Buffer      (), 
 						block->LogicalSize ());
@@ -1508,9 +2145,18 @@ void dng_negative::PostParse (dng_host &host,
 			stream.Get (block->Buffer      (),
 						block->LogicalSize ());
 						
-			SetXMP (host,
-					block->Buffer      (),
-					block->LogicalSize ());
+			fValidEmbeddedXMP = SetXMP (host,
+										block->Buffer      (),
+										block->LogicalSize ());
+										
+			#if qDNGValidate
+			
+			if (!fValidEmbeddedXMP)
+				{
+				ReportError ("The embedded XMP is invalid");
+				}
+			
+			#endif
 			
 			}
 				
@@ -1566,8 +2212,15 @@ void dng_negative::PostParse (dng_host &host,
 void dng_negative::SynchronizeMetadata ()
 	{
 	
-	fXMP->IngestIPTC (*this, fXMPisNewer);
+	if (!fOriginalExif.Get ())
+		{
 		
+		fOriginalExif.Reset (fExif->Clone ());
+		
+		}
+	
+	fXMP->IngestIPTC (*this, fXMPisNewer);
+	
 	fXMP->SyncExif (*fExif.Get ());
 	
 	fXMP->SyncOrientation (*this, fXMPinSidecar);
@@ -1576,13 +2229,12 @@ void dng_negative::SynchronizeMetadata ()
 					
 /*****************************************************************************/
 
-void dng_negative::UpdateDateTime (const dng_date_time &dt,
-								   int32 tzHour)
+void dng_negative::UpdateDateTime (const dng_date_time_info &dt)
 	{
 	
-	fExif->UpdateDateTime (dt, tzHour);
+	fExif->UpdateDateTime (dt);
 	
-	fXMP->UpdateDateTime (dt, tzHour);
+	fXMP->UpdateDateTime (dt);
 	
 	}
 					
@@ -1591,13 +2243,11 @@ void dng_negative::UpdateDateTime (const dng_date_time &dt,
 void dng_negative::UpdateDateTimeToNow ()
 	{
 	
-	dng_date_time dt;
+	dng_date_time_info dt;
 	
-	int32 tzHour = 0x7FFFFFFF;
+	CurrentDateTimeAndZone (dt);
 	
-	CurrentDateTimeAndZone (dt, tzHour);
-	
-	UpdateDateTime (dt, tzHour);
+	UpdateDateTime (dt);
 	
 	}
 					
@@ -1636,12 +2286,19 @@ bool dng_negative::SetFourColorBayer ()
 		fCameraNeutral = n;
 		
 		}
+
+	fCameraCalibration1.Clear ();
+	fCameraCalibration2.Clear ();
 	
-	if (fEmbeddedCameraProfile.Get ())
+	fCameraCalibrationSignature.Clear ();
+	
+	for (uint32 index = 0; index < (uint32) fCameraProfile.size (); index++)
 		{
-		fEmbeddedCameraProfile->SetFourColorBayer ();
-		}
 		
+		fCameraProfile [index]->SetFourColorBayer ();
+		
+		}
+			
 	return true;
 	
 	}
@@ -1661,36 +2318,13 @@ const dng_image & dng_negative::RawImage () const
 		return *fStage2Image.Get ();
 		}
 		
-	ASSERT (fStage3Image.Get (),
-		    "dng_negative::RawImage with no raw image");
+	DNG_ASSERT (fStage3Image.Get (),
+				"dng_negative::RawImage with no raw image");
 		    
 	return *fStage3Image.Get ();
 	
 	}
 			
-/*****************************************************************************/
-
-dng_image * dng_negative::MakeImage (const dng_rect &bounds,
-				  		  			 uint32 planes,
-				  		  			 uint32 pixelType,
-				  		  			 uint32 pixelRange) const
-	{
-	
-	dng_image *image = new dng_simple_image (bounds,
-											 planes,
-											 pixelType,
-											 pixelRange,
-											 Allocator ());
-
-	if (!image)
-		{
-		ThrowMemoryFull ();
-		}
-		
-	return image;
-	
-	}
-
 /*****************************************************************************/
 
 void dng_negative::ReadStage1Image (dng_host &host,
@@ -1700,10 +2334,9 @@ void dng_negative::ReadStage1Image (dng_host &host,
 	
 	dng_ifd &rawIFD = *info.fIFD [info.fMainIndex].Get ();
 	
-	fStage1Image.Reset (MakeImage (rawIFD.Bounds (),
-								   rawIFD.fSamplesPerPixel,
-								   rawIFD.PixelType (),
-								   0));
+	fStage1Image.Reset (host.Make_dng_image (rawIFD.Bounds (),
+											 rawIFD.fSamplesPerPixel,
+											 rawIFD.PixelType ()));
 					
 	rawIFD.ReadImage (host,
 					  stream,
@@ -1722,15 +2355,6 @@ void dng_negative::SetStage1Image (AutoPtr<dng_image> &image)
 
 /*****************************************************************************/
 
-uint16 dng_negative::LinearRange16 () const
-	{
-	
-	return 0xFFFF;
-	
-	}
-
-/*****************************************************************************/
-
 void dng_negative::DoBuildStage2 (dng_host &host,
 								  uint32 pixelType)
 	{
@@ -1739,11 +2363,9 @@ void dng_negative::DoBuildStage2 (dng_host &host,
 		
 	dng_linearization_info &info = *fLinearizationInfo.Get ();
 	
-	fStage2Image.Reset (MakeImage (info.fActiveArea.Size (),
-								   stage1.Planes (),
-								   pixelType,
-								   pixelType == ttShort ? LinearRange16 ()
-								   						: 0));
+	fStage2Image.Reset (host.Make_dng_image (info.fActiveArea.Size (),
+											 stage1.Planes (),
+											 pixelType));
 								   
 	info.Linearize (host,
 					stage1,
@@ -1790,7 +2412,14 @@ void dng_negative::BuildStage2Image (dng_host &host,
 void dng_negative::ClearStage1 ()
 	{
 	
-	fStage1Image.Reset ();
+	if (fStage1Image.Get ())
+		{
+	
+		fStage1Image.Reset ();
+		
+		ClearRawImageDigest ();
+		
+		}
 	
 	// If we are not keeping the stage 1 image, then the linearization
 	// information is now useless.
@@ -1802,7 +2431,6 @@ void dng_negative::ClearStage1 ()
 /*****************************************************************************/
 
 void dng_negative::DoBuildStage3 (dng_host &host,
-								  uint32 minSize,
 								  int32 srcPlane)
 	{
 	
@@ -1810,7 +2438,9 @@ void dng_negative::DoBuildStage3 (dng_host &host,
 		
 	dng_mosaic_info &info = *fMosaicInfo.Get ();
 	
-	dng_point downScale = info.DownScale (minSize);
+	dng_point downScale = info.DownScale (host.MinimumSize   (),
+										  host.PreferredSize (),
+										  host.CropFactor    ());
 	
 	if (downScale != dng_point (1, 1))
 		{
@@ -1819,10 +2449,9 @@ void dng_negative::DoBuildStage3 (dng_host &host,
 	
 	dng_point dstSize = info.DstSize (downScale);
 			
-	fStage3Image.Reset (MakeImage (dng_rect (dstSize),
-								   info.fColorPlanes,
-								   stage2.PixelType (),
-								   stage2.PixelRange ()));
+	fStage3Image.Reset (host.Make_dng_image (dng_rect (dstSize),
+											 info.fColorPlanes,
+											 stage2.PixelType ()));
 
 	if (srcPlane < 0 || srcPlane >= (int32) stage2.Planes ())
 		{
@@ -1830,6 +2459,7 @@ void dng_negative::DoBuildStage3 (dng_host &host,
 		}
 				
 	info.Interpolate (host,
+					  *this,
 					  stage2,
 					  *fStage3Image.Get (),
 					  downScale,
@@ -1847,9 +2477,7 @@ void dng_negative::DoMergeStage3 (dng_host &host)
 	// The DNG SDK does not provide multi-channel CFA image merging code.
 	// It just grabs the first channel and uses that.
 	
-	DoBuildStage3 (host,
-				   host.MinimumSize (),
-				   0);
+	DoBuildStage3 (host, 0);
 				   
 	// Just grabbing the first channel would often result in the very
 	// bright image using the baseline exposure value.
@@ -1906,9 +2534,7 @@ void dng_negative::BuildStage3Image (dng_host &host,
 		else
 			{
 				
-			DoBuildStage3 (host,
-						   host.MinimumSize (),
-						   srcPlane);
+			DoBuildStage3 (host, srcPlane);
 						   
 			}
 		
@@ -1937,7 +2563,14 @@ void dng_negative::BuildStage3Image (dng_host &host,
 void dng_negative::ClearStage2 ()
 	{
 	
-	fStage2Image.Reset ();
+	if (fStage2Image.Get ())
+		{
+	
+		fStage2Image.Reset ();
+		
+		ClearRawImageDigest ();
+		
+		}
 	
 	// If we did not keep the stage 1 image, and we are not keeping
 	// the stage 2 image either, then the mosaic information is now

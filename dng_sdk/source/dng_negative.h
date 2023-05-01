@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_negative.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_negative.h#3 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * 
@@ -36,6 +36,8 @@
 #include "dng_types.h"
 #include "dng_utils.h"
 #include "dng_xy_coord.h"
+
+#include <vector>
 
 /*****************************************************************************/
 
@@ -112,6 +114,12 @@ class dng_negative
 		
 		dng_urational fBaselineNoise;
 		
+		// How much noise reduction has already been applied (0.0 to 1.0) to the
+		// the raw image data?  0.0 = none, 1.0 = "ideal" amount--i.e. don't apply any
+		// more by default.  0/0 for unknown.
+		
+		dng_urational fNoiseReductionApplied;
+		
 		// Zero point for the exposure compensation slider. This reflects how
 		// the manufacturer sets up the camera and its conversions.
 		
@@ -175,15 +183,41 @@ class dng_negative
 		
 		dng_xy_coord fCameraWhiteXY;
 		
-		// Embedded camera profile, if any.  NULL for monochrome images.
-			
-		AutoPtr<dng_camera_profile> fEmbeddedCameraProfile;
+		// Individual camera calibrations.
 		
+		// Camera data --> camera calibration --> "inverse" of color matrix
+		
+		// This will be a 4x4 matrix for a 4-color camera. The defaults are
+		// almost always the identity matrix and for the cases where they
+		// aren't, they are diagonal matrices.
+		
+		dng_matrix fCameraCalibration1;
+		dng_matrix fCameraCalibration2;
+		
+		// Signature which allows a profile to announce that it is compatible
+		// with these calibration matrices.
+
+		dng_string fCameraCalibrationSignature;
+		
+		// List of camera profiles.
+		
+		std::vector<dng_camera_profile *> fCameraProfile;
+		
+		// "As shot" camera profile name.
+		
+		dng_string fAsShotProfileName;
+		
+		// Raw image data digest. This is a MD5 fingerprint of the raw image data
+		// in the file, computed using a specific algorithm.  It can be used
+		// verify the raw data has not been corrupted.
+		
+		mutable dng_fingerprint fRawImageDigest;
+
 		// Raw data unique ID.  This is an unique identifer for the actual
 		// raw image data in the file.  It can be used to index into caches
 		// for this data.
 		
-		dng_fingerprint fRawDataUniqueID;
+		mutable dng_fingerprint fRawDataUniqueID;
 		
 		// Original raw file name.  Just the file name, not the full path.
 		
@@ -196,6 +230,10 @@ class dng_negative
 		// The compressed original raw file data.
 		
 		AutoPtr<dng_memory_block> fOriginalRawFileData;
+		
+		// MD5 digest of original raw file data block.
+		
+		mutable dng_fingerprint fOriginalRawFileDigest;
 		
 		// DNG private data block.
 		
@@ -214,15 +252,23 @@ class dng_negative
 		
 		AutoPtr<dng_exif> fExif;
 		
+		// A copy of the EXIF data before is was synchronized with other metadata sources.
+		
+		AutoPtr<dng_exif> fOriginalExif;
+		
 		// IPTC binary data block and offset in original file.
 		
 		AutoPtr<dng_memory_block> fIPTCBlock;
 		
-		uint32 fIPTCOffset;
+		uint64 fIPTCOffset;
 		
 		// XMP data.
 		
 		AutoPtr<dng_xmp> fXMP;
+		
+		// Was there a valid embedded XMP block?
+		
+		bool fValidEmbeddedXMP;
 		
 		// Is the XMP data from a sidecar file?
 		
@@ -263,6 +309,10 @@ class dng_negative
 		// file reading this image?
 		
 		bool fIsPreview;
+		
+		// Does the file appear to be damaged?
+		
+		bool fIsDamaged;
 		
 	public:
 	
@@ -540,7 +590,8 @@ class dng_negative
 			return FinalHeight (DefaultScale () * BestQualityScale ().As_real64 ());
 			}
 		
-		/// The default crop area after applying the specified horizontal and vertical scale factors to the stage 3 image.
+		/// The default crop area after applying the specified horizontal and 
+		/// vertical scale factors to the stage 3 image.
 							
 		dng_rect DefaultCropArea (real64 scaleH = 1.0,
 						    	  real64 scaleV = 1.0) const;
@@ -564,6 +615,20 @@ class dng_negative
 		real64 BaselineNoise () const
 			{
 			return fBaselineNoise.As_real64 ();
+			}
+			
+		/// Setter for NoiseReductionApplied.
+		
+		void SetNoiseReductionApplied (const dng_urational &value)
+			{
+			fNoiseReductionApplied = value;
+			}
+			
+		/// Getter for NosieReductionApplied.
+		
+		const dng_urational & NoiseReductionApplied () const
+			{
+			return fNoiseReductionApplied;
 			}
 			
 		/// Setter for BaselineExposure.
@@ -701,14 +766,14 @@ class dng_negative
 			return fColorChannels;
 			}
 		
-		/// Setter for MonoChrome.
+		/// Setter for Monochrome.
 			
 		void SetMonochrome ()
 			{
 			SetColorChannels (1);
 			}
 
-		/// Getter for MonoChrome.
+		/// Getter for Monochrome.
 			
 		bool IsMonochrome () const
 			{
@@ -768,24 +833,112 @@ class dng_negative
 		void GetCameraWhiteXY (dng_urational &x,
 							   dng_urational &y) const;
 							   
-		// API for embedded camera profile:
+		// API for camera calibration:
 		
-		void SetEmbeddedCameraProfile (AutoPtr<dng_camera_profile> &profile);
+		/// Setter for first of up to two color matrices used for individual camera calibrations.
+		/// 
+		/// The sequence of matrix transforms is:
+		/// Camera data --> camera calibration --> "inverse" of color matrix
+		///
+		/// This will be a 4x4 matrix for a four-color camera. The defaults are
+		/// almost always the identity matrix, and for the cases where they
+		/// aren't, they are diagonal matrices.
+
+		void SetCameraCalibration1 (const dng_matrix &m);
+
+		/// Setter for second of up to two color matrices used for individual camera calibrations.
+		/// 
+		/// The sequence of matrix transforms is:
+		/// Camera data --> camera calibration --> "inverse" of color matrix
+		///
+		/// This will be a 4x4 matrix for a four-color camera. The defaults are
+		/// almost always the identity matrix, and for the cases where they
+		/// aren't, they are diagonal matrices.
+
+		void SetCameraCalibration2 (const dng_matrix &m);
 		
-		void ClearEmbeddedCameraProfile ();
-		
-		const dng_camera_profile * EmbeddedCameraProfile () const
+		/// Getter for first of up to two color matrices used for individual camera calibrations.
+
+		const dng_matrix & CameraCalibration1 () const
 			{
-			return fEmbeddedCameraProfile.Get ();
+			return fCameraCalibration1;
+			}
+	
+		/// Getter for second of up to two color matrices used for individual camera calibrations.
+
+		const dng_matrix & CameraCalibration2 () const
+			{
+			return fCameraCalibration2;
+			}
+		
+		void SetCameraCalibrationSignature (const char *signature)
+			{
+			fCameraCalibrationSignature.Set (signature);
+			}
+
+		const dng_string & CameraCalibrationSignature () const
+			{
+			return fCameraCalibrationSignature;
 			}
 			
+		// Camera Profile API:
+		
+		void AddProfile (AutoPtr<dng_camera_profile> &profile);
+		
+		void ClearProfiles ();
+			
+		uint32 ProfileCount () const;
+		
+		const dng_camera_profile & ProfileByIndex (uint32 index) const;
+		
+		const dng_camera_profile * ProfileByID (const dng_camera_profile_id &id,
+												bool useDefaultIfNoMatch = true) const;
+		
+		bool HasProfileID (const dng_camera_profile_id &id) const
+			{
+			return ProfileByID (id, false) != NULL;
+			}
+		
 		// Returns the camera profile to embed when saving to DNG: 
 		
 		virtual const dng_camera_profile * CameraProfileToEmbed () const;
 		
+		// API for AsShotProfileName.
+			
+		void SetAsShotProfileName (const char *name)
+			{
+			fAsShotProfileName.Set (name);
+			}
+
+		const dng_string & AsShotProfileName () const
+			{
+			return fAsShotProfileName;
+			}
+			
 		// Makes a dng_color_spec object for this negative.
 		
-		virtual dng_color_spec * MakeColorSpec (const char *name = NULL) const;
+		virtual dng_color_spec * MakeColorSpec (const dng_camera_profile_id &id) const;
+		
+		// API for RawImageDigest:
+		
+		void SetRawImageDigest (const dng_fingerprint &digest)
+			{
+			fRawImageDigest = digest;
+			}
+			
+		void ClearRawImageDigest ()
+			{
+			fRawImageDigest.Clear ();
+			}
+			
+		const dng_fingerprint & RawImageDigest () const
+			{
+			return fRawImageDigest;
+			}
+			
+		void FindRawImageDigest (dng_host &host) const;
+		
+		void ValidateRawImageDigest (dng_host &host);
 							   
 		// API for RawDataUniqueID:
 
@@ -799,7 +952,7 @@ class dng_negative
 			return fRawDataUniqueID;
 			}
 		
-		void FindRawDataUniqueID (dng_host &host);
+		void FindRawDataUniqueID (dng_host &host) const;
 		
 		// API for original raw file name:
 		
@@ -846,6 +999,22 @@ class dng_negative
 			return fOriginalRawFileData.Get () ? fOriginalRawFileData->LogicalSize ()
 											   : 0;
 			}
+			
+		// API for original raw file data digest.
+		
+		void SetOriginalRawFileDigest (const dng_fingerprint &digest)
+			{
+			fOriginalRawFileDigest = digest;
+			}
+			
+		const dng_fingerprint & OriginalRawFileDigest () const
+			{
+			return fOriginalRawFileDigest;
+			}
+			
+		void FindOriginalRawFileDigest () const;
+		
+		void ValidateOriginalRawFileDigest ();
 		
 		// API for DNG private data:
 		
@@ -919,11 +1088,23 @@ class dng_negative
 			
 		virtual dng_memory_block * BuildExifBlock (const dng_resolution *resolution = NULL,
 												   bool includeIPTC = false) const;
+												   
+		// API for original EXIF metadata.
+		
+		dng_exif * GetOriginalExif ()
+			{
+			return fOriginalExif.Get ();
+			}
+			
+		const dng_exif * GetOriginalExif () const
+			{
+			return fOriginalExif.Get ();
+			}
 			
 		// API for IPTC metadata:
 			
 		void SetIPTC (AutoPtr<dng_memory_block> &block,
-					  uint32 offset);
+					  uint64 offset);
 		
 		void SetIPTC (AutoPtr<dng_memory_block> &block);
 		
@@ -933,7 +1114,7 @@ class dng_negative
 		
 		uint32 IPTCLength () const;
 		
-		uint32 IPTCOffset () const;
+		uint64 IPTCOffset () const;
 		
 		dng_fingerprint IPTCDigest () const;
 		
@@ -1105,8 +1286,7 @@ class dng_negative
 		// Routines to update the date/time field in the EXIF and XMP
 		// metadata.
 		
-		void UpdateDateTime (const dng_date_time &dt,
-							 int32 tzHour = 0x7FFFFFF);
+		void UpdateDateTime (const dng_date_time_info &dt);
 							 
 		void UpdateDateTimeToNow ();
 		
@@ -1137,13 +1317,6 @@ class dng_negative
 		
 		const dng_image & RawImage () const;
 			
-		// Allocate an image.
-			
-		virtual dng_image * MakeImage (const dng_rect &bounds,
-				  		  			   uint32 planes,
-				  		  			   uint32 pixelType,
-				  		  			   uint32 pixelRange) const;
-				  		  			   
 		// Read the stage 1 image.
 			
 		virtual void ReadStage1Image (dng_host &host,
@@ -1170,6 +1343,11 @@ class dng_negative
 									   
 		// Additional gain applied when building the stage 3 image.
 		
+		void SetStage3Gain (real64 gain)
+			{
+			fStage3Gain = gain;
+			}
+		
 		real64 Stage3Gain () const
 			{
 			return fStage3Gain;
@@ -1195,6 +1373,18 @@ class dng_negative
 			return fIsPreview;
 			}
 			
+		// IsDamaged API:
+		
+		void SetIsDamaged (bool damaged)
+			{
+			fIsDamaged = damaged;
+			}
+			
+		bool IsDamaged () const
+			{
+			return fIsDamaged;
+			}
+			
 	protected:
 	
 		dng_negative (dng_memory_allocator &allocator);
@@ -1213,13 +1403,10 @@ class dng_negative
 		
 		void NeedMosaicInfo ();
 		
-		virtual uint16 LinearRange16 () const;
-
 		virtual void DoBuildStage2 (dng_host &host,
 									uint32 pixelType);
 									   
 		virtual void DoBuildStage3 (dng_host &host,
-									uint32 minSize,
 									int32 srcPlane);
 									
 		virtual void DoMergeStage3 (dng_host &host);

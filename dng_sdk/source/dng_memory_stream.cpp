@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_memory_stream.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_memory_stream.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -25,7 +25,9 @@ dng_memory_stream::dng_memory_stream (dng_memory_allocator &allocator,
 									  dng_abort_sniffer *sniffer,
 						   			  uint32 pageSize)
 						   			  
-	:	dng_stream (sniffer, kDefaultBufferSize, kInvalidOffset)
+	:	dng_stream (sniffer, 
+					kDefaultBufferSize,
+					kDNGStreamInvalidOffset)
 	
 	,	fAllocator (allocator)
 	,	fPageSize  (pageSize )
@@ -63,7 +65,7 @@ dng_memory_stream::~dng_memory_stream ()
 		
 /*****************************************************************************/
 		
-uint32 dng_memory_stream::DoGetLength ()
+uint64 dng_memory_stream::DoGetLength ()
 	{
 	
 	return fMemoryStreamLength;
@@ -74,7 +76,7 @@ uint32 dng_memory_stream::DoGetLength ()
 		
 void dng_memory_stream::DoRead (void *data,
 							    uint32 count,
-							    uint32 offset)
+							    uint64 offset)
 	{
 	
 	if (offset + count > fMemoryStreamLength)
@@ -84,20 +86,20 @@ void dng_memory_stream::DoRead (void *data,
 		
 		}
 		
-	uint32 baseOffset = offset;
+	uint64 baseOffset = offset;
 	
 	while (count)
 		{
 		
-		uint32 pageIndex  = offset / fPageSize;
-		uint32 pageOffset = offset % fPageSize;
+		uint32 pageIndex  = (uint32) (offset / fPageSize);
+		uint32 pageOffset = (uint32) (offset % fPageSize);
 		
 		uint32 blockCount = Min_uint32 (fPageSize - pageOffset, count);
 		
 		const uint8 *sPtr = fPageList [pageIndex]->Buffer_uint8 () +
 						    pageOffset;
 		
-		uint8 *dPtr = ((uint8 *) data) + (offset - baseOffset);
+		uint8 *dPtr = ((uint8 *) data) + (uint32) (offset - baseOffset);
 		
 		DoCopyBytes (sPtr, dPtr, blockCount);
 		
@@ -110,10 +112,10 @@ void dng_memory_stream::DoRead (void *data,
 							 
 /*****************************************************************************/
 
-void dng_memory_stream::DoSetLength (uint32 length)
+void dng_memory_stream::DoSetLength (uint64 length)
 	{
 	
-	while (length > fPageCount * fPageSize)
+	while (length > fPageCount * (uint64) fPageSize)
 		{
 		
 		if (fPageCount == fPagesAllocated)
@@ -168,23 +170,23 @@ void dng_memory_stream::DoSetLength (uint32 length)
 
 void dng_memory_stream::DoWrite (const void *data,
 							     uint32 count,
-							     uint32 offset)
+							     uint64 offset)
 	{
 	
-	DoSetLength (Max_uint32 (fMemoryStreamLength,
+	DoSetLength (Max_uint64 (fMemoryStreamLength,
 							 offset + count));
 	
-	uint32 baseOffset = offset;
+	uint64 baseOffset = offset;
 	
 	while (count)
 		{
 		
-		uint32 pageIndex  = offset / fPageSize;
-		uint32 pageOffset = offset % fPageSize;
+		uint32 pageIndex  = (uint32) (offset / fPageSize);
+		uint32 pageOffset = (uint32) (offset % fPageSize);
 		
 		uint32 blockCount = Min_uint32 (fPageSize - pageOffset, count);
 		
-		const uint8 *sPtr = ((const uint8 *) data) + (offset - baseOffset);
+		const uint8 *sPtr = ((const uint8 *) data) + (uint32) (offset - baseOffset);
 		
 		uint8 *dPtr = fPageList [pageIndex]->Buffer_uint8 () +
 					  pageOffset;
@@ -197,5 +199,56 @@ void dng_memory_stream::DoWrite (const void *data,
 		}
 	
 	}
+		
+/*****************************************************************************/
+
+void dng_memory_stream::CopyToStream (dng_stream &dstStream,
+									  uint64 count)
+	{
 	
+	if (count < kBigBufferSize)
+		{
+	
+		dng_stream::CopyToStream (dstStream, count);
+		
+		}
+		
+	else
+		{
+		
+		Flush ();
+		
+		uint64 offset = Position ();
+		
+		if (offset + count > Length ())
+			{
+			
+			ThrowEndOfFile ();
+			
+			}
+			
+		while (count)
+			{
+			
+			uint32 pageIndex  = (uint32) (offset / fPageSize);
+			uint32 pageOffset = (uint32) (offset % fPageSize);
+			
+			uint32 blockCount = (uint32) Min_uint64 (fPageSize - pageOffset, count);
+			
+			const uint8 *sPtr = fPageList [pageIndex]->Buffer_uint8 () +
+								pageOffset;
+								
+			dstStream.Put (sPtr, blockCount);
+			
+			offset += blockCount;
+			count  -= blockCount;
+			
+			}
+			
+		SetReadPosition (offset);
+	
+		}
+	
+	}
+		
 /*****************************************************************************/

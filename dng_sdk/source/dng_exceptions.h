@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_exceptions.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_exceptions.h#2 $ */ 
+/* $DateTime: 2008/04/02 14:06:57 $ */
+/* $Change: 440485 $ */
 /* $Author: tknoll $ */
 
 /** \file
@@ -27,25 +27,17 @@
 
 /*****************************************************************************/
 
-#if qDNGValidate
-
-/*****************************************************************************/
-
-/// Display a warning message.
+/// Display a warning message. Note that this may just eat the message.
 
 void ReportWarning (const char *message,
 				    const char *sub_message = NULL);
 	
 /*****************************************************************************/
 
-/// Display an error message.
+/// Display an error message. Note that this may just eat the message.
 
 void ReportError (const char *message,
 				  const char *sub_message = NULL);
-	
-/*****************************************************************************/
-
-#endif
 	
 /*****************************************************************************/
 
@@ -62,6 +54,7 @@ class dng_exception
 	
 		/// Construct an exception representing the given error code.
 		/// \param code Error code this exception is for.
+		
 		dng_exception (dng_error_code code)
 		
 			: fErrorCode (code)
@@ -75,6 +68,7 @@ class dng_exception
 
 		/// Getter for error code of this exception
 		/// \retval The error code of this exception.
+		
 		dng_error_code ErrorCode () const
 			{
 			return fErrorCode;
@@ -86,11 +80,15 @@ class dng_exception
 
 /// \brief Throw an exception based on an arbitrary error code.
 
-void Throw_dng_error (dng_error_code err);
+void Throw_dng_error (dng_error_code err,
+					  const char * message = NULL,
+					  const char * sub_message = NULL,
+					  bool silent = false);
 
 /******************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code if error_code is not dng_error_none .
+/// \brief Convenience function to throw dng_exception with error code if
+/// error_code is not dng_error_none .
 
 inline void Fail_dng_error (dng_error_code err)
 	{
@@ -106,29 +104,32 @@ inline void Fail_dng_error (dng_error_code err)
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_unknown .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_unknown .
 
-inline void ThrowProgramError ()
+inline void ThrowProgramError (const char * sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_unknown);
+	Throw_dng_error (dng_error_unknown, NULL, sub_message);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_not_yet_implemented .
+/// \brief Convenience function to throw dng_exception with error code 
+/// dng_error_not_yet_implemented .
 
-inline void ThrowNotYetImplemented ()
+inline void ThrowNotYetImplemented (const char * sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_not_yet_implemented);
+	Throw_dng_error (dng_error_not_yet_implemented, NULL, sub_message);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_silent .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_silent .
 
 inline void ThrowSilentError ()
 	{
@@ -139,7 +140,8 @@ inline void ThrowSilentError ()
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_user_canceled .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_user_canceled .
 
 inline void ThrowUserCanceled ()
 	{
@@ -150,89 +152,109 @@ inline void ThrowUserCanceled ()
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_host_insufficient .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_host_insufficient .
 
-inline void ThrowHostInsufficient ()
+inline void ThrowHostInsufficient (const char * sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_host_insufficient);
+	Throw_dng_error (dng_error_host_insufficient, NULL, sub_message);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_memory .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_memory .
 
-inline void ThrowMemoryFull ()
+inline void ThrowMemoryFull (const char * sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_memory);
+	Throw_dng_error (dng_error_memory, NULL, sub_message);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_bad_format .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_bad_format .
 
-inline void ThrowBadFormat ()
+inline void ThrowBadFormat (const char * sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_bad_format);
+	Throw_dng_error (dng_error_bad_format, NULL, sub_message);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_matrix_math .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_matrix_math .
 
-inline void ThrowMatrixMath ()
+inline void ThrowMatrixMath (const char * sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_matrix_math);
+	Throw_dng_error (dng_error_matrix_math, NULL, sub_message);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_open_file .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_open_file .
 
-inline void ThrowOpenFile ()
+inline void ThrowOpenFile (const char * sub_message = NULL, bool silent = false)
 	{
 	
-	Throw_dng_error (dng_error_open_file);
+	Throw_dng_error (dng_error_open_file, NULL, sub_message, silent);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_read_file .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_read_file .
 
-inline void ThrowReadFile ()
+inline void ThrowReadFile (const char *sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_read_file);
+	Throw_dng_error (dng_error_read_file, NULL, sub_message);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_write_file .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_write_file .
 
-inline void ThrowWriteFile ()
+inline void ThrowWriteFile (const char *sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_write_file);
+	Throw_dng_error (dng_error_write_file, NULL, sub_message);
 	
 	}
 
 /*****************************************************************************/
 
-/// \brief Convenience function to throw dng_exception with error code dng_error_end_of_file .
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_end_of_file .
 
-inline void ThrowEndOfFile ()
+inline void ThrowEndOfFile (const char *sub_message = NULL)
 	{
 	
-	Throw_dng_error (dng_error_end_of_file);
+	Throw_dng_error (dng_error_end_of_file, NULL, sub_message);
+	
+	}
+
+/*****************************************************************************/
+
+/// \brief Convenience function to throw dng_exception with error code
+/// dng_error_file_is_damaged .
+
+inline void ThrowFileIsDamaged ()
+	{
+	
+	Throw_dng_error (dng_error_file_is_damaged);
 	
 	}
 

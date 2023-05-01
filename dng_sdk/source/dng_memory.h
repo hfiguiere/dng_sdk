@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_memory.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_memory.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** Support for memory allocation.
  */
@@ -25,8 +25,8 @@
 
 /*****************************************************************************/
 
-
-/// \brief Class to provide resource acquisition is instantiation discipline for small memory allocations.
+/// \brief Class to provide resource acquisition is instantiation discipline
+/// for small memory allocations.
 ///
 /// This class does not use dng_memory_allocator for memory allocation.
 
@@ -60,7 +60,8 @@ class dng_memory_data
 
 		void Allocate (uint32 size);
 
-		/// Release any allocated memory using free. Object is still valid and Allocate can be called again.
+		/// Release any allocated memory using free. Object is still valid and
+		/// Allocate can be called again.
 		
 		void Clear ();
 		
@@ -176,6 +177,38 @@ class dng_memory_data
 			return (const int32 *) Buffer ();
 			}
 	
+		/// Return pointer to allocated memory as a uint64 *.
+		/// \retval uint64 * valid for as many bytes as were allocated.
+
+		uint64 * Buffer_uint64 ()
+			{
+			return (uint64 *) Buffer ();
+			}
+			
+		/// Return pointer to allocated memory as a uint64 *.
+		/// \retval uint64 * valid for as many bytes as were allocated.
+
+		const uint64 * Buffer_uint64 () const
+			{
+			return (const uint64 *) Buffer ();
+			}
+	
+		/// Return pointer to allocated memory as a const int64 *.
+		/// \retval const int64 * valid for as many bytes as were allocated.
+
+		int64 * Buffer_int64 ()
+			{
+			return (int64 *) Buffer ();
+			}
+			
+		/// Return pointer to allocated memory as a const int64 *.
+		/// \retval const int64 * valid for as many bytes as were allocated.
+
+		const int64 * Buffer_int64 () const
+			{
+			return (const int64 *) Buffer ();
+			}
+	
 		/// Return pointer to allocated memory as a real32 *.
 		/// \retval real32 * valid for as many bytes as were allocated.
 
@@ -220,7 +253,8 @@ class dng_memory_data
 	
 /*****************************************************************************/
 
-/// \brief Class to provide resource acquisition is instantiation discipline for image buffers and other larger memory allocations.
+/// \brief Class to provide resource acquisition is instantiation discipline for
+/// image buffers and other larger memory allocations.
 ///
 /// This class requires a dng_memory_allocator for allocation.
 
@@ -435,7 +469,7 @@ class dng_memory_allocator
 		/// Allocate a dng_memory block.
 		/// \param size Number of bytes in memory block.
 		/// \retval A dng_memory_block with at least size bytes of valid storage.
-		/// \exception dng_exception with fErrorCode equal to dng_error_memory .
+		/// \exception dng_exception with fErrorCode equal to dng_error_memory.
 
 		virtual dng_memory_block * Allocate (uint32 size);
 	
@@ -443,9 +477,11 @@ class dng_memory_allocator
 
 /*****************************************************************************/
 
-/// \brief Default memory allocator used if NULL is passed in for allocator when constructing a dng_host.
+/// \brief Default memory allocator used if NULL is passed in for allocator 
+/// when constructing a dng_host.
 ///
-/// Uses new and delete for memory block object and malloc/free for underlying buffer. 
+/// Uses new and delete for memory block object and malloc/free for underlying
+/// buffer. 
 
 extern dng_memory_allocator gDefaultDNGMemoryAllocator;
 

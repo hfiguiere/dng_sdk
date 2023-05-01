@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_exif.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_exif.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * EXIF read access support. See the \ref spec_exif "EXIF specification" for full description of tags.
@@ -52,19 +52,14 @@ class dng_exif
 		dng_string fCopyright2;
 		dng_string fUserComment;
 		
-		dng_date_time fDateTime;
-		
+		dng_date_time_info         fDateTime;
 		dng_date_time_storage_info fDateTimeStorageInfo;
 		
-		dng_date_time fDateTimeOriginal;
-		dng_date_time fDateTimeDigitized;
-		
-		dng_string fSubsecTime;
-		dng_string fSubsecTimeOriginal;
-		dng_string fSubsecTimeDigitized;
-		
-		int32 fTimeZoneOffset;
-		int32 fTimeZoneOffsetOriginal;
+		dng_date_time_info		   fDateTimeOriginal;
+		dng_date_time_storage_info fDateTimeOriginalStorageInfo;
+
+		dng_date_time_info 		   fDateTimeDigitized;
+		dng_date_time_storage_info fDateTimeDigitizedStorageInfo;
 		
 		uint32 fTIFF_EP_StandardID;
 		uint32 fExifVersion;
@@ -193,6 +188,8 @@ class dng_exif
 		
 		virtual ~dng_exif ();
 		
+		virtual dng_exif * Clone () const;
+		
 		static real64 SnapExposureTime (real64 et);
 		
 		void SetExposureTime (real64 et,
@@ -206,8 +203,7 @@ class dng_exif
 		
 		void SetApertureValue (real64 av);
 		
-		void UpdateDateTime (const dng_date_time &dt,
-							 int32 tzHour = 0x7FFFFFFF);
+		void UpdateDateTime (const dng_date_time_info &dt);
 		
 		virtual bool ParseTag (dng_stream &stream,
 							   dng_shared &shared,
@@ -216,7 +212,7 @@ class dng_exif
 							   uint32 tagCode,
 							   uint32 tagType,
 							   uint32 tagCount,
-							   uint32 tagOffset);
+							   uint64 tagOffset);
 							   
 		virtual void PostParse (dng_host &host,
 								dng_shared &shared);
@@ -229,7 +225,7 @@ class dng_exif
 							 	 uint32 tagCode,
 							 	 uint32 tagType,
 							 	 uint32 tagCount,
-							 	 uint32 tagOffset);
+							 	 uint64 tagOffset);
 							 		 
 		virtual bool Parse_ifd0_main (dng_stream &stream,
 							          dng_shared &shared,
@@ -237,7 +233,7 @@ class dng_exif
 						 		 	  uint32 tagCode,
 						 		 	  uint32 tagType,
 						 		 	  uint32 tagCount,
-						 		 	  uint32 tagOffset);
+						 		 	  uint64 tagOffset);
 
 		virtual bool Parse_ifd0_exif (dng_stream &stream,
 							          dng_shared &shared,
@@ -245,7 +241,7 @@ class dng_exif
 						 		 	  uint32 tagCode,
 						 		 	  uint32 tagType,
 						 		 	  uint32 tagCount,
-						 		 	  uint32 tagOffset);
+						 		 	  uint64 tagOffset);
 	
 		virtual bool Parse_gps (dng_stream &stream,
 							    dng_shared &shared,
@@ -253,7 +249,7 @@ class dng_exif
 						 		uint32 tagCode,
 						 		uint32 tagType,
 						 		uint32 tagCount,
-						 		uint32 tagOffset);
+						 		uint64 tagOffset);
 	
 		virtual bool Parse_interoperability (dng_stream &stream,
 							    			 dng_shared &shared,
@@ -261,7 +257,7 @@ class dng_exif
 											 uint32 tagCode,
 											 uint32 tagType,
 											 uint32 tagCount,
-											 uint32 tagOffset);
+											 uint64 tagOffset);
 	
 	};
 	

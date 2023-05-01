@@ -1,111 +1,121 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <!--
-/*
-    Copyright 2005-2006 Adobe Systems Incorporated
+    Copyright 2005-2007 Adobe Systems Incorporated
     Distributed under the MIT License (see accompanying file LICENSE_1_0_0.txt
-    or a copy at http://opensource.adobe.com/licenses.html)
-*/
-Some files are held under additional license. Please see "licenses.html" for more information.
+    or a copy at http://stlab.adobe.com/licenses.html)
+
+    Some files are held under additional license.
+    Please see "http://stlab.adobe.com/licenses.html" for more information.
 -->
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-    <TITLE>DNG SDK: dng_iptc Class Reference</TITLE>
+    <TITLE>DNG SDK 1.2: dng_iptc Class Reference</TITLE>
     <META HTTP-EQUIV="content-type" CONTENT="text/html;charset=ISO-8859-1"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/basic.css"/>
-    <STYLE TYPE="text/css" MEDIA="all"><!--
-        @import url("http://www.adobe.com/ssi/css/modern.css");
-    --></STYLE>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/print.css" MEDIA="print"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="http://www.adobe.com/ssi/css/mainnav.css"/>
-    <LINK TYPE="text/css" REL="stylesheet" HREF="stlab.css"/>
-    <LINK REL="alternate" TITLE="opensource.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
-</HEAD>
-
-<body bgcolor="white">
-
-<div id="mainnav" width="100%">
-<table width="100%" border="0"><tr><td width="50%">
-<a title="Adobe Systems home page" href="http://www.adobe.com/" tabindex="2"><img src="http://www.adobe.com/images/logo.gif" alt="Adobe Systems, Inc." height="80" width="150"/></a>
-</td><td align="right" valign="top">
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="+2" color="black">Adobe Open Source</font></a><br/>
-<a href="http://opensource.adobe.com" class="el" target="_top"><font size="-2" color="black">opensource.adobe.com</font></a>
-</td></tr></table>
-</div>
-<br/>
-<table border="0" cellspacing="0" cellpadding="0" width="100%">
-<tr><td width="10" nowrap="1"> </td>
+    <LINK TYPE="text/css" REL="stylesheet" HREF="adobe_source.css"/>
+    <LINK REL="alternate" TITLE="stlab.adobe.com RSS" HREF="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1" TYPE="application/rss+xml"/>
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+</head>
+<body>
+<div id='content'>
+<table><tr>
+<td colspan='5'>
+    <div id='opensource_banner'>
+    <table style='width: 100%; padding: 5px;'><tr>
+    <td>
+        <span style='font-size: 30px'><a href='index.html' style='color: black; border: none'>stlab.adobe.com</a></span>
+    </td>
+    <td align='right'>
+        <a href='http://www.adobe.com' style='border: none'><img src='adobe_hlogo.gif' alt="Adobe Systems Incorporated"/></a>
+    </td>
+    </tr></table>
+    </div>
+</td></tr><tr>
 <td valign="top">
-    <table border="0" cellpadding="5">
-    <tr><td nowrap="1">
-        <h3 class="navbar">Information</h3>
-        <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="group__asl__overview.html">Overview</a></li>
-            <li><a href="asl_toc.html">Documentation</a></li>
-            <li><a href="asl_readme.html">Getting Started</a></li>
-            <li><a href="asl_release_notes.html">Release Notes</a></li>
-            <li><a href="http://opensource.adobe.com/twiki/bin/view/AdobeSource">ASL Wiki</a></li>
-            <li><a href="licenses.html">License</a></li>
-            <li><a href="asl_indices.html">Indices</a></li>
-        </ul>
-        <h3 class="navbar">Media</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a></li>
-            <li><a href="asl_download_cvs.html">ASL CVS Repository</a></li>
-            <li><a href="http://cvs.sourceforge.net/viewcvs.py/adobe-source/">View CVS Repository</a></li>
-        </ul>
-        <h3 class="navbar">Support</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a></li>
-            <li><a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a></li>
-            <li><a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a></li>
-            <li><a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a></li>
-            <li><a href="asl_contributing.html">Contributing to ASL</a></li>
-        </ul>
-        <h3 class="navbar">RSS</h3>
-        <ul>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a></li>
-            <li><a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a></li>
-        </ul>
-        <h3 class="navbar">Other Resources</h3>
-        <ul>
-            <li><a href="http://boost.org">Boost</a></li>
-            <li><a href="http://www.sgi.com/tech/stl">SGI STL</a></li>
-        </ul>
-        <h3 class="navbar">Other Adobe Projects</h3>
-        <ul>
-            <li><a href="http://www.adobe.com/products/xmp/">Adobe XMP</a></li>
-        </ul>
-    </td></tr>
-    </table>
+    <div id='navtable' height='100%'>
+    <div style='margin: 5px'>
+        <h4>Documentation</h4>
+
+        <a href="group__asl__overview.html">Overview</a><br/>
+        <a href="asl_readme.html">Building ASL</a><br/>
+        <a href="asl_toc.html">Documentation</a><br/>
+        <a href="http://stlab.adobe.com/wiki/index.php/Supplementary_ASL_Documentation">Library Wiki Docs</a><br/>
+        <a href="asl_indices.html">Indices</a><br/>
+        <a href="http://stlab.adobe.com/perforce/">Browse Perforce</a><br/>
+
+        <h4>More Info</h4>
+
+        <a href="asl_release_notes.html">Release Notes</a><br/>
+        <a href="http://stlab.adobe.com/wiki/">Wiki</a><br/>
+        <a href="asl_search.html">Site Search</a><br/>
+        <a href="licenses.html">License</a><br/>
+        <a href="success_stories.html">Success Stories</a><br/>
+        <a href="asl_contributors.html">Contributors</a><br/>
+
+        <h4>Media</h4>
+
+        <a href="http://sourceforge.net/project/showfiles.php?group_id=132417&amp;package_id=145420">Download</a><br/>
+        <a href="asl_download_perforce.html">Perforce Depots</a><br/>
+
+        <h4>Support</h4>
+
+        <a href="http://sourceforge.net/projects/adobe-source/">ASL SourceForge Home</a><br/>
+        <a href="http://sourceforge.net/mail/?group_id=132417">Mailing Lists</a><br/>
+        <a href="http://sourceforge.net/forum/?group_id=132417">Discussion Forums</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724218&amp;group_id=132417&amp;func=browse">Report Bugs</a><br/>
+        <a href="http://sourceforge.net/tracker/?atid=724221&amp;group_id=132417&amp;func=browse">Suggest Features</a><br/>
+        <a href="asl_contributing.html">Contribute to ASL</a><br/>
+
+        <h4>RSS</h4>
+
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417">Short-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projnews.php?group_id=132417&amp;rss_fulltext=1">Full-text news</a><br/>
+        <a href="http://sourceforge.net/export/rss2_projfiles.php?group_id=132417">File releases</a><br/>
+
+        <h4>Other Adobe Projects</h4>
+
+        <a href="adobe_apollo.html">Adobe Air</a><br/>
+        <a href="http://stlab.adobe.com/gil/">Adobe GIL</a><br/>
+        <a href="http://labs.adobe.com">Adobe Labs</a><br/>
+        <a href="http://stlab.adobe.com/amg/">Adobe Media Gallery</a><br/>
+        <a href="http://www.adobe.com/products/xmp/">Adobe XMP</a><br/>
+        <a href="http://www.mozilla.org/projects/tamarin">Tamarin project<br/>(Mozilla Foundation)</a><br/>
+
+        <h4>Other Resources</h4>
+
+        <a href="http://boost.org">Boost</a><br/>
+        <a href="http://www.riaforge.com/">RIAForge</a><br/>
+        <a href="http://www.sgi.com/tech/stl">SGI STL</a><br/>
+    </div>
+    </div>
 </td>
-<td width="10" nowrap="1"> </td>
-<td width="100%" valign="top">
+<td id='maintable' width="100%" valign="top">
 
 <!-- End Header -->
-
-<!-- Generated by Doxygen 1.4.6-NO -->
-<div class="tabs">
-  <ul>
-    <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-    <li id="current"><a href="annotated.html"><span>Classes</span></a></li>
-    <li><a href="files.html"><span>Files</span></a></li>
-    <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
-  </ul></div>
-<div class="tabs">
-  <ul>
-    <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
-    <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
-    <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
-  </ul></div>
+<!-- Generated by Doxygen 1.5.5 -->
+<div class="navigation" id="top">
+  <div class="tabs">
+    <ul>
+      <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
+      <li><a href="pages.html"><span>Related&nbsp;Pages</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="files.html"><span>Files</span></a></li>
+    </ul>
+  </div>
+  <div class="tabs">
+    <ul>
+      <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
+      <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
+      <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
+    </ul>
+  </div>
+</div>
+<div class="contents">
 <h1>dng_iptc Class Reference</h1><!-- doxytag: class="dng_iptc" -->Class for reading and holding IPTC metadata associated with a DNG file.  
 <a href="#_details">More...</a>
 <p>
 <code>#include &lt;<a class="el" href="dng__iptc_8h-source.html">dng_iptc.h</a>&gt;</code>
+<p>
+
 <p>
 <a href="classdng__iptc-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
@@ -114,7 +124,7 @@ Some files are held under additional license. Please see "licenses.html" for mor
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__iptc.html#6776eba8ea684a7cf9200ac8a7248c03">NotEmpty</a> () const </td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__iptc.html#d81a2c3e754fb03d66a32972741ff122">Parse</a> (const void *blockData, uint32 blockSize, uint32 offsetInOriginalFile)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__iptc.html#de0026c1b5c72aa245244d40f417a6cd">Parse</a> (const void *blockData, uint32 blockSize, uint64 offsetInOriginalFile)</td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="el" href="classdng__memory__block.html">dng_memory_block</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdng__iptc.html#d02bd7f6e3258255a29b754bff000b7c">Spool</a> (<a class="el" href="classdng__memory__allocator.html">dng_memory_allocator</a> &amp;allocator)</td></tr>
 
@@ -137,14 +147,8 @@ dng_string_list&nbsp;</td><td class="memItemRight" valign="bottom"><b>fKeywords<
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a504db23d1a4af31a59ccdde24477806"></a><!-- doxytag: member="dng_iptc::fInstructions" ref="a504db23d1a4af31a59ccdde24477806" args="" -->
 dng_string&nbsp;</td><td class="memItemRight" valign="bottom"><b>fInstructions</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c164b70f6a5fa5213210aaf9b146d775"></a><!-- doxytag: member="dng_iptc::fDateCreated" ref="c164b70f6a5fa5213210aaf9b146d775" args="" -->
-<a class="el" href="classdng__date__time.html">dng_date_time</a>&nbsp;</td><td class="memItemRight" valign="bottom"><b>fDateCreated</b></td></tr>
-
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7e653db23b7c73cb3070306237cb4ece"></a><!-- doxytag: member="dng_iptc::fHasTimeCreated" ref="7e653db23b7c73cb3070306237cb4ece" args="" -->
-bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>fHasTimeCreated</b></td></tr>
-
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3382aa2ad2e5b4c1ebd0fa0db2150ba5"></a><!-- doxytag: member="dng_iptc::fTimeZoneMinutes" ref="3382aa2ad2e5b4c1ebd0fa0db2150ba5" args="" -->
-int32&nbsp;</td><td class="memItemRight" valign="bottom"><b>fTimeZoneMinutes</b></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a719dd54d125bcc9ffc174855c802fd0"></a><!-- doxytag: member="dng_iptc::fDateTimeCreated" ref="a719dd54d125bcc9ffc174855c802fd0" args="" -->
+<a class="el" href="classdng__date__time__info.html">dng_date_time_info</a>&nbsp;</td><td class="memItemRight" valign="bottom"><b>fDateTimeCreated</b></td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f583572f8f48fac61abf4b488d58e8a4"></a><!-- doxytag: member="dng_iptc::fAuthor" ref="f583572f8f48fac61abf4b488d58e8a4" args="" -->
 dng_string&nbsp;</td><td class="memItemRight" valign="bottom"><b>fAuthor</b></td></tr>
@@ -229,38 +233,38 @@ dng_string&nbsp;</td><td class="memItemRight" valign="bottom"><b>fDescriptionWri
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f38af6a4d8447d79531759c75a8fb681"></a><!-- doxytag: member="dng_iptc::ParseString" ref="f38af6a4d8447d79531759c75a8fb681" args="(dng_stream &amp;stream, dng_string &amp;s, CharSet charSet)" -->
 void&nbsp;</td><td class="memItemRight" valign="bottom"><b>ParseString</b> (<a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, dng_string &amp;s, CharSet charSet)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="d9c7697e06a7949a03d11b5909710598"></a><!-- doxytag: member="dng_iptc::SpoolString" ref="d9c7697e06a7949a03d11b5909710598" args="(dng_stream &amp;stream, const dng_string &amp;s, uint8 dataSet, uint32 maxChars)" -->
-void&nbsp;</td><td class="memItemRight" valign="bottom"><b>SpoolString</b> (<a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, const dng_string &amp;s, uint8 dataSet, uint32 maxChars)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e44bff9e53a26dc4308c0542a2af6f6b"></a><!-- doxytag: member="dng_iptc::SpoolString" ref="e44bff9e53a26dc4308c0542a2af6f6b" args="(dng_stream &amp;stream, const dng_string &amp;s, uint8 dataSet, uint32 maxChars, CharSet charSet)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><b>SpoolString</b> (<a class="el" href="classdng__stream.html">dng_stream</a> &amp;stream, const dng_string &amp;s, uint8 dataSet, uint32 maxChars, CharSet charSet)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b6533f759570fba478105ef896f675f6"></a><!-- doxytag: member="dng_iptc::SafeForSystemEncoding" ref="b6533f759570fba478105ef896f675f6" args="() const " -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>SafeForSystemEncoding</b> () const </td></tr>
+
+<tr><td colspan="2"><br><h2>Static Protected Member Functions</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="c19b96ab5d43bf03ff397b88c8856df5"></a><!-- doxytag: member="dng_iptc::SafeForSystemEncoding" ref="c19b96ab5d43bf03ff397b88c8856df5" args="(const dng_string &amp;s)" -->
+static bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>SafeForSystemEncoding</b> (const dng_string &amp;s)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a1093845b52340defa747d0e96e9e59e"></a><!-- doxytag: member="dng_iptc::SafeForSystemEncoding" ref="a1093845b52340defa747d0e96e9e59e" args="(const dng_string_list &amp;list)" -->
+static bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>SafeForSystemEncoding</b> (const dng_string_list &amp;list)</td></tr>
 
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 Class for reading and holding IPTC metadata associated with a DNG file. 
 <p>
-See the <a class="el" href="index.html#spec_iptc">IPTC specification</a> for information on member fields of this class. 
-<p>
-<hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="02873eaa065798915c432e8f4526dc10"></a><!-- doxytag: member="dng_iptc::IsEmpty" ref="02873eaa065798915c432e8f4526dc10" args="() const " --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
+See the <a class="el" href="index.html#spec_iptc">IPTC specification</a> for information on member fields of this class. <hr><h2>Member Function Documentation</h2>
+<a class="anchor" name="02873eaa065798915c432e8f4526dc10"></a><!-- doxytag: member="dng_iptc::IsEmpty" ref="02873eaa065798915c432e8f4526dc10" args="() const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
         <tr>
-          <td class="md" nowrap valign="top">bool dng_iptc::IsEmpty           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="mdname1" valign="top" nowrap>          </td>
-          <td class="md" valign="top">&nbsp;)&nbsp;</td>
-          <td class="md" nowrap> const</td>
+          <td class="memname">bool dng_iptc::IsEmpty           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"> const</td>
         </tr>
       </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
+</div>
+<div class="memdoc">
 
 <p>
 Test if IPTC metadata exists. <dl compact><dt><b>Return values:</b></dt><dd>
@@ -268,31 +272,27 @@ Test if IPTC metadata exists. <dl compact><dt><b>Return values:</b></dt><dd>
     <tr><td valign="top"></td><td valign="top"><em>true</em>&nbsp;</td><td>if no IPTC metadata exists for this DNG. </td></tr>
   </table>
 </dl>
-    </td>
-  </tr>
-</table>
-<a class="anchor" name="6776eba8ea684a7cf9200ac8a7248c03"></a><!-- doxytag: member="dng_iptc::NotEmpty" ref="6776eba8ea684a7cf9200ac8a7248c03" args="() const " --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
+
+<p>References <a class="el" href="dng__date__time_8cpp-source.html#l00192">dng_date_time_info::IsValid()</a>, and <a class="el" href="dng__iptc_8h-source.html#l00127">NotEmpty()</a>.</p>
+
+<p>Referenced by <a class="el" href="dng__iptc_8h-source.html#l00127">NotEmpty()</a>.</p>
+
+</div>
+</div><p>
+<a class="anchor" name="6776eba8ea684a7cf9200ac8a7248c03"></a><!-- doxytag: member="dng_iptc::NotEmpty" ref="6776eba8ea684a7cf9200ac8a7248c03" args="() const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
         <tr>
-          <td class="md" nowrap valign="top">bool dng_iptc::NotEmpty           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="mdname1" valign="top" nowrap>          </td>
-          <td class="md" valign="top">&nbsp;)&nbsp;</td>
-          <td class="md" nowrap> const<code> [inline]</code></td>
+          <td class="memname">bool dng_iptc::NotEmpty           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"> const<code> [inline]</code></td>
         </tr>
       </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
+</div>
+<div class="memdoc">
 
 <p>
 Test if IPTC metadata exists. <dl compact><dt><b>Return values:</b></dt><dd>
@@ -300,47 +300,43 @@ Test if IPTC metadata exists. <dl compact><dt><b>Return values:</b></dt><dd>
     <tr><td valign="top"></td><td valign="top"><em>true</em>&nbsp;</td><td>if IPTC metadata exists for this DNG. </td></tr>
   </table>
 </dl>
-    </td>
-  </tr>
-</table>
-<a class="anchor" name="d81a2c3e754fb03d66a32972741ff122"></a><!-- doxytag: member="dng_iptc::Parse" ref="d81a2c3e754fb03d66a32972741ff122" args="(const void *blockData, uint32 blockSize, uint32 offsetInOriginalFile)" --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
+
+<p>References <a class="el" href="dng__iptc_8cpp-source.html#l00078">IsEmpty()</a>.</p>
+
+<p>Referenced by <a class="el" href="dng__iptc_8cpp-source.html#l00078">IsEmpty()</a>.</p>
+
+</div>
+</div><p>
+<a class="anchor" name="de0026c1b5c72aa245244d40f417a6cd"></a><!-- doxytag: member="dng_iptc::Parse" ref="de0026c1b5c72aa245244d40f417a6cd" args="(const void *blockData, uint32 blockSize, uint64 offsetInOriginalFile)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
         <tr>
-          <td class="md" nowrap valign="top">void dng_iptc::Parse           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="md" nowrap valign="top">const void *&nbsp;</td>
-          <td class="mdname" nowrap> <em>blockData</em>, </td>
+          <td class="memname">void dng_iptc::Parse           </td>
+          <td>(</td>
+          <td class="paramtype">const void *&nbsp;</td>
+          <td class="paramname"> <em>blockData</em>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>uint32&nbsp;</td>
-          <td class="mdname" nowrap> <em>blockSize</em>, </td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32&nbsp;</td>
+          <td class="paramname"> <em>blockSize</em>, </td>
         </tr>
         <tr>
-          <td class="md" nowrap align="right"></td>
-          <td class="md"></td>
-          <td class="md" nowrap>uint32&nbsp;</td>
-          <td class="mdname" nowrap> <em>offsetInOriginalFile</em></td>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64&nbsp;</td>
+          <td class="paramname"> <em>offsetInOriginalFile</em></td><td>&nbsp;</td>
         </tr>
         <tr>
-          <td class="md"></td>
-          <td class="md">)&nbsp;</td>
-          <td class="md" colspan="2"></td>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td width="100%"></td>
         </tr>
       </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
+</div>
+<div class="memdoc">
 
 <p>
 Parse a complete block of IPTC data. <dl compact><dt><b>Parameters:</b></dt><dd>
@@ -350,32 +346,26 @@ Parse a complete block of IPTC data. <dl compact><dt><b>Parameters:</b></dt><dd>
     <tr><td valign="top"></td><td valign="top"><em>offsetInOriginalFile</em>&nbsp;</td><td>Used to enable certain file patching operations such as updating date/time in place. </td></tr>
   </table>
 </dl>
-    </td>
-  </tr>
-</table>
-<a class="anchor" name="d02bd7f6e3258255a29b754bff000b7c"></a><!-- doxytag: member="dng_iptc::Spool" ref="d02bd7f6e3258255a29b754bff000b7c" args="(dng_memory_allocator &amp;allocator)" --><p>
-<table class="mdTable" cellpadding="2" cellspacing="0">
-  <tr>
-    <td class="mdRow">
-      <table cellpadding="0" cellspacing="0" border="0">
+
+<p>References <a class="el" href="dng__date__time_8cpp-source.html#l00442">dng_date_time_info::Decode_IPTC_Date()</a>, <a class="el" href="dng__date__time_8cpp-source.html#l00497">dng_date_time_info::Decode_IPTC_Time()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00227">dng_stream::Get()</a>, <a class="el" href="dng__stream_8h-source.html#l00362">dng_stream::Get_int8()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00450">dng_stream::Get_uint16()</a>, <a class="el" href="dng__stream_8h-source.html#l00261">dng_stream::Get_uint8()</a>, <a class="el" href="dng__stream_8h-source.html#l00168">dng_stream::Length()</a>, <a class="el" href="dng__stream_8h-source.html#l00187">dng_stream::Position()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00134">dng_stream::SetBigEndian()</a>, and <a class="el" href="dng__stream_8cpp-source.html#l00190">dng_stream::SetReadPosition()</a>.</p>
+
+</div>
+</div><p>
+<a class="anchor" name="d02bd7f6e3258255a29b754bff000b7c"></a><!-- doxytag: member="dng_iptc::Spool" ref="d02bd7f6e3258255a29b754bff000b7c" args="(dng_memory_allocator &amp;allocator)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
         <tr>
-          <td class="md" nowrap valign="top"><a class="el" href="classdng__memory__block.html">dng_memory_block</a> * dng_iptc::Spool           </td>
-          <td class="md" valign="top">(&nbsp;</td>
-          <td class="md" nowrap valign="top"><a class="el" href="classdng__memory__allocator.html">dng_memory_allocator</a> &amp;&nbsp;</td>
-          <td class="mdname1" valign="top" nowrap> <em>allocator</em>          </td>
-          <td class="md" valign="top">&nbsp;)&nbsp;</td>
-          <td class="md" nowrap></td>
+          <td class="memname"><a class="el" href="classdng__memory__block.html">dng_memory_block</a> * dng_iptc::Spool           </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdng__memory__allocator.html">dng_memory_allocator</a> &amp;&nbsp;</td>
+          <td class="paramname"> <em>allocator</em>          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"></td>
         </tr>
       </table>
-    </td>
-  </tr>
-</table>
-<table cellspacing="5" cellpadding="0" border="0">
-  <tr>
-    <td>
-      &nbsp;
-    </td>
-    <td>
+</div>
+<div class="memdoc">
 
 <p>
 Serialize IPTC data to a memory block. <dl compact><dt><b>Parameters:</b></dt><dd>
@@ -388,18 +378,44 @@ Serialize IPTC data to a memory block. <dl compact><dt><b>Parameters:</b></dt><d
     <tr><td valign="top"></td><td valign="top"><em>Memory</em>&nbsp;</td><td>block </td></tr>
   </table>
 </dl>
-    </td>
-  </tr>
-</table>
+
+<p>References <a class="el" href="dng__stream_8cpp-source.html#l00159">dng_stream::AsMemoryBlock()</a>, <a class="el" href="dng__assertions_8h-source.html#l00057">DNG_ASSERT</a>, <a class="el" href="dng__date__time_8cpp-source.html#l00471">dng_date_time_info::Encode_IPTC_Date()</a>, <a class="el" href="dng__date__time_8cpp-source.html#l00557">dng_date_time_info::Encode_IPTC_Time()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00338">dng_stream::Flush()</a>, <a class="el" href="dng__date__time_8cpp-source.html#l00192">dng_date_time_info::IsValid()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00380">dng_stream::Put()</a>, <a class="el" href="dng__stream_8cpp-source.html#l00470">dng_stream::Put_uint16()</a>, <a class="el" href="dng__stream_8h-source.html#l00286">dng_stream::Put_uint8()</a>, and <a class="el" href="dng__stream_8cpp-source.html#l00134">dng_stream::SetBigEndian()</a>.</p>
+
+</div>
+</div><p>
 <hr>The documentation for this class was generated from the following files:<ul>
-<li>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/<a class="el" href="dng__iptc_8h-source.html">dng_iptc.h</a><li>C:/Development/DigitalImaging/dng_sdk_1_1/dng_sdk/source/dng_iptc.cpp</ul>
+<li><a class="el" href="dng__iptc_8h-source.html">dng_iptc.h</a><li>dng_iptc.cpp</ul>
+</div>
 
 <!-- Begin Footer -->
-</td>
-<td width="20">&nbsp;&nbsp;</td>
+</td></tr>
 </table>
-
-<div id="footerrow"><!--give footer 25px of white above--></div><div id="footer" title="footer: links to copyright and other legal information"><p><a href="licenses.html" class="el">Copyright &copy; 2005 Adobe Systems Incorporated</a></p><ul id="list1"><!-- due to a rendering error in IE, these links should all be on one line without returns --><li id="terms"><a title="Terms of Use" href="http://www.adobe.com/misc/copyright.html">Terms of Use</a></li><li><a title="Privacy Policy" href="http://www.adobe.com/misc/privacy.html">Privacy Policy</a></li><li><a href="http://access.adobe.com">Accessibility</a></li><li><a title="Avoid software piracy" href="http://www.adobe.com/aboutadobe/antipiracy/main.html">Avoid software piracy</a></li></ul><!--two lists because of quirks mode--><ul id="list2"><li id="tms"><a title="Permissions and trademarks" href="http://www.adobe.com/misc/agreement.html">Permissions and trademarks</a></li><li><a title="Product License Agreements" href="http://www.adobe.com/products/eulas/main.html">Product License Agreements</a></li></ul><a title="Reviewed by TRUSTe: site privacy statement" href="http://www.adobe.com/misc/privacy.html"><img id="privacyicon" src="http://www.adobe.com/images/finalmark.gif" alt="Reviewed by TRUSTe: site privacy statement" height="31" width="116" border="0"/></a></div>
-
+</div> <!-- content -->
+<div class='footerdiv'>
+    <div id='footersub'>
+        <ul>
+            <li><a href="http://www.adobe.com/go/gftray_foot_aboutadobe">Company</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_contact_adobe">Contact Us</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_accessibility">Accessibility</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_report_piracy">Report Piracy</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_permissions_trademarks">Permissions &amp; Trademarks</a>&nbsp;|&nbsp;</li>
+            <li><a href="http://www.adobe.com/go/gftray_foot_product_license_agreements">Product License Agreements</a>&nbsp;|&nbsp;</li>
+    
+            <li><a href="http://www.adobe.com/go/gftray_foot_feedback">Send Feedback</a></li>
+        </ul>
+        <div>
+            <p>Copyright &#169; 2006-2008 Adobe Systems Incorporated.</p>
+            <p>Use of this website signifies your agreement to the <a href="http://www.adobe.com/go/gftray_foot_terms">Terms of Use</a> and <a href="http://www.adobe.com/go/gftray_foot_privacy_security">Online Privacy Policy</a>.</p>
+            <p>Search powered by <a href="http://www.google.com/" target="new">Google</a></p>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+_uacct = "UA-396569-1";
+urchinTracker();
+</script>
 </body>
 </html>

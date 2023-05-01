@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_color_spec.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_color_spec.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Class for holding a specific color transform.
@@ -27,17 +27,19 @@
 
 /*****************************************************************************/
 
-/// \brief Compute a 3x3 matrix which maps colors from white point white1 to white point white2
+/// \brief Compute a 3x3 matrix which maps colors from white point white1 to
+/// white point white2
 ///
-/// Uses linearized Bradford adaptation matrix to compute a mapping from colors measured with one white point
-/// (white1) to another (white2).
+/// Uses linearized Bradford adaptation matrix to compute a mapping from 
+/// colors measured with one white point (white1) to another (white2).
 
 dng_matrix_3by3 MapWhiteMatrix (const dng_xy_coord &white1,
 						   		const dng_xy_coord &white2);
 						   
 /*****************************************************************************/
 
-/// Color transform taking into account white point and camera calibration and individual calibration from DNG negative.
+/// Color transform taking into account white point and camera calibration and
+/// individual calibration from DNG negative.
 
 class dng_color_spec
 	{
@@ -49,11 +51,19 @@ class dng_color_spec
 		real64 fTemperature1;
 		real64 fTemperature2;
 		
-		dng_matrix fXYZtoCamera1;
-		dng_matrix fXYZtoCamera2;
+		dng_matrix fColorMatrix1;
+		dng_matrix fColorMatrix2;
 		
-		dng_matrix fReduction1;
-		dng_matrix fReduction2;
+		dng_matrix fForwardMatrix1;
+		dng_matrix fForwardMatrix2;
+		
+		dng_matrix fReductionMatrix1;
+		dng_matrix fReductionMatrix2;
+		
+		dng_matrix fCameraCalibration1;
+		dng_matrix fCameraCalibration2;
+		
+		dng_matrix fAnalogBalance;
 		
 		dng_xy_coord fWhiteXY;
 		
@@ -61,7 +71,9 @@ class dng_color_spec
 		dng_matrix fCameraToPCS;
 		
 	public:
-		/// Read calibration info from DNG negative and construct a dng_color_spec.
+
+		/// Read calibration info from DNG negative and construct a 
+		/// dng_color_spec.
 
 		dng_color_spec (const dng_negative &negative,
 					    const dng_camera_profile *profile);
@@ -70,7 +82,8 @@ class dng_color_spec
 			{
 			}
 
-		/// Number of channels used for this color transform. Three for most cameras.
+		/// Number of channels used for this color transform. Three
+		/// for most cameras.
 
 		uint32 Channels () const
 			{
@@ -88,26 +101,33 @@ class dng_color_spec
 		const dng_xy_coord & WhiteXY () const;
 
 		/// Return white point in camera native color coordinates.
-		/// \retval A dng_vector with components ranging from 0.0 to 1.0 that is normalized such that one component is equal to 1.0 .
+		/// \retval A dng_vector with components ranging from 0.0 to 1.0 
+		/// that is normalized such that one component is equal to 1.0 .
 
 		const dng_vector & CameraWhite () const;
 			
 		/// Getter for camera to Profile Connection Space color transform.
-		/// \retval A transform that takes into account all camera calibration transforms and white point. 
+		/// \retval A transform that takes into account all camera calibration
+		/// transforms and white point. 
 
 		const dng_matrix & CameraToPCS () const;
 
-		/// Return the XY value to use for SetWhiteXY for a given camera color space coordinate as the white point.
-		/// \param neutral A camera color space value to use for white point. Components range from 0.0 to 1.0 and should be normalized such that the largest value is 1.0 .
-		/// \retval White point in XY space that makes neutral map to this XY value as closely as possible.
+		/// Return the XY value to use for SetWhiteXY for a given camera color
+		/// space coordinate as the white point.
+		/// \param neutral A camera color space value to use for white point.
+		/// Components range from 0.0 to 1.0 and should be normalized such that
+		/// the largest value is 1.0 .
+		/// \retval White point in XY space that makes neutral map to this
+		/// XY value as closely as possible.
 
 		dng_xy_coord NeutralToXY (const dng_vector &neutral);
 
 	private:
 	
-		void FindXYZtoCamera (const dng_xy_coord &white,
-							  dng_matrix &xyzToCamera,
-							  dng_matrix &reduction);
+		dng_matrix FindXYZtoCamera (const dng_xy_coord &white,
+									dng_matrix *forwardMatrix = NULL,
+									dng_matrix *reductionMatrix = NULL,
+									dng_matrix *cameraCalibration = NULL);
 	
 	};
 

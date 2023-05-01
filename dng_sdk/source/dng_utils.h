@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_utils.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_utils.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -85,10 +85,24 @@ inline uint32 Min_uint32 (uint32 x, uint32 y)
 	
 	}
 
+inline uint32 Min_uint32 (uint32 x, uint32 y, uint32 z)
+	{
+	
+	return Min_uint32 (x, Min_uint32 (y, z));
+	
+	}
+	
 inline uint32 Max_uint32 (uint32 x, uint32 y)
 	{
 	
 	return (x >= y ? x : y);
+	
+	}
+	
+inline uint32 Max_uint32 (uint32 x, uint32 y, uint32 z)
+	{
+	
+	return Max_uint32 (x, Max_uint32 (y, z));
 	
 	}
 	
@@ -154,6 +168,96 @@ inline uint32 RoundUp16 (uint32 x)
 	{
 	
 	return (x + 15) & ~15;
+	
+	}
+
+inline uint32 RoundUp4096 (uint32 x)
+	{
+	
+	return (x + 4095) & ~4095;
+	
+	}
+
+/******************************************************************************/
+
+inline uint32 RoundDown2 (uint32 x)
+	{
+	
+	return x & ~1;
+	
+	}
+
+inline uint32 RoundDown4 (uint32 x)
+	{
+	
+	return x & ~3;
+	
+	}
+
+inline uint32 RoundDown8 (uint32 x)
+	{
+	
+	return x & ~7;
+	
+	}
+
+inline uint32 RoundDown16 (uint32 x)
+	{
+	
+	return x & ~15;
+	
+	}
+
+/******************************************************************************/
+
+inline uint64 Abs_int64 (int64 x)
+	{
+	
+	return (uint64) (x < 0 ? -x : x);
+
+	}
+
+inline int64 Min_int64 (int64 x, int64 y)
+	{
+	
+	return (x <= y ? x : y);
+	
+	}
+
+inline int64 Max_int64 (int64 x, int64 y)
+	{
+	
+	return (x >= y ? x : y);
+	
+	}
+
+inline int64 Pin_int64 (int64 min, int64 x, int64 max)
+	{
+	
+	return Max_int64 (min, Min_int64 (x, max));
+	
+	}
+
+/******************************************************************************/
+
+inline uint64 Min_uint64 (uint64 x, uint64 y)
+	{
+	
+	return (x <= y ? x : y);
+	
+	}
+
+inline uint64 Max_uint64 (uint64 x, uint64 y)
+	{
+	
+	return (x >= y ? x : y);
+	
+	}
+
+inline uint64 Pin_uint64 (uint64 min, uint64 x, uint64 max)
+	{
+	
+	return Max_uint64 (min, Min_uint64 (x, max));
 	
 	}
 
@@ -236,14 +340,14 @@ inline int32 Round_int32 (real64 x)
 inline uint32 Floor_uint32 (real32 x)
 	{
 	
-	return (uint32) (x);
+	return (uint32) Max_real32 (0.0f, x);
 	
 	}
 
 inline uint32 Floor_uint32 (real64 x)
 	{
 	
-	return (uint32) (x);
+	return (uint32) Max_real64 (0.0, x);
 	
 	}
 
@@ -258,6 +362,15 @@ inline uint32 Round_uint32 (real64 x)
 	{
 	
 	return Floor_uint32 (x + 0.5);
+	
+	}
+
+/******************************************************************************/
+
+inline int64 Round_int64 (real64 x)
+	{
+	
+	return (int64) (x >= 0.0 ? x + 0.5 : x - 0.5);
 	
 	}
 
@@ -299,6 +412,118 @@ inline uint32 SwapBytes32 (uint32 x)
 
 /******************************************************************************/
 
+// Converts from RGB values (range 0.0 to 1.0) to HSV values (range 0.0 to
+// 6.0 for hue, and 0.0 to 1.0 for saturation and value).
+
+inline void DNG_RGBtoHSV (real32 r,
+					      real32 g,
+					      real32 b,
+					      real32 &h,
+					      real32 &s,
+					      real32 &v)
+	{
+	
+	v = Max_real32 (r, Max_real32 (g, b));
+
+	real32 gap = v - Min_real32 (r, Min_real32 (g, b));
+	
+	if (gap > 0.0f)
+		{
+
+		if (r == v)
+			{
+			
+			h = (g - b) / gap;
+			
+			if (h < 0.0f)
+				{
+				h += 6.0f;
+				}
+				
+			}
+			
+		else if (g == v) 
+			{
+			h = 2.0f + (b - r) / gap;
+			}
+			
+		else
+			{
+			h = 4.0f + (r - g) / gap;
+			}
+			
+		s = gap / v;
+		
+		}
+		
+	else
+		{
+		h = 0.0f;
+		s = 0.0f;
+		}
+	
+	}
+
+/*****************************************************************************/
+
+// Converts from HSV values (range 0.0 to 6.0 for hue, and 0.0 to 1.0 for
+// saturation and value) to RGB values (range 0.0 to 1.0).
+
+inline void DNG_HSVtoRGB (real32 h,
+						  real32 s,
+						  real32 v,
+						  real32 &r,
+						  real32 &g,
+						  real32 &b)
+	{
+	
+	if (s > 0.0f)
+		{
+		
+		if (h < 0.0f)
+			h += 6.0f;
+			
+		if (h >= 6.0f)
+			h -= 6.0f;
+			
+		int32  i = (int32) h;
+		real32 f = h - (real32) i;
+		
+		real32 p = v * (1.0f - s);
+		
+		#define q	(v * (1.0f - s * f))
+		#define t	(v * (1.0f - s * (1.0f - f)))
+		
+		switch (i)
+			{
+			case 0: r = v; g = t; b = p; break;
+			case 1: r = q; g = v; b = p; break;
+			case 2: r = p; g = v; b = t; break;
+			case 3: r = p; g = q; b = v; break;
+			case 4: r = t; g = p; b = v; break;
+			case 5: r = v; g = p; b = q; break;
+			}
+			
+		#undef q
+		#undef t
+		
+		}
+		
+	else
+		{
+		r = v;
+		g = v;
+		b = v;
+		}
+	
+	}
+
+/******************************************************************************/
+
+real64 TickTimeInSeconds ();
+
+/******************************************************************************/
+
 class dng_timer
 	{
 
@@ -320,16 +545,8 @@ class dng_timer
 
 		const char *fMessage;
 		
-		#if qMacOS
+		real64 fStartTime;
 		
-		uint32 fStartTime;
-		
-		#else
-
-		clock_t fStartTime;
-		
-		#endif
-
 	};
 
 /*****************************************************************************/

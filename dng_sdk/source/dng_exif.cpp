@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_exif.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_exif.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -39,15 +39,11 @@ dng_exif::dng_exif ()
 	,	fDateTimeStorageInfo ()
 	
 	,	fDateTimeOriginal  ()
+	,	fDateTimeOriginalStorageInfo ()
+	
 	,	fDateTimeDigitized ()
+	,	fDateTimeDigitizedStorageInfo ()
 		
-	,	fSubsecTime          ()
-	,	fSubsecTimeOriginal  ()
-	,	fSubsecTimeDigitized ()
-		
-	,	fTimeZoneOffset 		(0x7FFFFFFF)
-	,	fTimeZoneOffsetOriginal (0x7FFFFFFF)
-
 	,	fTIFF_EP_StandardID (0)
 	,	fExifVersion        (0)
 	,	fFlashPixVersion	(0)
@@ -178,6 +174,22 @@ dng_exif::dng_exif ()
 
 dng_exif::~dng_exif ()
 	{
+	
+	}
+		
+/*****************************************************************************/
+
+dng_exif * dng_exif::Clone () const
+	{
+	
+	dng_exif *result = new dng_exif (*this);
+	
+	if (!result)
+		{
+		ThrowMemoryFull ();
+		}
+	
+	return result;
 	
 	}
 		
@@ -592,16 +604,11 @@ void dng_exif::SetApertureValue (real64 av)
 			
 /*****************************************************************************/
 
-void dng_exif::UpdateDateTime (const dng_date_time &dt,
-							   int32 tzHour)
+void dng_exif::UpdateDateTime (const dng_date_time_info &dt)
 	{
 	
 	fDateTime = dt;
 	
-	fSubsecTime.Clear ();
-			
-	fTimeZoneOffset = tzHour;
-			
 	}
 		
 /*****************************************************************************/
@@ -613,7 +620,7 @@ bool dng_exif::ParseTag (dng_stream &stream,
 						 uint32 tagCode,
 						 uint32 tagType,
 						 uint32 tagCount,
-						 uint32 tagOffset)
+						 uint64 tagOffset)
 	{
 	
 	if (parentCode == 0)
@@ -721,7 +728,7 @@ bool dng_exif::Parse_ifd0 (dng_stream &stream,
 						   uint32 tagCode,
 						   uint32 tagType,
 						   uint32 tagCount,
-						   uint32 /* tagOffset */)
+						   uint64 /* tagOffset */)
 	{
 	
 	switch (tagCode)
@@ -850,19 +857,24 @@ bool dng_exif::Parse_ifd0 (dng_stream &stream,
 		case tcDateTime:
 			{
 			
-			uint32 tagPosition = stream.PositionInOriginalFile ();
+			uint64 tagPosition = stream.PositionInOriginalFile ();
+			
+			dng_date_time dt;
 				
 			if (!ParseDateTimeTag (stream,
 								   parentCode,
 								   tagCode,
 								   tagType,
 								   tagCount,
-								   fDateTime))
+								   dt))
 				{
 				return false;
 				}
 				
-				fDateTimeStorageInfo = dng_date_time_storage_info (tagPosition, dng_date_time_format_exif);
+			fDateTime.SetDateTime (dt);
+				
+			fDateTimeStorageInfo = dng_date_time_storage_info (tagPosition,
+															   dng_date_time_format_exif);
 				
 			#if qDNGValidate
 			
@@ -871,7 +883,7 @@ bool dng_exif::Parse_ifd0 (dng_stream &stream,
 				
 				printf ("DateTime: ");
 				
-				DumpDateTime (fDateTime);
+				DumpDateTime (fDateTime.DateTime ());
 				
 				printf ("\n");
 				
@@ -1089,7 +1101,7 @@ bool dng_exif::Parse_ifd0_main (dng_stream &stream,
 						  	    uint32 tagCode,
 						  	    uint32 tagType,
 						  	    uint32 tagCount,
-						  	    uint32 /* tagOffset */)
+						  	    uint64 /* tagOffset */)
 	{
 	
 	switch (tagCode)
@@ -1218,7 +1230,7 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 						  	    uint32 tagCode,
 						  	    uint32 tagType,
 						  	    uint32 tagCount,
-						  	    uint32 /* tagOffset */)
+						  	    uint64 /* tagOffset */)
 	{
 	
 	switch (tagCode)
@@ -1421,12 +1433,25 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 			
 			CheckTagCount (parentCode, tagCode, tagCount, 1, 2);
 			
-			fTimeZoneOffsetOriginal = stream.TagValue_int32 (tagType);
+			dng_time_zone zoneOriginal;
 			
+			zoneOriginal.SetOffsetHours (stream.TagValue_int32 (tagType));
+			
+			fDateTimeOriginal.SetZone (zoneOriginal);
+			
+			// Note that there is no "TimeZoneOffsetDigitized" field, so
+			// we assume the same tone zone as the original.
+			
+			fDateTimeDigitized.SetZone (zoneOriginal);
+
+			dng_time_zone zoneCurrent;
+
 			if (tagCount >= 2)
 				{
 				
-				fTimeZoneOffset = stream.TagValue_int32 (tagType);
+				zoneCurrent.SetOffsetHours (stream.TagValue_int32 (tagType));
+				
+				fDateTime.SetZone (zoneCurrent);
 				
 				}
 				
@@ -1436,13 +1461,13 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 				{
 				
 				printf ("TimeZoneOffset: DateTimeOriginal = %d", 
-						(int) fTimeZoneOffsetOriginal);
+						(int) zoneOriginal.ExactHourOffset ());
 						
 				if (tagCount >= 2)
 					{
 				
-					printf (", DateTimeOriginal = %d",
-							(int) fTimeZoneOffset);
+					printf (", DateTime = %d",
+							(int) zoneCurrent.ExactHourOffset ());
 							
 					}
 					
@@ -1533,16 +1558,25 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 		case tcDateTimeOriginal:
 			{
 			
+			uint64 tagPosition = stream.PositionInOriginalFile ();
+			
+			dng_date_time dt;
+			
 			if (!ParseDateTimeTag (stream,
 								   parentCode,
 								   tagCode,
 								   tagType,
 								   tagCount,
-								   fDateTimeOriginal))
+								   dt))
 				{
 				return false;
 				}
+				
+			fDateTimeOriginal.SetDateTime (dt);
 			
+			fDateTimeOriginalStorageInfo = dng_date_time_storage_info (tagPosition,
+																	   dng_date_time_format_exif);
+				
 			#if qDNGValidate
 			
 			if (gVerbose)
@@ -1550,7 +1584,7 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 				
 				printf ("DateTimeOriginal: ");
 				
-				DumpDateTime (fDateTimeOriginal);
+				DumpDateTime (fDateTimeOriginal.DateTime ());
 				
 				printf ("\n");
 				
@@ -1565,16 +1599,25 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 		case tcDateTimeDigitized:
 			{
 			
+			uint64 tagPosition = stream.PositionInOriginalFile ();
+			
+			dng_date_time dt;
+			
 			if (!ParseDateTimeTag (stream,
 								   parentCode,
 								   tagCode,
 								   tagType,
 								   tagCount,
-								   fDateTimeDigitized))
+								   dt))
 				{
 				return false;
 				}
+				
+			fDateTimeDigitized.SetDateTime (dt);
 			
+			fDateTimeDigitizedStorageInfo = dng_date_time_storage_info (tagPosition,
+																	    dng_date_time_format_exif);
+
 			#if qDNGValidate
 			
 			if (gVerbose)
@@ -1582,7 +1625,7 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 				
 				printf ("DateTimeDigitized: ");
 				
-				DumpDateTime (fDateTimeDigitized);
+				DumpDateTime (fDateTimeDigitized.DateTime ());
 				
 				printf ("\n");
 				
@@ -1922,7 +1965,7 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 				
 				printf ("Flash: %u\n", (unsigned) fFlash);
 				
-				if ((fFlash >> 4) & 1)
+				if ((fFlash >> 5) & 1)
 					{
 					printf ("    No flash function\n");
 					}
@@ -1972,7 +2015,7 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 							
 						}
 						
-					if ((fFlash >> 5) & 1)
+					if ((fFlash >> 6) & 1)
 						{
 						printf ("    Red-eye reduction supported\n");
 						}
@@ -2103,11 +2146,15 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 			
 			CheckTagType (parentCode, tagCode, tagType, ttAscii);
 			
+			dng_string subsecs;
+			
 			ParseStringTag (stream,
 							parentCode,
 							tagCode,
 							tagCount,
-							fSubsecTime);
+							subsecs);
+							
+			fDateTime.SetSubseconds (subsecs);
 			
 			#if qDNGValidate
 
@@ -2116,7 +2163,7 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 				
 				printf ("SubsecTime: ");
 				
-				DumpString (fSubsecTime);
+				DumpString (subsecs);
 				
 				printf ("\n");
 				
@@ -2133,12 +2180,16 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 			
 			CheckTagType (parentCode, tagCode, tagType, ttAscii);
 			
+			dng_string subsecs;
+			
 			ParseStringTag (stream,
 							parentCode,
 							tagCode,
 							tagCount,
-							fSubsecTimeOriginal);
-			
+							subsecs);
+							
+			fDateTimeOriginal.SetSubseconds (subsecs);
+
 			#if qDNGValidate
 
 			if (gVerbose)
@@ -2146,7 +2197,7 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 				
 				printf ("SubsecTimeOriginal: ");
 				
-				DumpString (fSubsecTimeOriginal);
+				DumpString (subsecs);
 				
 				printf ("\n");
 				
@@ -2163,11 +2214,15 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 			
 			CheckTagType (parentCode, tagCode, tagType, ttAscii);
 			
+			dng_string subsecs;
+			
 			ParseStringTag (stream,
 							parentCode,
 							tagCode,
 							tagCount,
-							fSubsecTimeDigitized);
+							subsecs);
+							
+			fDateTimeDigitized.SetSubseconds (subsecs);
 			
 			#if qDNGValidate
 
@@ -2176,7 +2231,7 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 				
 				printf ("SubsecTimeDigitized: ");
 				
-				DumpString (fSubsecTimeDigitized);
+				DumpString (subsecs);
 				
 				printf ("\n");
 				
@@ -2935,16 +2990,13 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 
 			if (gVerbose)
 				{
+								
+				printf ("ImageUniqueID: ");
 				
-				printf ("ImageUniqueID: <");
-				
-				for (uint32 j = 0; j < 16; j++)
-					{
-					printf ("%02x", fImageUniqueID.data [j]);
-					}
-					
-				printf (">\n");
-				
+				DumpFingerprint (fImageUniqueID);
+									
+				printf ("\n");
+
 				}
 				
 			#endif
@@ -2976,7 +3028,7 @@ bool dng_exif::Parse_gps (dng_stream &stream,
 						  uint32 tagCode,
 						  uint32 tagType,
 						  uint32 tagCount,
-						  uint32 /* tagOffset */)
+						  uint64 /* tagOffset */)
 	{
 	
 	switch (tagCode)
@@ -3433,7 +3485,7 @@ bool dng_exif::Parse_interoperability (dng_stream &stream,
 									   uint32 tagCode,
 									   uint32 tagType,
 									   uint32 tagCount,
-									   uint32 /* tagOffset */)
+									   uint64 /* tagOffset */)
 	{
 	
 	switch (tagCode)
@@ -3714,9 +3766,7 @@ void dng_exif::PostParse (dng_host & /* host */,
 	if (fDateTime.NotValid () && fDateTimeOriginal.IsValid ())
 		{
 		
-		fDateTime       = fDateTimeOriginal;
-		fSubsecTime     = fSubsecTimeOriginal;
-		fTimeZoneOffset = fTimeZoneOffsetOriginal;
+		fDateTime = fDateTimeOriginal;
 		
 		}
 	

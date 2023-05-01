@@ -1,15 +1,15 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2008 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_iptc.h#2 $ */ 
-/* $DateTime: 2006/04/12 14:23:04 $ */
-/* $Change: 216157 $ */
-/* $Author: stern $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_iptc.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
+/* $Author: tknoll $ */
 
 /** \file
  * Support for IPTC metadata within DNG files.
@@ -50,11 +50,7 @@ class dng_iptc
 		
 		dng_string fInstructions;
 		
-		dng_date_time fDateCreated;
-		
-		bool fHasTimeCreated;
-		
-		int32 fTimeZoneMinutes;
+		dng_date_time_info fDateTimeCreated;
 		
 		dng_string fAuthor;
 		dng_string fAuthorsPosition;
@@ -140,7 +136,7 @@ class dng_iptc
 
 		void Parse (const void *blockData,
 					uint32 blockSize,
-					uint32 offsetInOriginalFile);
+					uint64 offsetInOriginalFile);
 
 		/// Serialize IPTC data to a memory block.
 		/// \param allocator Memory allocator used to acquire memory block.
@@ -157,7 +153,14 @@ class dng_iptc
 		void SpoolString (dng_stream &stream,
 						  const dng_string &s,
 						  uint8 dataSet,
-						  uint32 maxChars);
+						  uint32 maxChars,
+						  CharSet charSet);
+						  
+		static bool SafeForSystemEncoding (const dng_string &s);
+		
+		static bool SafeForSystemEncoding (const dng_string_list &list);
+		
+		bool SafeForSystemEncoding () const;
 
 	};
 

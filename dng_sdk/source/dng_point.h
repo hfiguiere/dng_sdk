@@ -6,9 +6,9 @@
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_point.h#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_point.h#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -19,6 +19,7 @@
 /*****************************************************************************/
 
 #include "dng_types.h"
+#include "dng_utils.h"
 
 /*****************************************************************************/
 
@@ -59,6 +60,55 @@ class dng_point
 
 /*****************************************************************************/
 
+class dng_point_real64
+	{
+	
+	public:
+	
+		real64 v;
+		real64 h;
+	
+	public:
+	
+		dng_point_real64 ()
+			:	v (0.0)
+			,	h (0.0)
+			{
+			}
+			
+		dng_point_real64 (real64 vv, real64 hh)
+			:	v (vv)
+			,	h (hh)
+			{
+			}
+			
+		dng_point_real64 (const dng_point &pt)
+			:	v ((real64) pt.v)
+			,	h ((real64) pt.h)
+			{
+			}
+			
+		bool operator== (const dng_point_real64 &pt) const
+			{
+			return (v == pt.v) &&
+				   (h == pt.h);
+			}
+			
+		bool operator!= (const dng_point_real64 &pt) const
+			{
+			return !(*this == pt);
+			}
+			
+		dng_point Round () const
+			{
+			return dng_point (Round_int32 (v),
+							  Round_int32 (h));
+			}
+			
+	};
+
+/*****************************************************************************/
+
 inline dng_point operator+ (const dng_point &a,
 				  			const dng_point &b)
 				  
@@ -67,6 +117,19 @@ inline dng_point operator+ (const dng_point &a,
 	
 	return dng_point (a.v + b.v,
 					  a.h + b.h);
+					  
+	}
+
+/*****************************************************************************/
+
+inline dng_point_real64 operator+ (const dng_point_real64 &a,
+				  				   const dng_point_real64 &b)
+				  
+				  
+	{
+	
+	return dng_point_real64 (a.v + b.v,
+					  		 a.h + b.h);
 					  
 	}
 
@@ -85,10 +148,32 @@ inline dng_point operator- (const dng_point &a,
 
 /*****************************************************************************/
 
+inline dng_point_real64 operator- (const dng_point_real64 &a,
+				  				   const dng_point_real64 &b)
+				  
+				  
+	{
+	
+	return dng_point_real64 (a.v - b.v,
+					         a.h - b.h);
+					  
+	}
+
+/*****************************************************************************/
+
 inline dng_point Transpose (const dng_point &a)
 	{
 	
 	return dng_point (a.h, a.v);
+	
+	}
+
+/*****************************************************************************/
+
+inline dng_point_real64 Transpose (const dng_point_real64 &a)
+	{
+	
+	return dng_point_real64 (a.h, a.v);
 	
 	}
 

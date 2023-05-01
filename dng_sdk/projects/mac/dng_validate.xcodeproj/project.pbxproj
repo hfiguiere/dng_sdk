@@ -7,6 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		382CE4020D37B415002BCBAD /* dng_pthread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 382CE4000D37B415002BCBAD /* dng_pthread.cpp */; };
+		382CE4030D37B415002BCBAD /* dng_pthread.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 382CE4010D37B415002BCBAD /* dng_pthread.h */; };
+		382CE4040D37B415002BCBAD /* dng_pthread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 382CE4000D37B415002BCBAD /* dng_pthread.cpp */; };
+		382CE4050D37B415002BCBAD /* dng_pthread.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 382CE4010D37B415002BCBAD /* dng_pthread.h */; };
+		3852C9FD0BD6F4E20048EA83 /* dng_hue_sat_map.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3852C9F90BD6F4E20048EA83 /* dng_hue_sat_map.cpp */; };
+		3852C9FE0BD6F4E20048EA83 /* dng_hue_sat_map.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3852C9FA0BD6F4E20048EA83 /* dng_hue_sat_map.h */; };
+		3852C9FF0BD6F4E20048EA83 /* dng_tone_curve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3852C9FB0BD6F4E20048EA83 /* dng_tone_curve.cpp */; };
+		3852CA000BD6F4E20048EA83 /* dng_tone_curve.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3852C9FC0BD6F4E20048EA83 /* dng_tone_curve.h */; };
+		3852CA010BD6F4E20048EA83 /* dng_hue_sat_map.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3852C9F90BD6F4E20048EA83 /* dng_hue_sat_map.cpp */; };
+		3852CA020BD6F4E20048EA83 /* dng_hue_sat_map.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3852C9FA0BD6F4E20048EA83 /* dng_hue_sat_map.h */; };
+		3852CA030BD6F4E20048EA83 /* dng_tone_curve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3852C9FB0BD6F4E20048EA83 /* dng_tone_curve.cpp */; };
+		3852CA040BD6F4E20048EA83 /* dng_tone_curve.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3852C9FC0BD6F4E20048EA83 /* dng_tone_curve.h */; };
 		C7085FE9097EF22B00F3BF1D /* dng_filter_task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7085FE7097EF22B00F3BF1D /* dng_filter_task.cpp */; };
 		C7085FEA097EF22B00F3BF1D /* dng_filter_task.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7085FE8097EF22B00F3BF1D /* dng_filter_task.h */; };
 		C7175EAB09CDD1710067F2AA /* dng_1d_function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7175EA909CDD1710067F2AA /* dng_1d_function.cpp */; };
@@ -17,7 +29,10 @@
 		C719F60108E78313000A0AC5 /* dng_iptc.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C719F5FD08E78313000A0AC5 /* dng_iptc.h */; };
 		C719F60208E78313000A0AC5 /* dng_string_list.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C719F5FE08E78313000A0AC5 /* dng_string_list.cpp */; };
 		C719F60308E78313000A0AC5 /* dng_string_list.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C719F5FF08E78313000A0AC5 /* dng_string_list.h */; };
-		C71AB7E7098D1EE20036178F /* libStaticXMP-debug.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C71AB7E6098D1EE20036178F /* libStaticXMP-debug.a */; };
+		C722BC700D1834EF00800B9C /* dng_preview.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C722BC6E0D1834EF00800B9C /* dng_preview.cpp */; };
+		C722BC710D1834EF00800B9C /* dng_preview.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C722BC6F0D1834EF00800B9C /* dng_preview.h */; };
+		C722BC720D1834EF00800B9C /* dng_preview.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C722BC6E0D1834EF00800B9C /* dng_preview.cpp */; };
+		C722BC730D1834EF00800B9C /* dng_preview.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C722BC6F0D1834EF00800B9C /* dng_preview.h */; };
 		C72A791F09CE109200D26E5E /* dng_image_writer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C72A791D09CE109200D26E5E /* dng_image_writer.cpp */; };
 		C72A792009CE109200D26E5E /* dng_image_writer.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C72A791E09CE109200D26E5E /* dng_image_writer.h */; };
 		C72A792109CE109200D26E5E /* dng_image_writer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C72A791D09CE109200D26E5E /* dng_image_writer.cpp */; };
@@ -36,7 +51,6 @@
 		C778CDE309A14FF20011A302 /* dng_resample.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C778CDDF09A14FF20011A302 /* dng_resample.h */; };
 		C78E9D3209993D73003C04F9 /* dng_render.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C78E9D3009993D73003C04F9 /* dng_render.cpp */; };
 		C78E9D3309993D73003C04F9 /* dng_render.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C78E9D3109993D73003C04F9 /* dng_render.h */; };
-		C79659F9098D08940073C295 /* libStaticXMP-release.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C79659F8098D08940073C295 /* libStaticXMP-release.a */; };
 		C79C164009995BA200143696 /* dng_render.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C78E9D3009993D73003C04F9 /* dng_render.cpp */; };
 		C79C164109995BAB00143696 /* dng_render.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C78E9D3109993D73003C04F9 /* dng_render.h */; };
 		C7A38497098D10B7004375CB /* dng_abort_sniffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7FFA56A08DCA62C00743F0C /* dng_abort_sniffer.cpp */; };
@@ -148,6 +162,8 @@
 		C7CD211F08F9681900D265DD /* dng_xmp_sdk.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7CD211B08F9681900D265DD /* dng_xmp_sdk.h */; };
 		C7CD212008F9681900D265DD /* dng_xmp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7CD211C08F9681900D265DD /* dng_xmp.cpp */; };
 		C7CD212108F9681900D265DD /* dng_xmp.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7CD211D08F9681900D265DD /* dng_xmp.h */; };
+		C7CE824A0D849AC100249435 /* libXMPCoreStaticRelease.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C7CE82450D849AB800249435 /* libXMPCoreStaticRelease.a */; };
+		C7CE824C0D849ACF00249435 /* libXMPCoreStaticDebug.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C7CE82430D849AB800249435 /* libXMPCoreStaticDebug.a */; };
 		C7E084EA0917BC1300739AD2 /* dng_mutex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E084E80917BC1300739AD2 /* dng_mutex.cpp */; };
 		C7E084EB0917BC1300739AD2 /* dng_mutex.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7E084E90917BC1300739AD2 /* dng_mutex.h */; };
 		C7E20E5E092CF37E00C3B275 /* dng_orientation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C7E20E5C092CF37E00C3B275 /* dng_orientation.cpp */; };
@@ -243,29 +259,50 @@
 		C7FFA60B08DCA62C00743F0C /* dng_xy_coord.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = C7FFA5BA08DCA62C00743F0C /* dng_xy_coord.h */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXBuildStyle section */
-		014CEA460018CE2711CA2923 /* Debug */ = {
-			isa = PBXBuildStyle;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_FIX_AND_CONTINUE = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				ZERO_LINK = YES;
-			};
-			name = Debug;
+/* Begin PBXContainerItemProxy section */
+		C7CE82420D849AB800249435 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = DC49326C089A9441003ADAAF /* libXMPCoreStaticDebug.a */;
+			remoteInfo = "XMPCore Debug";
 		};
-		014CEA470018CE2711CA2923 /* Release */ = {
-			isa = PBXBuildStyle;
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				ZERO_LINK = NO;
-			};
-			name = Release;
+		C7CE82440D849AB800249435 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = DC4932B0089A9726003ADAAF /* libXMPCoreStaticRelease.a */;
+			remoteInfo = "XMPCore Release";
 		};
-/* End PBXBuildStyle section */
+		C7CE82460D849AB800249435 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 01FC6CEC0B7B6D65008559A1 /* libXMPFilesStaticDebug.a */;
+			remoteInfo = "XMPFiles Debug";
+		};
+		C7CE82480D849AB800249435 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 01FC6D0A0B7B7514008559A1 /* libXMPFilesStaticRelease.a */;
+			remoteInfo = "XMPFiles Release";
+		};
+		C7CE82510D849AF700249435 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = DC49326B089A9441003ADAAF /* XMPCore Debug */;
+			remoteInfo = "XMPCore Debug";
+		};
+		C7CE82580D849B0900249435 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = DC493293089A9726003ADAAF /* XMPCore Release */;
+			remoteInfo = "XMPCore Release";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		8DD76F690486A84900D96B5E /* CopyFiles */ = {
@@ -336,6 +373,10 @@
 				C778CDE109A14FF20011A302 /* dng_resample.h in CopyFiles */,
 				C7175EAC09CDD1710067F2AA /* dng_1d_function.h in CopyFiles */,
 				C72A792009CE109200D26E5E /* dng_image_writer.h in CopyFiles */,
+				3852C9FE0BD6F4E20048EA83 /* dng_hue_sat_map.h in CopyFiles */,
+				3852CA000BD6F4E20048EA83 /* dng_tone_curve.h in CopyFiles */,
+				C722BC710D1834EF00800B9C /* dng_preview.h in CopyFiles */,
+				382CE4030D37B415002BCBAD /* dng_pthread.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
@@ -407,12 +448,22 @@
 				C778CDE309A14FF20011A302 /* dng_resample.h in CopyFiles */,
 				C7175EAE09CDD1710067F2AA /* dng_1d_function.h in CopyFiles */,
 				C72A792209CE109200D26E5E /* dng_image_writer.h in CopyFiles */,
+				3852CA020BD6F4E20048EA83 /* dng_hue_sat_map.h in CopyFiles */,
+				3852CA040BD6F4E20048EA83 /* dng_tone_curve.h in CopyFiles */,
+				C722BC730D1834EF00800B9C /* dng_preview.h in CopyFiles */,
+				382CE4050D37B415002BCBAD /* dng_pthread.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		382CE4000D37B415002BCBAD /* dng_pthread.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_pthread.cpp; path = ../../source/dng_pthread.cpp; sourceTree = SOURCE_ROOT; };
+		382CE4010D37B415002BCBAD /* dng_pthread.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_pthread.h; path = ../../source/dng_pthread.h; sourceTree = SOURCE_ROOT; };
+		3852C9F90BD6F4E20048EA83 /* dng_hue_sat_map.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_hue_sat_map.cpp; path = ../../source/dng_hue_sat_map.cpp; sourceTree = SOURCE_ROOT; };
+		3852C9FA0BD6F4E20048EA83 /* dng_hue_sat_map.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_hue_sat_map.h; path = ../../source/dng_hue_sat_map.h; sourceTree = SOURCE_ROOT; };
+		3852C9FB0BD6F4E20048EA83 /* dng_tone_curve.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_tone_curve.cpp; path = ../../source/dng_tone_curve.cpp; sourceTree = SOURCE_ROOT; };
+		3852C9FC0BD6F4E20048EA83 /* dng_tone_curve.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_tone_curve.h; path = ../../source/dng_tone_curve.h; sourceTree = SOURCE_ROOT; };
 		8DD76F6C0486A84900D96B5E /* dng_validate */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = dng_validate; sourceTree = BUILT_PRODUCTS_DIR; };
 		C7085FE7097EF22B00F3BF1D /* dng_filter_task.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_filter_task.cpp; path = ../../source/dng_filter_task.cpp; sourceTree = SOURCE_ROOT; };
 		C7085FE8097EF22B00F3BF1D /* dng_filter_task.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_filter_task.h; path = ../../source/dng_filter_task.h; sourceTree = SOURCE_ROOT; };
@@ -422,7 +473,8 @@
 		C719F5FD08E78313000A0AC5 /* dng_iptc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_iptc.h; path = ../../source/dng_iptc.h; sourceTree = SOURCE_ROOT; };
 		C719F5FE08E78313000A0AC5 /* dng_string_list.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_string_list.cpp; path = ../../source/dng_string_list.cpp; sourceTree = SOURCE_ROOT; };
 		C719F5FF08E78313000A0AC5 /* dng_string_list.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_string_list.h; path = ../../source/dng_string_list.h; sourceTree = SOURCE_ROOT; };
-		C71AB7E6098D1EE20036178F /* libStaticXMP-debug.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libStaticXMP-debug.a"; path = "../../../xmp_sdk/public/libraries/macintosh/debug/libStaticXMP-debug.a"; sourceTree = SOURCE_ROOT; };
+		C722BC6E0D1834EF00800B9C /* dng_preview.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_preview.cpp; path = ../../source/dng_preview.cpp; sourceTree = SOURCE_ROOT; };
+		C722BC6F0D1834EF00800B9C /* dng_preview.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_preview.h; path = ../../source/dng_preview.h; sourceTree = SOURCE_ROOT; };
 		C72A791D09CE109200D26E5E /* dng_image_writer.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_image_writer.cpp; path = ../../source/dng_image_writer.cpp; sourceTree = SOURCE_ROOT; };
 		C72A791E09CE109200D26E5E /* dng_image_writer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_image_writer.h; path = ../../source/dng_image_writer.h; sourceTree = SOURCE_ROOT; };
 		C76C420A099B0FAE00E3871C /* dng_1d_table.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_1d_table.cpp; path = ../../source/dng_1d_table.cpp; sourceTree = SOURCE_ROOT; };
@@ -433,13 +485,13 @@
 		C778CDDF09A14FF20011A302 /* dng_resample.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_resample.h; path = ../../source/dng_resample.h; sourceTree = SOURCE_ROOT; };
 		C78E9D3009993D73003C04F9 /* dng_render.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_render.cpp; path = ../../source/dng_render.cpp; sourceTree = SOURCE_ROOT; };
 		C78E9D3109993D73003C04F9 /* dng_render.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_render.h; path = ../../source/dng_render.h; sourceTree = SOURCE_ROOT; };
-		C79659F8098D08940073C295 /* libStaticXMP-release.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libStaticXMP-release.a"; path = "../../../xmp_sdk/public/libraries/macintosh/release/libStaticXMP-release.a"; sourceTree = SOURCE_ROOT; };
 		C7A38507098D10B7004375CB /* dng_validate */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = dng_validate; sourceTree = BUILT_PRODUCTS_DIR; };
 		C7A8C4AE08DCB2EF0075C20C /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		C7CD211A08F9681800D265DD /* dng_xmp_sdk.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_xmp_sdk.cpp; path = ../../source/dng_xmp_sdk.cpp; sourceTree = SOURCE_ROOT; };
 		C7CD211B08F9681900D265DD /* dng_xmp_sdk.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_xmp_sdk.h; path = ../../source/dng_xmp_sdk.h; sourceTree = SOURCE_ROOT; };
 		C7CD211C08F9681900D265DD /* dng_xmp.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_xmp.cpp; path = ../../source/dng_xmp.cpp; sourceTree = SOURCE_ROOT; };
 		C7CD211D08F9681900D265DD /* dng_xmp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_xmp.h; path = ../../source/dng_xmp.h; sourceTree = SOURCE_ROOT; };
+		C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = XMPToolkit.xcodeproj; path = "../../../XMP-SDK/build/xcode/XMPToolkit.xcodeproj"; sourceTree = SOURCE_ROOT; };
 		C7E084E80917BC1300739AD2 /* dng_mutex.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_mutex.cpp; path = ../../source/dng_mutex.cpp; sourceTree = SOURCE_ROOT; };
 		C7E084E90917BC1300739AD2 /* dng_mutex.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_mutex.h; path = ../../source/dng_mutex.h; sourceTree = SOURCE_ROOT; };
 		C7E20E5C092CF37E00C3B275 /* dng_orientation.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_orientation.cpp; path = ../../source/dng_orientation.cpp; sourceTree = SOURCE_ROOT; };
@@ -541,7 +593,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C7A8C4AF08DCB2EF0075C20C /* Carbon.framework in Frameworks */,
-				C79659F9098D08940073C295 /* libStaticXMP-release.a in Frameworks */,
+				C7CE824A0D849AC100249435 /* libXMPCoreStaticRelease.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -550,7 +602,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C7A384C8098D10B7004375CB /* Carbon.framework in Frameworks */,
-				C71AB7E7098D1EE20036178F /* libStaticXMP-debug.a in Frameworks */,
+				C7CE824C0D849ACF00249435 /* libXMPCoreStaticDebug.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -561,7 +613,7 @@
 			isa = PBXGroup;
 			children = (
 				08FB7795FE84155DC02AAC07 /* Source */,
-				C700868708FAD04A004E8F57 /* Libraries */,
+				38DA1D2A0C6FC37500CB6874 /* Subprojects */,
 				C7F6234708DCAA7F004E2E0C /* Frameworks */,
 				1AB674ADFE9D54B511CA2CBB /* Products */,
 			);
@@ -571,6 +623,14 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				382CE4000D37B415002BCBAD /* dng_pthread.cpp */,
+				382CE4010D37B415002BCBAD /* dng_pthread.h */,
+				C722BC6E0D1834EF00800B9C /* dng_preview.cpp */,
+				C722BC6F0D1834EF00800B9C /* dng_preview.h */,
+				3852C9F90BD6F4E20048EA83 /* dng_hue_sat_map.cpp */,
+				3852C9FA0BD6F4E20048EA83 /* dng_hue_sat_map.h */,
+				3852C9FB0BD6F4E20048EA83 /* dng_tone_curve.cpp */,
+				3852C9FC0BD6F4E20048EA83 /* dng_tone_curve.h */,
 				C7175EA909CDD1710067F2AA /* dng_1d_function.cpp */,
 				C7175EAA09CDD1710067F2AA /* dng_1d_function.h */,
 				C76C420A099B0FAE00E3871C /* dng_1d_table.cpp */,
@@ -699,13 +759,23 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		C700868708FAD04A004E8F57 /* Libraries */ = {
+		38DA1D2A0C6FC37500CB6874 /* Subprojects */ = {
 			isa = PBXGroup;
 			children = (
-				C79659F8098D08940073C295 /* libStaticXMP-release.a */,
-				C71AB7E6098D1EE20036178F /* libStaticXMP-debug.a */,
+				C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */,
 			);
-			name = Libraries;
+			name = Subprojects;
+			sourceTree = "<group>";
+		};
+		C7CE82380D849AB800249435 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C7CE82430D849AB800249435 /* libXMPCoreStaticDebug.a */,
+				C7CE82450D849AB800249435 /* libXMPCoreStaticRelease.a */,
+				C7CE82470D849AB800249435 /* libXMPFilesStaticDebug.a */,
+				C7CE82490D849AB800249435 /* libXMPFilesStaticRelease.a */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 		C7F6234708DCAA7F004E2E0C /* Frameworks */ = {
@@ -729,16 +799,8 @@
 			);
 			buildRules = (
 			);
-			buildSettings = {
-				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INSTALL_PATH = "$(HOME)/bin";
-				PREBINDING = NO;
-				PRODUCT_NAME = dng_validate;
-			};
 			dependencies = (
+				C7CE82590D849B0900249435 /* PBXTargetDependency */,
 			);
 			name = "dng_validate release";
 			productInstallPath = "$(HOME)/bin";
@@ -756,16 +818,8 @@
 			);
 			buildRules = (
 			);
-			buildSettings = {
-				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_MODEL_TUNING = G5;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INSTALL_PATH = "$(HOME)/bin";
-				PREBINDING = NO;
-				PRODUCT_NAME = dng_validate;
-			};
 			dependencies = (
+				C7CE82520D849AF700249435 /* PBXTargetDependency */,
 			);
 			name = "dng_validate debug";
 			productInstallPath = "$(HOME)/bin";
@@ -779,21 +833,54 @@
 		08FB7793FE84155DC02AAC07 /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = C7BE865808DC8CBC0095F9F4 /* Build configuration list for PBXProject "dng_validate" */;
-			buildSettings = {
-			};
-			buildStyles = (
-				014CEA460018CE2711CA2923 /* Debug */,
-				014CEA470018CE2711CA2923 /* Release */,
-			);
+			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 1;
 			mainGroup = 08FB7794FE84155DC02AAC07 /* dng_validate */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = C7CE82380D849AB800249435 /* Products */;
+					ProjectRef = C7CE82370D849AB800249435 /* XMPToolkit.xcodeproj */;
+				},
+			);
+			projectRoot = "";
 			targets = (
 				8DD76F620486A84900D96B5E /* dng_validate release */,
 				C7A38495098D10B7004375CB /* dng_validate debug */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		C7CE82430D849AB800249435 /* libXMPCoreStaticDebug.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libXMPCoreStaticDebug.a;
+			remoteRef = C7CE82420D849AB800249435 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		C7CE82450D849AB800249435 /* libXMPCoreStaticRelease.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libXMPCoreStaticRelease.a;
+			remoteRef = C7CE82440D849AB800249435 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		C7CE82470D849AB800249435 /* libXMPFilesStaticDebug.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libXMPFilesStaticDebug.a;
+			remoteRef = C7CE82460D849AB800249435 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		C7CE82490D849AB800249435 /* libXMPFilesStaticRelease.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libXMPFilesStaticRelease.a;
+			remoteRef = C7CE82480D849AB800249435 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXSourcesBuildPhase section */
 		8DD76F640486A84900D96B5E /* Sources */ = {
@@ -853,6 +940,10 @@
 				C778CDE009A14FF20011A302 /* dng_resample.cpp in Sources */,
 				C7175EAB09CDD1710067F2AA /* dng_1d_function.cpp in Sources */,
 				C72A791F09CE109200D26E5E /* dng_image_writer.cpp in Sources */,
+				3852C9FD0BD6F4E20048EA83 /* dng_hue_sat_map.cpp in Sources */,
+				3852C9FF0BD6F4E20048EA83 /* dng_tone_curve.cpp in Sources */,
+				C722BC700D1834EF00800B9C /* dng_preview.cpp in Sources */,
+				382CE4020D37B415002BCBAD /* dng_pthread.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -913,10 +1004,27 @@
 				C778CDE209A14FF20011A302 /* dng_resample.cpp in Sources */,
 				C7175EAD09CDD1710067F2AA /* dng_1d_function.cpp in Sources */,
 				C72A792109CE109200D26E5E /* dng_image_writer.cpp in Sources */,
+				3852CA010BD6F4E20048EA83 /* dng_hue_sat_map.cpp in Sources */,
+				3852CA030BD6F4E20048EA83 /* dng_tone_curve.cpp in Sources */,
+				C722BC720D1834EF00800B9C /* dng_preview.cpp in Sources */,
+				382CE4040D37B415002BCBAD /* dng_pthread.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C7CE82520D849AF700249435 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "XMPCore Debug";
+			targetProxy = C7CE82510D849AF700249435 /* PBXContainerItemProxy */;
+		};
+		C7CE82590D849B0900249435 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "XMPCore Release";
+			targetProxy = C7CE82580D849B0900249435 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		C7A38510098D14F7004375CB /* Default */ = {
@@ -983,10 +1091,10 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = ../../../xmp_sdk/public/include;
+				HEADER_SEARCH_PATHS = "../../../XMP-SDK/public/include";
 				LIBRARY_SEARCH_PATHS = (
-					../../../xmp_sdk/public/libraries/macintosh/release,
-					../../../xmp_sdk/public/libraries/macintosh/debug,
+					"../../../XMP-SDK/public/libraries/macintosh/release",
+					"../../../XMP-SDK/public/libraries/macintosh/debug",
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = dng_validate;

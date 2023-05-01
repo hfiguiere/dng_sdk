@@ -1,14 +1,14 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2007 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/dng_sdk_1_1/dng_sdk/source/dng_pixel_buffer.cpp#1 $ */ 
-/* $DateTime: 2006/04/05 18:24:55 $ */
-/* $Change: 215171 $ */
+/* $Id: //mondo/dng_sdk_1_2/dng_sdk/source/dng_pixel_buffer.cpp#1 $ */ 
+/* $DateTime: 2008/03/09 14:29:54 $ */
+/* $Change: 431850 $ */
 /* $Author: tknoll $ */
 
 /*****************************************************************************/
@@ -59,10 +59,10 @@ void OptimizeOrder (const void *&sPtr,
 			{
 			
 			sPtr = (const void *)
-				   (((const uint8 *) sPtr) + (count0 - 1) * sStep0 * sPixelSize);
+				   (((const uint8 *) sPtr) + (int32)(count0 - 1) * sStep0 * (int32)sPixelSize);
 				   
 			dPtr = (void *)
-				   (((uint8 *) dPtr) + (count0 - 1) * dStep0 * dPixelSize);
+				   (((uint8 *) dPtr) + (int32)(count0 - 1) * dStep0 * (int32)dPixelSize);
 				   
 			sStep0 = -sStep0;
 			dStep0 = -dStep0;
@@ -73,10 +73,10 @@ void OptimizeOrder (const void *&sPtr,
 			{
 			
 			sPtr = (const void *)
-				   (((const uint8 *) sPtr) + (count1 - 1) * sStep1 * sPixelSize);
+				   (((const uint8 *) sPtr) + (int32)(count1 - 1) * sStep1 * (int32)sPixelSize);
 				   
 			dPtr = (void *)
-				   (((uint8 *) dPtr) + (count1 - 1) * dStep1 * dPixelSize);
+				   (((uint8 *) dPtr) + (int32)(count1 - 1) * dStep1 * (int32)dPixelSize);
 				   
 			sStep1 = -sStep1;
 			dStep1 = -dStep1;
@@ -87,10 +87,10 @@ void OptimizeOrder (const void *&sPtr,
 			{
 			
 			sPtr = (const void *)
-				   (((const uint8 *) sPtr) + (count2 - 1) * sStep2 * sPixelSize);
+				   (((const uint8 *) sPtr) + (int32)(count2 - 1) * sStep2 * (int32)sPixelSize);
 				   
 			dPtr = (void *)
-				   (((uint8 *) dPtr) + (count2 - 1) * dStep2 * dPixelSize);
+				   (((uint8 *) dPtr) + (int32)(count2 - 1) * dStep2 * (int32)dPixelSize);
 				   
 			sStep2 = -sStep2;
 			dStep2 = -dStep2;
@@ -110,10 +110,10 @@ void OptimizeOrder (const void *&sPtr,
 			{
 			
 			sPtr = (const void *)
-				   (((const uint8 *) sPtr) + (count0 - 1) * sStep0 * sPixelSize);
+				   (((const uint8 *) sPtr) + (int32)(count0 - 1) * sStep0 * (int32)sPixelSize);
 				   
 			dPtr = (void *)
-				   (((uint8 *) dPtr) + (count0 - 1) * dStep0 * dPixelSize);
+				   (((uint8 *) dPtr) + (int32)(count0 - 1) * dStep0 * (int32)dPixelSize);
 				   
 			sStep0 = -sStep0;
 			dStep0 = -dStep0;
@@ -124,10 +124,10 @@ void OptimizeOrder (const void *&sPtr,
 			{
 			
 			sPtr = (const void *)
-				   (((const uint8 *) sPtr) + (count1 - 1) * sStep1 * sPixelSize);
+				   (((const uint8 *) sPtr) + (int32)(count1 - 1) * sStep1 * (int32)sPixelSize);
 				   
 			dPtr = (void *)
-				   (((uint8 *) dPtr) + (count1 - 1) * dStep1 * dPixelSize);
+				   (((uint8 *) dPtr) + (int32)(count1 - 1) * dStep1 * (int32)dPixelSize);
 				   
 			sStep1 = -sStep1;
 			dStep1 = -dStep1;
@@ -138,10 +138,10 @@ void OptimizeOrder (const void *&sPtr,
 			{
 			
 			sPtr = (const void *)
-				   (((const uint8 *) sPtr) + (count2 - 1) * sStep2 * sPixelSize);
+				   (((const uint8 *) sPtr) + (int32)(count2 - 1) * sStep2 * (int32)sPixelSize);
 				   
 			dPtr = (void *)
-				   (((uint8 *) dPtr) + (count2 - 1) * dStep2 * dPixelSize);
+				   (((uint8 *) dPtr) + (int32)(count2 - 1) * dStep2 * (int32)dPixelSize);
 				   
 			sStep2 = -sStep2;
 			dStep2 = -dStep2;
@@ -397,6 +397,25 @@ dng_pixel_buffer::~dng_pixel_buffer ()
 							
 /*****************************************************************************/
 
+#if qDebugPixelType
+
+
+void dng_pixel_buffer::CheckPixelType (uint32 pixelType) const
+	{
+	
+	if (fPixelType != pixelType)
+		{
+		
+		DNG_REPORT ("Pixel type access mismatch");
+		
+		}
+	
+	}
+
+#endif
+
+/*****************************************************************************/
+
 uint32 dng_pixel_buffer::PixelRange () const
 	{
 	
@@ -437,9 +456,10 @@ uint32 dng_pixel_buffer::PixelRange () const
 							
 /*****************************************************************************/
 
-void dng_pixel_buffer::SetZero (const dng_rect &area,
-					   			uint32 plane,
-					   			uint32 planes)
+void dng_pixel_buffer::SetConstant (const dng_rect &area,
+									uint32 plane,
+									uint32 planes,
+									uint32 value)
 	{
 	
 	uint32 rows = area.H ();
@@ -462,13 +482,13 @@ void dng_pixel_buffer::SetZero (const dng_rect &area,
 				   dColStep,
 				   dPlaneStep);
 				   
-	switch (fPixelType)
+	switch (fPixelSize)
 		{
 		
-		case ttByte:
+		case 1:
 			{
 			
-			if (rows == 1 && cols == 1 && dPlaneStep == 1)
+			if (rows == 1 && cols == 1 && dPlaneStep == 1 && value == 0)
 				{
 				
 				DoZeroBytes (dPtr, planes);
@@ -479,7 +499,7 @@ void dng_pixel_buffer::SetZero (const dng_rect &area,
 				{
 				
 				DoSetArea8 ((uint8 *) dPtr,
-							0,
+							(uint8) value,
 							rows,
 							cols,
 							planes,
@@ -493,10 +513,10 @@ void dng_pixel_buffer::SetZero (const dng_rect &area,
 			
 			}
 				   
-		case ttShort:
+		case 2:
 			{
 			
-			if (rows == 1 && cols == 1 && dPlaneStep == 1)
+			if (rows == 1 && cols == 1 && dPlaneStep == 1 && value == 0)
 				{
 				
 				DoZeroBytes (dPtr, planes << 1);
@@ -507,7 +527,7 @@ void dng_pixel_buffer::SetZero (const dng_rect &area,
 				{
 				
 				DoSetArea16 ((uint16 *) dPtr,
-							 0,
+							 (uint16) value,
 							 rows,
 							 cols,
 							 planes,
@@ -521,27 +541,10 @@ void dng_pixel_buffer::SetZero (const dng_rect &area,
 			
 			}
 				   
-		case ttSShort:
-			{
-		
-			DoSetArea16 ((uint16 *) dPtr,
-						 0x8000,
-						 rows,
-						 cols,
-						 planes,
-						 dRowStep,
-						 dColStep,
-						 dPlaneStep);
-					 
-			break;
-			
-			}
-				   
-		case ttLong:
-		case ttFloat:
+		case 4:
 			{
 			
-			if (rows == 1 && cols == 1 && dPlaneStep == 1)
+			if (rows == 1 && cols == 1 && dPlaneStep == 1 && value == 0)
 				{
 				
 				DoZeroBytes (dPtr, planes << 2);
@@ -552,7 +555,7 @@ void dng_pixel_buffer::SetZero (const dng_rect &area,
 				{
 				
 				DoSetArea32 ((uint32 *) dPtr,
-							 0,
+							 value,
 							 rows,
 							 cols,
 							 planes,
@@ -579,9 +582,52 @@ void dng_pixel_buffer::SetZero (const dng_rect &area,
 		
 /*****************************************************************************/
 
+void dng_pixel_buffer::SetZero (const dng_rect &area,
+					   			uint32 plane,
+					   			uint32 planes)
+	{
+					   
+	uint32 value = 0;
+				   
+	switch (fPixelType)
+		{
+		
+		case ttByte:
+		case ttShort:
+		case ttLong:
+		case ttFloat:
+			{
+			break;
+			}
+			
+		case ttSShort:
+			{
+			value = 0x8000;
+			break;
+			}
+
+		default:
+			{
+			
+			ThrowNotYetImplemented ();
+			
+			}
+			
+		}
+		
+	SetConstant (area,
+				 plane,
+				 planes,
+				 value);
+				   
+	}
+		
+/*****************************************************************************/
+
 void dng_pixel_buffer::CopyArea (const dng_pixel_buffer &src,
 					   			 const dng_rect &area,
-					   			 uint32 plane,
+					   			 uint32 srcPlane,
+					   			 uint32 dstPlane,
 					   			 uint32 planes)
 	{
 	
@@ -590,11 +636,11 @@ void dng_pixel_buffer::CopyArea (const dng_pixel_buffer &src,
 	
 	const void *sPtr = src.ConstPixel (area.t,
 								  	   area.l,
-								  	   plane);
+								  	   srcPlane);
 								  
 	void *dPtr = DirtyPixel (area.t,
 					   		 area.l,
-					    	 plane);
+					    	 dstPlane);
 	
 	int32 sRowStep   = src.fRowStep;
 	int32 sColStep   = src.fColStep;
@@ -1127,7 +1173,7 @@ dng_point dng_pixel_buffer::RepeatPhase (const dng_rect &srcArea,
 		}
 	else
 		{
-		phaseV = (srcArea.t - dstArea.t) % repeatV;
+		phaseV = (dstArea.t - srcArea.t) % repeatV;
 		}
 		
 	if (srcArea.l >= dstArea.l)
@@ -1325,6 +1371,123 @@ void dng_pixel_buffer::FlipZ ()
 	fData = InternalPixel (fArea.t, fArea.l, fPlanes - 1);
 
 	fPlaneStep = -fPlaneStep;
+
+	}
+
+/*****************************************************************************/
+
+bool dng_pixel_buffer::EqualArea (const dng_pixel_buffer &src,
+								  const dng_rect &area,
+								  uint32 plane,
+								  uint32 planes) const
+	{
+	
+	uint32 rows = area.H ();
+	uint32 cols = area.W ();
+	
+	const void *sPtr = src.ConstPixel (area.t,
+								  	   area.l,
+								  	   plane);
+								  
+	const void *dPtr = ConstPixel (area.t,
+								   area.l,
+								   plane);
+	
+	int32 sRowStep   = src.fRowStep;
+	int32 sColStep   = src.fColStep;
+	int32 sPlaneStep = src.fPlaneStep;
+	
+	int32 dRowStep   = fRowStep;
+	int32 dColStep   = fColStep;
+	int32 dPlaneStep = fPlaneStep;
+
+	if (fPixelType == src.fPixelType)
+		{
+		
+		if (rows == 1 && cols == 1 && sPlaneStep == 1 && dPlaneStep == 1)
+			{
+			
+			return DoEqualBytes (sPtr,
+								 dPtr, 
+								 planes * fPixelSize);
+			
+			}
+			
+		else switch (fPixelSize)
+			{
+			
+			case 1:
+				{
+				
+				return DoEqualArea8 ((const uint8 *) sPtr,
+									 (const uint8 *) dPtr,
+									 rows,
+									 cols,
+									 planes,
+									 sRowStep,
+									 sColStep,
+									 sPlaneStep,
+									 dRowStep,
+									 dColStep,
+									 dPlaneStep);
+				
+				break;
+				
+				}
+				
+			case 2:
+				{
+				
+				return DoEqualArea16 ((const uint16 *) sPtr,
+									  (const uint16 *) dPtr,
+									  rows,
+									  cols,
+									  planes,
+									  sRowStep,
+									  sColStep,
+									  sPlaneStep,
+									  dRowStep,
+									  dColStep,
+									  dPlaneStep);
+
+				break;
+				
+				}
+				
+			case 4:
+				{
+				
+				return DoEqualArea32 ((const uint32 *) sPtr,
+									  (const uint32 *) dPtr,
+									  rows,
+									  cols,
+									  planes,
+									  sRowStep,
+									  sColStep,
+									  sPlaneStep,
+									  dRowStep,
+									  dColStep,
+									  dPlaneStep);
+				
+				break;
+				
+				}
+				
+			default:
+				{
+				
+				ThrowNotYetImplemented ();
+
+				return false;
+
+				}
+				
+			}
+		
+		}
+		
+	else
+		return false;
 
 	}
 
