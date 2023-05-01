@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2011 Adobe Systems Incorporated
+// Copyright 2011-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_jpeg_image.cpp#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_jpeg_image.h"
@@ -23,9 +16,10 @@
 #include "dng_image.h"
 #include "dng_image_writer.h"
 #include "dng_memory_stream.h"
-#include "dng_mutex.h"
 #include "dng_safe_arithmetic.h"
 #include "dng_uncopyable.h"
+
+#include <atomic>
 
 /*****************************************************************************/
 
@@ -61,9 +55,7 @@ class dng_jpeg_image_encode_task : public dng_area_task,
 		
 		const dng_ifd &fIFD;
 				
-		dng_mutex fMutex;
-		
-		uint32 fNextTileIndex;
+		std::atomic_uint fNextTileIndex;
 		
 	public:
 	
@@ -82,7 +74,6 @@ class dng_jpeg_image_encode_task : public dng_area_task,
 			,	fJPEGImage        (jpegImage)
 			,	fTileCount		  (tileCount)
 			,	fIFD		      (ifd)
-			,	fMutex			  ("dng_jpeg_image_encode_task")
 			,	fNextTileIndex	  (0)
 			
 			{
@@ -113,22 +104,16 @@ class dng_jpeg_image_encode_task : public dng_area_task,
 	
 			while (true)
 				{
+
+				// Note: fNextTileIndex is atomic
 				
-				uint32 tileIndex;
-				
+				uint32 tileIndex = fNextTileIndex++;
+
+				if (tileIndex >= fTileCount)
 					{
-					
-					dng_lock_mutex lock (&fMutex);
-					
-					if (fNextTileIndex == fTileCount)
-						{
-						return;
-						}
-						
-					tileIndex = fNextTileIndex++;
-										
+					return;
 					}
-					
+
 				dng_abort_sniffer::SniffForAbort (sniffer);
 				
 				uint32 rowIndex = tileIndex / tilesAcross;
@@ -249,9 +234,7 @@ class dng_jpeg_image_find_digest_task : public dng_area_task,
 		
 		dng_fingerprint *fDigests;
 				
-		dng_mutex fMutex;
-		
-		uint32 fNextTileIndex;
+		std::atomic_uint fNextTileIndex;
 		
 	public:
 	
@@ -264,7 +247,6 @@ class dng_jpeg_image_find_digest_task : public dng_area_task,
 			,	fJPEGImage        (jpegImage)
 			,	fTileCount		  (tileCount)
 			,	fDigests		  (digests)
-			,	fMutex			  ("dng_jpeg_image_find_digest_task")
 			,	fNextTileIndex	  (0)
 			
 			{
@@ -283,19 +265,13 @@ class dng_jpeg_image_find_digest_task : public dng_area_task,
 			while (true)
 				{
 				
-				uint32 tileIndex;
+				// Note: fNextTileIndex is atomic
 				
+				uint32 tileIndex = fNextTileIndex++;
+
+				if (tileIndex >= fTileCount)
 					{
-					
-					dng_lock_mutex lock (&fMutex);
-					
-					if (fNextTileIndex == fTileCount)
-						{
-						return;
-						}
-						
-					tileIndex = fNextTileIndex++;
-										
+					return;
 					}
 					
 				dng_abort_sniffer::SniffForAbort (sniffer);

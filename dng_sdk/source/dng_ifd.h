@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_ifd.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
 
 /** \file
  *  DNG image file directory support.
@@ -23,6 +18,7 @@
 /*****************************************************************************/
 
 #include "dng_fingerprint.h"
+#include "dng_negative.h"
 #include "dng_rect.h"
 #include "dng_shared.h"
 #include "dng_stream.h"
@@ -221,7 +217,15 @@ class dng_ifd
 		
 		uint32 fOpcodeList3Count;
 		uint64 fOpcodeList3Offset;
-		
+
+		dng_noise_profile fNoiseProfile;
+  
+        dng_string fEnhanceParams;
+        
+        dng_urational fBaselineSharpness;
+        
+        dng_urational fNoiseReductionApplied;
+        
 		bool fLosslessJPEGBug16;
 		
 		uint32 fSampleBitShift;

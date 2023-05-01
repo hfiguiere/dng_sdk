@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2011 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_linearization_info.cpp#4 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_linearization_info.h"
@@ -23,6 +16,7 @@
 #include "dng_negative.h"
 #include "dng_pixel_buffer.h"
 #include "dng_safe_arithmetic.h"
+#include "dng_sdk_limits.h"
 #include "dng_tag_types.h"
 #include "dng_tile_iterator.h"
 #include "dng_utils.h"
@@ -63,6 +57,8 @@ class dng_linearize_plane
 	
 		dng_linearize_plane (dng_host &host,
 							 dng_linearization_info &info,
+                             uint16 dstBlackLevel,
+							 bool forceClipBlackLevel,
 							 const dng_image &srcImage,
 							 dng_image &dstImage,
 							 uint32 plane);
@@ -77,6 +73,8 @@ class dng_linearize_plane
 
 dng_linearize_plane::dng_linearize_plane (dng_host &host,
 										  dng_linearization_info &info,
+                                          uint16 dstBlackLevel,
+										  bool forceClipBlackLevel,
 										  const dng_image &srcImage,
 										  dng_image &dstImage,
 										  uint32 plane)
@@ -211,8 +209,8 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 				else
 					{
 					
-					x *= 0x0FFFF * 256.0;
-					
+                    x *= (0x0FFFF - dstBlackLevel) * 256;
+
 					int32 y = Round_int32 (x);
 					
 					fBlack_2D_buffer->Buffer_int32 () [index] = y;
@@ -235,7 +233,8 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 		}
 		
 	else if (fBlack_2D_rows == 0 &&
-			 (info.fBlackLevelRepeatRows > 1 || fSrcPixelType != ttShort))
+			 (info.fBlackLevelRepeatRows > 1 || (fSrcPixelType != ttShort &&
+                                                 fSrcPixelType != ttByte)))
 		{
 		
 		fBlack_1D_rows = info.fBlackLevelRepeatRows;
@@ -285,8 +284,8 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 			else
 				{
 				
-				x *= 0x0FFFF * 256.0;
-				
+                x *= (0x0FFFF - dstBlackLevel) * 256;
+
 				int32 y = Round_int32 (x);
 				
 				fBlack_1D_buffer->Buffer_int32 () [j] = y;
@@ -333,11 +332,13 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 		if (fBlack_1D_rows == 0 &&
 		    fBlack_2D_rows == 0)
 			{
+   
+            uint32 scaleLUTEntries = (fSrcPixelType == ttByte ? 0x100 : 0x10000);
 		
-			fScale_buffer.Reset (host.Allocate (0x10000 *
+			fScale_buffer.Reset (host.Allocate (scaleLUTEntries *
 											    TagTypeSize (fDstPixelType)));
 											    
-			for (j = 0; j < 0x10000; j++)
+			for (j = 0; j < scaleLUTEntries; j++)
 				{
 				
 				uint32 x = j;
@@ -361,27 +362,30 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 				
 				y *= scale;
 				
-				// We can burn in the clipping also.
-				
-				y = Pin_real64 (0.0, y, 1.0);
-				
-				// Store output value in table.
-				
-				if (fDstPixelType == ttShort)
+				// Burn in the clipping if requested.
+
+				if (forceClipBlackLevel)
 					{
-					
-					uint16 z = (uint16) Round_uint32 (y * 0x0FFFF);
-					
-					fScale_buffer->Buffer_uint16 () [j] = z;
-					
+					y = Pin_real64 (0.0, y, 1.0);
 					}
-					
-				else
-					{
-					
-					fScale_buffer->Buffer_real32 () [j] = (real32) y;
-					
-					}
+                
+                // Store output value in table.
+                
+                if (fDstPixelType == ttShort)
+                    {
+                    
+                    uint16 z = Pin_uint16 (Round_int32 (y * (0x0FFFF - dstBlackLevel) + dstBlackLevel));
+                        
+                    fScale_buffer->Buffer_uint16 () [j] = z;
+                    
+                    }
+                    
+                else
+                    {
+                    
+                    fScale_buffer->Buffer_real32 () [j] = (real32) y;
+                    
+                    }
 				
 				}
 				
@@ -426,8 +430,8 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 				else
 					{
 					
-					int32 z = Round_int32 (y * 0x0FFFF * 256.0);
-					
+                    int32 z = Round_int32 ((y * (0x0FFFF - dstBlackLevel) + dstBlackLevel) * 256.0);
+
 					fScale_buffer->Buffer_int32 () [j] = z;
 					
 					}
@@ -975,6 +979,8 @@ class dng_linearize_image: public dng_area_task
 	
 		dng_linearize_image (dng_host &host,
 							 dng_linearization_info &info,
+                             uint16 dstBlackLevel,
+							 bool forceClipBlackLevel,
 							 const dng_image &srcImage,
 							 dng_image &dstImage);
 							 
@@ -994,6 +1000,8 @@ class dng_linearize_image: public dng_area_task
 
 dng_linearize_image::dng_linearize_image (dng_host &host,
 										  dng_linearization_info &info,
+                                          uint16 dstBlackLevel,
+										  bool forceClipBlackLevel,
 										  const dng_image &srcImage,
 										  dng_image &dstImage)
 
@@ -1012,6 +1020,8 @@ dng_linearize_image::dng_linearize_image (dng_host &host,
 		
 		fPlaneTask [plane].Reset (new dng_linearize_plane (host,
 														   info,
+                                                           dstBlackLevel,
+														   forceClipBlackLevel,
 														   srcImage,
 														   dstImage,
 														   plane));
@@ -1438,12 +1448,60 @@ real64 dng_linearization_info::MaxBlackLevel (uint32 plane) const
 /*****************************************************************************/
 
 void dng_linearization_info::Linearize (dng_host &host,
+                                        dng_negative &negative,
 										const dng_image &srcImage,
 										dng_image &dstImage)
 	{
-	
+
+	bool allowPreserveBlackLevels = negative.SupportsPreservedBlackLevels (host);
+
+    if (allowPreserveBlackLevels &&
+		negative.ColorimetricReference () == crSceneReferred &&
+        dstImage.PixelType () == ttShort)
+        {
+        
+        real64 zeroFract = 0.0;
+        
+        for (uint32 plane = 0; plane < srcImage.Planes (); plane++)
+            {
+            
+            real64 maxBlackLevel = MaxBlackLevel (plane);
+            real64    whiteLevel = fWhiteLevel   [plane];
+            
+            if (maxBlackLevel > 0.0 && maxBlackLevel < whiteLevel)
+                {
+                
+                zeroFract = Max_real64 (zeroFract, maxBlackLevel / whiteLevel);
+                
+                }
+            
+            }
+
+        zeroFract = Min_real64 (zeroFract, kMaxStage3BlackLevelNormalized);
+        
+        uint16 dstBlackLevel = (uint16) Round_uint32 (65535.0 * zeroFract);
+        
+        if (negative.GetMosaicInfo ())
+            {
+            
+            // If we have a mosaic image that supports non-zero black levels,
+            // enforce a minimum black level to give the demosaic algorithms
+            // some "footroom".
+            
+            dstBlackLevel = (uint16) Max_uint32 (dstBlackLevel, 0x0404);
+            
+            }
+            
+        negative.SetStage3BlackLevel (dstBlackLevel);
+        
+        }
+
+	bool forceClipBlackLevel = !allowPreserveBlackLevels;
+    
 	dng_linearize_image processor (host,
 								   *this,
+                                   negative.Stage3BlackLevel (),
+								   forceClipBlackLevel,
 								   srcImage,
 								   dstImage);
 								   

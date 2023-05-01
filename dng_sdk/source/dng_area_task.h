@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2015 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_area_task.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
 
 /** \file
  * Class to handle partitioning a rectangular image processing operation taking
@@ -174,12 +169,14 @@ class dng_area_task
 		///
 		/// \param threadCount Total number of threads that will be used for processing.
         /// Less than or equal to MaxThreads.
+		/// \param dstArea Area to be processed in the current run of the task.
 		/// \param tileSize Size of source tiles which will be processed.
         /// (Not all tiles will be this size due to edge conditions.)
 		/// \param allocator dng_memory_allocator to use for allocating temporary buffers, etc.
 		/// \param sniffer Sniffer to test for user cancellation and to set up progress.
 
 		virtual void Start (uint32 threadCount,
+							const dng_rect &dstArea,
 							const dng_point &tileSize,
 							dng_memory_allocator *allocator,
 							dng_abort_sniffer *sniffer);
@@ -223,8 +220,9 @@ class dng_area_task
 		///
 		/// \param threadIndex 0 to threadCount - 1 index indicating which thread this is.
 		/// \param area Tile area partitioned to this resource.
-		/// \param tileSize
+		/// \param tileSize size of tiles to use for processing.
 		/// \param sniffer dng_abort_sniffer to use to check for user cancellation and progress updates.
+		/// \param progress optional pointer to progress reporting object.
 
 		void ProcessOnThread (uint32 threadIndex,
 							  const dng_rect &area,
@@ -271,6 +269,7 @@ class dng_area_task
 		/// \param area The area on which mage processing should be performed.
 		/// \param allocator dng_memory_allocator to use for allocating temporary buffers, etc.
 		/// \param sniffer dng_abort_sniffer to use to check for user cancellation and progress updates.
+		/// \param progress optional pointer to progress reporting object.
 
 		static void Perform (dng_area_task &task,
 				  			 const dng_rect &area,

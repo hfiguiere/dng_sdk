@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_memory.h#5 $ */ 
-/* $DateTime: 2016/01/25 07:36:40 $ */
-/* $Change: 1060590 $ */
-/* $Author: krishnas $ */
 
 /** Support for memory allocation.
  */
@@ -534,9 +529,40 @@ class dng_memory_allocator
 		/// \exception dng_exception with fErrorCode equal to dng_error_memory.
 
 		virtual dng_memory_block * Allocate (uint32 size);
+
+		/// Directly allocate a block of at least 'size' bytes.
+		/// \param size Number of bytes in memory block.
+		/// \retval A pointer to a contiguous block of memory with at least
+		/// size bytes of valid storage.
+		/// Caller is responsible for freeing the memory with Free.
+		/// Default implementation uses standard library 'malloc' routine.
+
+		virtual void * Malloc (size_t size);
+
+		/// Free the specified block of memory previously allocated with Malloc.
+		/// Default implementation uses standard library 'free' routine.
+	
+		virtual void Free (void *ptr);
 	
 	};
 
+/*****************************************************************************/
+
+class dng_malloc_block : public dng_memory_block
+	{
+	
+	private:
+	
+		void *fMalloc;
+	
+	public:
+	
+		dng_malloc_block (uint32 logicalSize);
+		
+		virtual ~dng_malloc_block ();
+		
+	};
+	
 /*****************************************************************************/
 
 /// \brief Default memory allocator used if NULL is passed in for allocator 
@@ -561,7 +587,7 @@ class dng_std_allocator
 
 		typedef T value_type;
 		
-		#if qWinUniversal
+		#if defined(_MSC_VER) && _MSC_VER >= 1900
 
 		// Default implementations of default constructor and copy
 		// constructor.

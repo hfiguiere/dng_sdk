@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_utils.h#4 $ */ 
-/* $DateTime: 2016/01/20 16:00:38 $ */
-/* $Change: 1060141 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #ifndef __dng_utils__
@@ -1342,6 +1335,46 @@ void LimitFloatBitDepth (dng_host &host,
 						 dng_image &dstImage,
 						 uint32 bitDepth,
 						 real32 scale = 1.0f);
+
+/*****************************************************************************/
+
+#if qMacOS
+
+/*****************************************************************************/
+
+template<typename T>
+class CFReleaseHelper
+	{
+
+	private:
+
+		T fRef;
+
+	public:
+
+		CFReleaseHelper (T ref)
+			:	fRef (ref)
+			{
+			}
+
+		~CFReleaseHelper ()
+			{
+			if (fRef)
+				{
+				CFRelease (fRef);
+				}
+			}
+
+		T Get () const
+			{
+			return fRef;
+			}
+
+	};
+
+/*****************************************************************************/
+
+#endif	// qMacOS
 
 /*****************************************************************************/
 

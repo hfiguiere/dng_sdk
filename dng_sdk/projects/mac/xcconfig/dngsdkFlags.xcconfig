@@ -9,6 +9,6 @@ DNG_SDK_COMMON_FLAGS = qDispatchQueueManager=0 qMacOS=1 qWinOS=0 qDNGUseStdInt=1
 
 DNG_SDK_DNG_SDK_HEADERS	   = $(DNG_ROOT)/dng_sdk/source
 DNG_SDK_LIBJPEG_HEADERS	   = $(DNG_ROOT)/libjpeg
-DNG_SDK_XMP_HEADERS		   = $(DNG_ROOT)/xmp/toolkit/public/include
+DNG_SDK_XMP_HEADERS		   = $(DNG_ROOT)/xmp_sdk/public/include
 
 DNG_SDK_COMMON_HEADERS	   = $(DNG_SDK_DNG_SDK_HEADERS) $(DNG_SDK_LIBJPEG_HEADERS) $(DNG_SDK_XMP_HEADERS)

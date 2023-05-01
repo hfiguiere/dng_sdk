@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_string.cpp#4 $ */ 
-/* $DateTime: 2016/01/19 18:00:21 $ */
-/* $Change: 1059957 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_string.h"
@@ -2151,11 +2144,12 @@ void dng_string::ForceASCII ()
 	
 /******************************************************************************/
 
-static dng_mutex gProtectUCCalls ("gProtectUCCalls");
+static dng_std_mutex gProtectUCCalls;
 				
 /******************************************************************************/
 
-int32 dng_string::Compare (const dng_string &s) const
+int32 dng_string::Compare (const dng_string &s,
+                           bool digitsAsNumber) const
 	{
 	
 	#if qMacOS
@@ -2177,10 +2171,18 @@ int32 dng_string::Compare (const dng_string &s) const
 				// For some Mac OS versions anyway, UCCompareTextDefault is not
 				// thread safe.
 				
-				dng_lock_mutex lockMutex (&gProtectUCCalls);
+				dng_lock_std_mutex lockMutex (gProtectUCCalls);
 
 				UCCollateOptions aOptions = kUCCollateStandardOptions |
 											kUCCollatePunctuationSignificantMask;
+           
+                if (digitsAsNumber)
+                    {
+                    
+                    aOptions |= kUCCollateDigitsOverrideMask |
+                                kUCCollateDigitsAsNumberMask;
+                        
+                    }
 											   
 				SInt32 aOrder = -1;
 				
@@ -2263,6 +2265,11 @@ int32 dng_string::Compare (const dng_string &s) const
 				LCID locale = LOCALE_SYSTEM_DEFAULT;
 
 				DWORD aFlags = NORM_IGNOREWIDTH;
+
+				if (digitsAsNumber)
+					{
+					aFlags |= SORT_DIGITSASNUMBERS;
+					}
 				
 				int aOrder = ::CompareStringW (locale, 
 											   aFlags,
@@ -2355,8 +2362,78 @@ int32 dng_string::Compare (const dng_string &s) const
 						}
 				
 					}
+     
+                if (digitsAsNumber)
+                    {
+                    
+                    uint32 aNumber = 0;
+                    uint32 aDigits = 0;
+                    
+                    if (a >= (uint32) '0' && a <= (uint32) '9')
+                        {
+                        
+                        aNumber = a - (uint32) '0';
+                        aDigits = 1;
+                        
+                        while (aDigits < 6 && *aPtr >= '0' && *aPtr <= '9')
+                            {
+                            aNumber = aNumber * 10 + ((uint32) *aPtr -
+                                                      (uint32) '0');
+                            aDigits++;
+                            aPtr++;
+                            }
+                            
+                        }
+                    
+                    uint32 bNumber = 0;
+                    uint32 bDigits = 0;
+                    
+                    if (b >= (uint32) '0' && b <= (uint32) '9')
+                        {
+                        
+                        bNumber = b - (uint32) '0';
+                        bDigits = 1;
+                        
+                        while (bDigits < 6 && *bPtr >= '0' && *bPtr <= '9')
+                            {
+                            bNumber = bNumber * 10 + ((uint32) *bPtr -
+                                                      (uint32) '0');
+                            bDigits++;
+                            bPtr++;
+                            }
+                            
+                        }
+                        
+                    if (aDigits > 0 && bDigits > 0)
+                        {
+                        
+                        if (aNumber > bNumber)
+                            {
+                            return 1;
+                            }
+                            
+                        if (aNumber < bNumber)
+                            {
+                            return -1;
+                            }
+                            
+                        if (aDigits > bDigits)
+                            {
+                            return 1;
+                            }
+                            
+                        if (aDigits < bDigits)
+                            {
+                            return -1;
+                            }
+                            
+                        continue;
+                        
+                        }
+                    
+                    }
 					
-				if (b > a)
+				if (a > b)
 					{
 					return 1;
 					}

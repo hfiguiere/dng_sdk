@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_classes.h#4 $ */ 
-/* $DateTime: 2015/07/31 23:53:38 $ */
-/* $Change: 1033820 $ */
-/* $Author: tknoll $ */
 
 /*** \file
  * Forward class declarations to avoid having to include many .h files in most places.
@@ -29,6 +24,7 @@ class dng_area_task;
 class dng_area_task_progress;
 class dng_base_tile_iterator;
 class dng_basic_tag_set;
+class dng_big_table;
 class dng_camera_profile;
 class dng_camera_profile_id;
 class dng_camera_profile_info;
@@ -50,6 +46,7 @@ class dng_jpeg_image;
 class dng_jpeg_preview;
 class dng_linearization_info;
 class dng_local_string;
+class dng_look_table;
 class dng_matrix;
 class dng_matrix_3by3;
 class dng_matrix_4by3;
@@ -81,6 +78,8 @@ class dng_ref_counted_block;
 class dng_render;
 class dng_resample_function;
 class dng_resolution;
+class dng_rgb_table;
+class dng_set_minimum_priority;
 class dng_shared;
 class dng_spline_solver;
 class dng_srational;

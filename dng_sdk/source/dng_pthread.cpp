@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2002-2008 Adobe Systems Incorporated
+// Copyright 2002-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_pthread.cpp#3 $ */ 
-/* $DateTime: 2015/07/08 12:06:54 $ */
-/* $Change: 1029827 $ */
-/* $Author: krishnas $ */
 
 #include "dng_pthread.h"
 
@@ -728,16 +723,19 @@ int dng_pthread_cond_timedwait(dng_pthread_cond_t *cond, dng_pthread_mutex_t *mu
 	
 	struct dng_timespec sys_timespec;
 	
-	#if qWinUniversal
-	//krishnas - windows universal defines timespec in time.h and it is different size than dng_timespec on 64 bit.
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+
 	struct timespec temp;
-	dng_pthread_now(&temp);
+	dng_pthread_now (&temp);
 
 	sys_timespec.tv_sec = (long)temp.tv_sec;
 	sys_timespec.tv_nsec = temp.tv_nsec;
-	#else
-	dng_pthread_now(&sys_timespec);
-	#endif
+
+#else
+
+	dng_pthread_now (&sys_timespec);
+
+#endif
 
 	__int64 sys_time  = (__int64)sys_timespec.tv_sec * 1000000000 + sys_timespec.tv_nsec;
 	__int64 lock_time = (__int64)latest_time->tv_sec * 1000000000 + latest_time->tv_nsec;

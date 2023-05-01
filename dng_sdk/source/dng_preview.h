@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2007-2011 Adobe Systems Incorporated
+// Copyright 2007-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_preview.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
-
 /*****************************************************************************/
 
 #ifndef __dng_preview__
@@ -124,6 +117,8 @@ class dng_raw_preview: public dng_preview
 		AutoPtr<dng_image> fImage;
 		
 		AutoPtr<dng_memory_block> fOpcodeList2Data;
+  
+        real64 fBlackLevel [kMaxSamplesPerPixel];
 		
 		int32 fCompressionQuality;
 
@@ -148,7 +143,7 @@ class dng_raw_preview: public dng_preview
 
 /*****************************************************************************/
 
-class dng_mask_preview: public dng_preview
+class dng_depth_preview: public dng_preview
 	{
 	
 	public:
@@ -156,6 +151,8 @@ class dng_mask_preview: public dng_preview
 		AutoPtr<dng_image> fImage;
 		
 		int32 fCompressionQuality;
+  
+        bool fFullResolution;
 
 	private:
 		
@@ -163,9 +160,9 @@ class dng_mask_preview: public dng_preview
 		
 	public:
 	
-		dng_mask_preview ();
+		dng_depth_preview ();
 		
-		virtual ~dng_mask_preview ();
+		virtual ~dng_depth_preview ();
 		
 		virtual dng_basic_tag_set * AddTagSet (dng_tiff_directory &directory) const;
 		
@@ -175,6 +172,36 @@ class dng_mask_preview: public dng_preview
 								dng_stream &stream) const;
 		
 	};
+
+/*****************************************************************************/
+
+class dng_mask_preview: public dng_preview
+    {
+    
+    public:
+    
+        AutoPtr<dng_image> fImage;
+        
+        int32 fCompressionQuality;
+
+    private:
+        
+        mutable dng_ifd fIFD;
+        
+    public:
+    
+        dng_mask_preview ();
+        
+        virtual ~dng_mask_preview ();
+        
+        virtual dng_basic_tag_set * AddTagSet (dng_tiff_directory &directory) const;
+        
+        virtual void WriteData (dng_host &host,
+                                dng_image_writer &writer,
+                                dng_basic_tag_set &basic,
+                                dng_stream &stream) const;
+        
+    };
 
 /*****************************************************************************/
 

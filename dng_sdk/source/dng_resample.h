@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_resample.h#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #ifndef __dng_resample__
@@ -95,7 +88,7 @@ class dng_resample_coords
 			return fCoords->Buffer_int32 () + (index - fOrigin);
 			}
 						 
-		const int32 Pixel (int32 index) const
+		int32 Pixel (int32 index) const
 			{
 			return Coords (index) [0] >> kResampleSubsampleBits;
 			}

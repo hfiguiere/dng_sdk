@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2008-2009 Adobe Systems Incorporated
+// Copyright 2008-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_gain_map.cpp#5 $ */ 
-/* $DateTime: 2016/01/20 16:00:38 $ */
-/* $Change: 1060141 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_gain_map.h"
@@ -18,6 +11,7 @@
 #include "dng_exceptions.h"
 #include "dng_globals.h"
 #include "dng_host.h"
+#include "dng_negative.h"
 #include "dng_pixel_buffer.h"
 #include "dng_stream.h"
 #include "dng_tag_values.h"
@@ -547,7 +541,7 @@ void dng_opcode_GainMap::PutData (dng_stream &stream) const
 		
 /*****************************************************************************/
 
-void dng_opcode_GainMap::ProcessArea (dng_negative & /* negative */,
+void dng_opcode_GainMap::ProcessArea (dng_negative &negative,
 									  uint32 /* threadIndex */,
 									  dng_pixel_buffer &buffer,
 									  const dng_rect &dstArea,
@@ -558,7 +552,24 @@ void dng_opcode_GainMap::ProcessArea (dng_negative & /* negative */,
 	
 	if (overlap.NotEmpty ())
 		{
-		
+  
+        uint16 blackLevel = (Stage () >= 2) ? negative.Stage3BlackLevel () : 0;
+        
+        real32 blackScale1  = 1.0f;
+        real32 blackScale2  = 1.0f;
+        real32 blackOffset1 = 0.0f;
+        real32 blackOffset2 = 0.0f;
+
+        if (blackLevel != 0)
+            {
+            
+            blackOffset2 = ((real32) blackLevel) / 65535.0f;
+            blackScale2  = 1.0f - blackOffset2;
+            blackScale1  = 1.0f / blackScale2;
+            blackOffset1 = 1.0f - blackScale1;
+            
+            }
+        
 		uint32 cols = overlap.W ();
 		
 		uint32 colPitch = fAreaSpec.ColPitch ();
@@ -583,7 +594,19 @@ void dng_opcode_GainMap::ProcessArea (dng_negative & /* negative */,
 												  row,
 												  overlap.l,
 												  mapPlane);
-										   
+              
+                if (blackLevel != 0)
+                    {
+                    
+                    for (uint32 col = 0; col < cols; col += colPitch)
+                        {
+
+                        dPtr [col] = dPtr [col] * blackScale1 + blackOffset1;
+                                
+                        }
+                        
+                    }
+                    
 				for (uint32 col = 0; col < cols; col += colPitch)
 					{
 					
@@ -598,6 +621,18 @@ void dng_opcode_GainMap::ProcessArea (dng_negative & /* negative */,
 					
 					}
 				
+                if (blackLevel != 0)
+                    {
+                    
+                    for (uint32 col = 0; col < cols; col += colPitch)
+                        {
+
+                        dPtr [col] = dPtr [col] * blackScale2 + blackOffset2;
+                            
+                        }
+                        
+                    }
+                    
 				}
 			
 			}

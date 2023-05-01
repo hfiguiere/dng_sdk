@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_sdk_limits.h#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Collection of constants detailing maximum values used in processing in the DNG SDK.
@@ -70,10 +65,14 @@ const uint32 kMaxToneCurvePoints = 8192;
 /// Maximum number of MP threads for dng_area_task operations.
 
 #if qDNG64Bit
-const uint32 kMaxMPThreads = 32;
+const uint32 kMaxMPThreads = 128; // EP! Needs much larger max!
 #else
 const uint32 kMaxMPThreads = 8;
 #endif
+
+/// Maximum supported value of Stage3BlackLevelNormalized.
+
+const real64 kMaxStage3BlackLevelNormalized = 0.2;
 
 /*****************************************************************************/
 

@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2009 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_bottlenecks.cpp#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
-
 /*****************************************************************************/
 
 #include "dng_bottlenecks.h"
@@ -26,15 +19,15 @@ dng_suite gDNGSuite =
 	RefSwapBytes16,
 	RefSwapBytes32,
 	RefSetArea8,
-	RefSetArea16,
-	RefSetArea32,
+	RefSetArea<Scalar, uint16>,
+	RefSetArea<Scalar, uint32>,
 	RefCopyArea8,
 	RefCopyArea16,
 	RefCopyArea32,
 	RefCopyArea8_16,
 	RefCopyArea8_S16,
 	RefCopyArea8_32,
-	RefCopyArea16_S16,
+	RefCopyArea16_S16<Scalar>,
 	RefCopyArea16_32,
 	RefCopyArea8_R32,
 	RefCopyArea16_R32,

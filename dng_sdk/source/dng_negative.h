@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_negative.h#4 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Functions and classes for working with a digital negative (image data and
@@ -31,6 +26,7 @@
 #include "dng_linearization_info.h"
 #include "dng_matrix.h"
 #include "dng_mosaic_info.h"
+#include "dng_mutex.h"
 #include "dng_opcode_list.h"
 #include "dng_orientation.h"
 #include "dng_rational.h"
@@ -202,7 +198,16 @@ class dng_noise_profile
 		/// The number of noise functions in this profile.
 
 		uint32 NumFunctions () const;
-		
+  
+        /// Equality test.
+        
+        bool operator== (const dng_noise_profile &profile) const;
+
+        bool operator!= (const dng_noise_profile &profile) const
+            {
+            return !(*this == profile);
+            }
+
 	};
 
 /*****************************************************************************/
@@ -611,10 +616,20 @@ class dng_negative
 		
 		dng_urational fNoiseReductionApplied;
 
+        // Enhanced images can change the applied noise reduction, so we
+        // need to keep around the original value.
+        
+        dng_urational fRawNoiseReductionApplied;
+
 		// Amount of noise for this negative (see dng_noise_profile for details).
 
 		dng_noise_profile fNoiseProfile;
 		
+        // Enhanced images can change the noise profile, so we
+        // need to keep around the original value.
+        
+        dng_noise_profile fRawNoiseProfile;
+        
 		// Zero point for the exposure compensation slider. This reflects how
 		// the manufacturer sets up the camera and its conversions.
 		
@@ -626,6 +641,11 @@ class dng_negative
 		// value.
 	
 		dng_urational fBaselineSharpness;
+  
+        // Enhanced images can change the baseline sharpness, so we
+        // need to keep around the original value.
+        
+        dng_urational fRawBaselineSharpness;
 		
 		// Chroma blur radius (or 0/0 for auto). Set to 0/1 to disable
 		// chroma blurring.
@@ -720,6 +740,8 @@ class dng_negative
 		// for this data.
 		
 		mutable dng_fingerprint fRawDataUniqueID;
+
+		mutable dng_std_mutex fRawDataUniqueIDMutex;
 		
 		// Original raw file name.  Just the file name, not the full path.
 		
@@ -779,9 +801,13 @@ class dng_negative
 		
 		AutoPtr<dng_image> fStage3Image;
 		
-		// Additiona gain applied when building the stage 3 image. 
+		// Additional gain applied when building the stage 3 image. 
 		
 		real64 fStage3Gain;
+
+		// Optical black level of stage 3 image (in [0,65535]).
+
+		uint16 fStage3BlackLevel;
 
 		// Were any approximations (e.g. downsampling, etc.) applied
 		// file reading this image?
@@ -799,6 +825,10 @@ class dng_negative
 		// The raw image data that we grabbed, if any.
 		
 		AutoPtr<dng_image> fRawImage;
+  
+        // The black level of the raw image (if not encoded by linearization info).
+        
+        uint16 fRawImageBlackLevel;
 		
 		// The floating point bit depth of the raw file, if any.
 		
@@ -828,7 +858,29 @@ class dng_negative
 		// flattening the transparency.
 		
 		AutoPtr<dng_image> fUnflattenedStage3Image;
+        
+        // Depth map.
 		
+        bool fHasDepthMap;
+		
+        AutoPtr<dng_image> fDepthMap;
+        
+        // Grabbed depth map, if we are not saving the current map.
+        
+        AutoPtr<dng_image> fRawDepthMap;
+        
+        // Depth metadata.
+		
+        uint32        fDepthFormat;
+        dng_urational fDepthNear;
+        dng_urational fDepthFar;
+        uint32        fDepthUnits;
+        uint32        fDepthMeasureType;
+        
+        // Enhance metadata.
+        
+        dng_string fEnhanceParams;
+        
 	public:
 	
 		virtual ~dng_negative ();
@@ -1370,6 +1422,24 @@ class dng_negative
 			return fNoiseReductionApplied;
 			}
 
+        // Sets the raw noise reduction applied to be a copy of the unenhanced
+        // noise reduction applied, if not set yet.
+        
+        void SetRawNoiseReductionApplied ()
+            {
+            if (fRawNoiseReductionApplied.NotValid ())
+                {
+                fRawNoiseReductionApplied = fNoiseReductionApplied;
+                }
+            }
+        
+        // Gets the raw NoiseReductionApplied value.
+        
+        const dng_urational & RawNoiseReductionApplied () const
+            {
+            return fRawNoiseReductionApplied;
+            }
+        
 		/// Setter for noise profile.
 
 		void SetNoiseProfile (const dng_noise_profile &noiseProfile)
@@ -1391,6 +1461,31 @@ class dng_negative
 			return fNoiseProfile;
 			}
 			
+        // Does this negative have a valid raw noise profile?
+
+        bool HasRawNoiseProfile () const
+            {
+            return fRawNoiseProfile.IsValidForNegative (*this);
+            }
+
+        // Sets the raw noise profile to be a copy of the unenhanced
+        // noise profile, if not set yet.
+        
+        void SetRawNoiseProfile ()
+            {
+            if (!HasRawNoiseProfile ())
+                {
+                fRawNoiseProfile = fNoiseProfile;
+                }
+            }
+        
+        // Getter for raw noise profile.
+
+        const dng_noise_profile & RawNoiseProfile () const
+            {
+            return fRawNoiseProfile;
+            }
+        
 		/// Setter for BaselineExposure.
 		
 		void SetBaselineExposure (real64 exposure)
@@ -1437,7 +1532,29 @@ class dng_negative
 			{
 			return BaselineSharpnessR ().As_real64 ();
 			}
-		
+   
+        // Sets the raw baseline sharpness to be a copy of the baseline
+        // sharpness, if not set yet.
+        
+        void SetRawBaselineSharpness ()
+            {
+            if (fRawBaselineSharpness.d == 0)
+                {
+                fRawBaselineSharpness = fBaselineSharpness;
+                }
+            }
+        
+        // Gets the raw baseline sharpness value.
+        
+        const dng_urational & RawBaselineSharpness () const
+            {
+            if (fRawBaselineSharpness.d != 0)
+                {
+                return fRawBaselineSharpness;
+                }
+            return fBaselineSharpness;
+            }
+        
 		/// Setter for ChromaBlurRadius.
 		
 		void SetChromaBlurRadius (const dng_urational &radius)
@@ -2072,6 +2189,9 @@ class dng_negative
 						    real64 black2,
 						    real64 black3,
 							int32 plane = -1);
+	
+		void Set6x6Blacks (real64 blacks6x6 [36],
+						   int32 plane = -1);
 						    
 		void SetRowBlacks (const real64 *blacks,
 						   uint32 count);
@@ -2252,6 +2372,10 @@ class dng_negative
 		// Returns the raw image data.
 		
 		const dng_image & RawImage () const;
+  
+        // Returns the raw image black level in 16-bit space.
+        
+        uint16 RawImageBlackLevel () const;
 		
 		// API for raw floating point bit depth.
 		
@@ -2292,12 +2416,24 @@ class dng_negative
 			
 		void FindRawJPEGImageDigest (dng_host &host) const;
 		
-		// Read the stage 1 image.
-			
-		virtual void ReadStage1Image (dng_host &host,
-									  dng_stream &stream,
-									  dng_info &info);
-									  
+        // Read the opcode lists.
+        
+        virtual void ReadOpcodeLists (dng_host &host,
+                                      dng_stream &stream,
+                                      dng_info &info);
+        
+        // Read the stage 1 image.
+        
+        virtual void ReadStage1Image (dng_host &host,
+                                      dng_stream &stream,
+                                      dng_info &info);
+        
+        // Read the enhanced image directly into the stage 3 image.
+        
+        virtual void ReadEnhancedImage (dng_host &host,
+                                        dng_stream &stream,
+                                        dng_info &info);
+        
 		// Assign the stage 1 image.
 		
 		void SetStage1Image (AutoPtr<dng_image> &image);
@@ -2330,12 +2466,43 @@ class dng_negative
 			{
 			return fStage3Gain;
 			}
+
+		// Optical black level of stage 3 image (in [0,65535]).
+  
+        void SetStage3BlackLevel (uint16 level)
+            {
+            fStage3BlackLevel = level;
+            }
+
+		uint16 Stage3BlackLevel () const
+			{
+			return fStage3BlackLevel;
+			}
+
+		// Optical black level of stage 3 image (in [0,1]).
+			
+		real64 Stage3BlackLevelNormalized () const
+			{
+			return fStage3BlackLevel * (1.0 / 65535.0);
+			}
+
+		// Is this negative permitted to support deferred black subtraction
+		// (by preserving offset or negative black values in the stage 3
+		// image)?
+		//
+		// If false, then fStage3BlackLevel must be zero.
+		// If true, then fStage3BlackLevel may or may not be zero.
+		//
+		// Default implementation return false.
+
+		virtual bool SupportsPreservedBlackLevels (dng_host &host);
 			
 		// Adaptively encode a proxy image down to 8-bits/channel.
 
 		dng_image * EncodeRawProxy (dng_host &host,
 									const dng_image &srcImage,
-									dng_opcode_list &opcodeList) const;
+									dng_opcode_list &opcodeList,
+                                    real64 *blackLevel) const;
 
 		// Convert to a proxy negative.
 
@@ -2387,12 +2554,121 @@ class dng_negative
 								   dng_stream &stream,
 								   dng_info &info);
 								   
+        virtual void ResizeTransparencyToMatchStage3 (dng_host &host,
+                                                      bool convertTo8Bit = false);
+        
 		virtual bool NeedFlattenTransparency (dng_host &host);
 		
 		virtual void FlattenTransparency (dng_host &host);
 		
 		const dng_image * UnflattenedStage3Image () const;
+        
+		// Depth map API:
+		
+		bool HasDepthMap () const
+            {
+            return fHasDepthMap;
+            }
+		
+		void SetHasDepthMap (bool hasDepthMap)
+			{
+			fHasDepthMap = hasDepthMap;
+			}
+		
+		const dng_image * DepthMap () const
+			{
+			return fDepthMap.Get ();
+			}
+		
+		void SetDepthMap (AutoPtr<dng_image> &depthMap);
+		
+		bool HasDepthMapImage () const
+			{
+			return (fDepthMap.Get () != NULL);
+			}
+        
+        const dng_image * RawDepthMap () const
+            {
+            if (fRawDepthMap.Get ())
+                {
+                return fRawDepthMap.Get ();
+                }
+            return DepthMap ();
+            }
+        
+        void ReadDepthMap (dng_host &host,
+                           dng_stream &stream,
+                           dng_info &info);
+        
+        virtual void ResizeDepthToMatchStage3 (dng_host &host);
+        
+        uint32 DepthFormat () const
+            {
+            return fDepthFormat;
+            }
+        
+        void SetDepthFormat (uint32 format)
+            {
+            fDepthFormat = format;
+            }
+        
+        const dng_urational & DepthNear () const
+            {
+            return fDepthNear;
+            }
+        
+        void SetDepthNear (const dng_urational &dist)
+            {
+            fDepthNear = dist;
+            }
+        
+        const dng_urational & DepthFar () const
+            {
+            return fDepthFar;
+            }
+        
+        void SetDepthFar (const dng_urational &dist)
+            {
+            fDepthFar = dist;
+            }
+        
+        uint32 DepthUnits () const
+            {
+            return fDepthUnits;
+            }
+        
+        void SetDepthUnits (uint32 units)
+            {
+            fDepthUnits = units;
+            }
 
+        uint32 DepthMeasureType () const
+            {
+            return fDepthMeasureType;
+            }
+        
+        void SetDepthMeasureType (uint32 measure)
+            {
+            fDepthMeasureType = measure;
+            }
+
+         // EnhanceParams API:
+        
+        const dng_string & EnhanceParams () const
+            {
+            return fEnhanceParams;
+            }
+        
+        void SetEnhanceParams (const dng_string &s)
+            {
+            fEnhanceParams = s;
+            }
+        
+        void SetEnhanceParams (const char *s)
+            {
+            fEnhanceParams.Set (s);
+            }
+        
 	protected:
 	
 		dng_negative (dng_host &host);
@@ -2428,9 +2704,6 @@ class dng_negative
 									   
 		virtual void AdjustProfileForStage3 ();
 									  
-		virtual void ResizeTransparencyToMatchStage3 (dng_host &host,
-													  bool convertTo8Bit = false);
-													  
 	};
 
 /*****************************************************************************/

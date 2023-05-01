@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_utils.cpp#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_utils.h"
@@ -25,6 +18,7 @@
 #include "dng_mutex.h"
 #include "dng_point.h"
 #include "dng_rect.h"
+#include "dng_simd_type.h"
 #include "dng_tile_iterator.h"
 
 #if qMacOS
@@ -47,6 +41,8 @@
 #include <sys/time.h>
 #include <stdarg.h> // for va_start/va_end
 #endif
+
+#include <atomic>
 
 /*****************************************************************************/
 
@@ -296,10 +292,7 @@ real64 TickCountInSeconds ()
 
 /*****************************************************************************/
 
-static int32 sTimerLevel = 0;
-
-static dng_mutex sTimerLevelMutex ("gTimerLevelMutex",
-                                   dng_mutex::kDNGMutexLevelLeaf + 1);
+static std::atomic_int sTimerLevel (0);
 
 /*****************************************************************************/
 
@@ -311,8 +304,6 @@ void DNGIncrementTimerLevel ()
     
     if (!gImagecore)
         {
-        
-        dng_lock_mutex lock (&sTimerLevelMutex);
         
         sTimerLevel++;
         
@@ -335,9 +326,7 @@ int32 DNGDecrementTimerLevel ()
     else
         {
         
-        dng_lock_mutex lock (&sTimerLevelMutex);
-        
-        return --sTimerLevel;
+        return (int32) (--sTimerLevel);
         
         }
         
@@ -368,7 +357,7 @@ dng_timer::~dng_timer ()
 
 	real64 totalTime = TickTimeInSeconds () - fStartTime;
 	
-    #if defined(qCRLogging) && qCRLogging
+    #if defined(qCRLogging) && qCRLogging && defined(cr_logi)
         
     if (gImagecore)
         {
@@ -583,6 +572,7 @@ void HistogramArea (dng_host & /* host */,
 		
 /*****************************************************************************/
 
+template <SIMDType simd>
 class dng_limit_float_depth_task: public dng_area_task
 	{
 	
@@ -621,10 +611,12 @@ class dng_limit_float_depth_task: public dng_area_task
 
 /*****************************************************************************/
 
-dng_limit_float_depth_task::dng_limit_float_depth_task (const dng_image &srcImage,
-														dng_image &dstImage,
-														uint32 bitDepth,
-														real32 scale)
+template <SIMDType simd>
+dng_limit_float_depth_task<simd>::dng_limit_float_depth_task
+	(const dng_image &srcImage,
+	 dng_image &dstImage,
+	 uint32 bitDepth,
+	 real32 scale)
 
 	:	dng_area_task ("dng_limit_float_depth_task")
 										
@@ -639,11 +631,16 @@ dng_limit_float_depth_task::dng_limit_float_depth_task (const dng_image &srcImag
 
 /*****************************************************************************/
 
-void dng_limit_float_depth_task::Process (uint32 /* threadIndex */,
-										  const dng_rect &tile,
-										  dng_abort_sniffer * /* sniffer */)
+template <SIMDType simd>
+void dng_limit_float_depth_task<simd>::Process (uint32 /* threadIndex */,
+												const dng_rect &tile,
+												dng_abort_sniffer * /* sniffer */)
 	{
-	
+
+	INTEL_COMPILER_NEEDED_NOTE
+
+	SET_CPU_FEATURE (simd);
+
 	dng_const_tile_buffer srcBuffer (fSrcImage, tile);
 	dng_dirty_tile_buffer dstBuffer (fDstImage, tile);
 	
@@ -718,7 +715,7 @@ void dng_limit_float_depth_task::Process (uint32 /* threadIndex */,
 			
 				const real32 *sPtr2 = sPtr1;
 					  real32 *dPtr2 = dPtr1;
-					  
+				INTEL_PRAGMA_SIMD_ASSERT_VECLEN_FLOAT(simd)
 				for (uint32 index2 = 0; index2 < count2; index2++)
 					{
 					
@@ -739,9 +736,14 @@ void dng_limit_float_depth_task::Process (uint32 /* threadIndex */,
 				
 			if (limit16)
 				{
-			
+
+				//start by using intrinsic __m256 _mm256_cvtph_ps (__m128i a) 
+				//once the intrinsic is written, merge this branch with previous one
+
 				uint32 *dPtr2 = (uint32 *) dPtr1;
-					  
+
+				INTEL_PRAGMA_SIMD_ASSERT_VECLEN_INT32(simd)
+
 				for (uint32 index2 = 0; index2 < count2; index2++)
 					{
 					
@@ -794,9 +796,10 @@ void dng_limit_float_depth_task::Process (uint32 /* threadIndex */,
 		}
 				   	
 	}
-								  
+
 /******************************************************************************/
 
+template <SIMDType simd>
 void LimitFloatBitDepth (dng_host &host,
 						 const dng_image &srcImage,
 						 dng_image &dstImage,
@@ -807,13 +810,79 @@ void LimitFloatBitDepth (dng_host &host,
 	DNG_ASSERT (srcImage.PixelType () == ttFloat, "Floating point image expected");
 	DNG_ASSERT (dstImage.PixelType () == ttFloat, "Floating point image expected");
 	
-	dng_limit_float_depth_task task (srcImage,
+	dng_limit_float_depth_task<simd> task (srcImage,
 									 dstImage,
 									 bitDepth,
 									 scale);
 									 
 	host.PerformAreaTask (task, dstImage.Bounds ());
 	
+	}
+
+/*****************************************************************************/
+
+template
+void LimitFloatBitDepth<Scalar> (dng_host &host,
+								 const dng_image &srcImage,
+								 dng_image &dstImage,
+								 uint32 bitDepth,
+								 real32 scale);
+
+/*****************************************************************************/
+
+#if qDNGIntelCompiler
+
+template
+void LimitFloatBitDepth<AVX2> (dng_host &host,
+							   const dng_image &srcImage,
+							   dng_image &dstImage,
+							   uint32 bitDepth,
+							   real32 scale);
+
+#endif	// qDNGIntelCompiler
+
+/*****************************************************************************/
+
+void LimitFloatBitDepth (dng_host &host,
+						 const dng_image &srcImage,
+						 dng_image &dstImage,
+						 uint32 bitDepth,
+						 real32 scale)
+	{
+	
+	// Kludge: Turning this off for now because the AVX2 path produces
+	// slightly different results from the Scalar routine causing a mis-match
+	// in raw digest values when building HDR merge result negatives which
+	// causes the client to display a "file appears to be damaged" warning.
+	// -bury 11/13/2017
+	
+	#if (qDNGIntelCompiler && qDNGExperimental && 0)
+
+	if (gDNGMaxSIMD >= AVX2)
+		{
+
+		LimitFloatBitDepth<AVX2> (host,
+								  srcImage,
+								  dstImage,
+								  bitDepth,
+								  scale);
+
+		}
+
+	else
+
+	#endif	// qDNGIntelCompiler && qDNGExperimental
+
+		{
+
+		LimitFloatBitDepth<Scalar> (host,
+									srcImage,
+									dstImage,
+									bitDepth,
+									scale);
+
+		}
+
 	}
 
 /*****************************************************************************/

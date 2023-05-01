@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2014 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_flags.h#11 $ */ 
-/* $DateTime: 2016/03/10 16:02:14 $ */
-/* $Change: 1066844 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Conditional compilation flags for DNG SDK.
@@ -146,6 +141,37 @@
 #else
 #define qDNGDebug 0
 
+#endif
+#endif
+
+/*****************************************************************************/
+// Support Intel Thread Building Blocks (TBB)?
+// 
+// This flag needs to be configured via the project, because there are sources
+// outside the cr_sdk (such as the CTJPEG and ACE libs) that need to use the
+// same flag to determine whether to use TBB or not.
+// 
+// By default, configure to 0 (disabled).
+
+#ifndef qCRSupportTBB
+#define qCRSupportTBB 0
+#endif
+
+#if qCRSupportTBB
+#ifndef TBB_DEPRECATED
+#define TBB_DEPRECATED 0
+#endif
+#endif
+
+// This is not really a switch, but rather a shorthand for determining whether
+// or not we're building a particular translation unit (source file) using the
+// Intel Compiler.
+
+#ifndef qDNGIntelCompiler
+#if defined(__INTEL_COMPILER)
+#define qDNGIntelCompiler (__INTEL_COMPILER >= 1700)
+#else
+#define qDNGIntelCompiler 0
 #endif
 #endif
 
@@ -320,13 +346,53 @@
 #define qDNGAVXSupport ((qMacOS || qWinOS) && qDNG64Bit && !qARM && 1)
 #endif
 
+#if qDNGAVXSupport && !(qDNG64Bit && !qARM)
+#error AVX support is enabled when 64-bit support is not or ARM is
+#endif
+
+/*****************************************************************************/
+
+#ifndef qDNGSupportVC5
+#define qDNGSupportVC5 (1)
+#endif
+
+/*****************************************************************************/
+
+/// \def qDNGUsingSanitizer
+/// Set to 1 when using a Sanitizer tool.
+
+#ifndef qDNGUsingSanitizer
+#define qDNGUsingSanitizer (0)
+#endif
+
 /*****************************************************************************/
 
 #ifndef DNG_ATTRIB_NO_SANITIZE
+#if qDNGUsingSanitizer && defined(__clang__)
+#define DNG_ATTRIB_NO_SANITIZE(type) __attribute__((no_sanitize(type)))
+#else
 #define DNG_ATTRIB_NO_SANITIZE(type)
-//#if defined(__clang__)
-//#define DNG_ATTRIB_NO_SANITIZE(type) __attribute__((no_sanitize(type)))
-//#endif
+#endif
+#endif
+
+/*****************************************************************************/
+
+/// \def qDNGDepthSupport
+/// 1 to add support for depth maps in DNG format.
+/// Deprecated 2018-09-19.
+
+#ifdef __cplusplus
+#define qDNGDepthSupport #error
+#endif
+
+/*****************************************************************************/
+
+/// \def qDNGPreserveBlackPoint
+/// 1 to add support for non-zero black point in early raw pipeline.
+/// Deprecated 2018-09-19.
+
+#ifdef __cplusplus
+#define qDNGPreserveBlackPoint #error
 #endif
 
 /*****************************************************************************/

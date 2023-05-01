@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_pixel_buffer.h#4 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Support for holding buffers of sample data.
@@ -127,10 +122,10 @@ class dng_pixel_buffer
 					  	      uint32 plane = 0) const
 			{
 
-// BULLSHIT: review this. do we set up buffers sometimes with "col" parameter
-// equal to 0, which would then cause this exception to throw?!
+            // TO DO: review this. do we set up buffers sometimes with "col" parameter
+            // equal to 0, which would then cause this exception to throw?!
 
-#if 0
+            #if 0
 
 			// Ensure pixel to be accessed lies inside valid area.
 			if (row < fArea.t || row >= fArea.b ||
@@ -153,7 +148,7 @@ class dng_pixel_buffer
 			// Add offset to buffer base address.
 			return static_cast<void *> (static_cast<uint8 *> (fData) + offset);
 
-#else
+            #else
 
 			#if qDNG64Bit
 			
@@ -173,7 +168,7 @@ class dng_pixel_buffer
 
 			#endif
 
-#endif
+            #endif
 
 			}
 			
@@ -195,7 +190,7 @@ class dng_pixel_buffer
 		/// computing the row, column or plane step, or if an invalid value
 		/// was passed for planarConfiguration.
 		///
-		/// \param size Area covered by the pixel buffer
+		/// \param area Area covered by the pixel buffer
 		/// \param plane Index of the first plane
 		/// \param planes Number of planes
 		/// \param pixelType Pixel data type (one of the values defined in
@@ -303,6 +298,17 @@ class dng_pixel_buffer
 			return (const uint8 *) ConstPixel (row, col, plane);
 			
 			}
+
+		const uint8 * ConstPixel_uint8_overrideType (int32 row,
+										int32 col,
+										uint32 plane = 0) const
+			{
+			
+			// No type check
+
+			return (const uint8 *) ConstPixel (row, col, plane);
+			
+			}
 			
 		/// Get a writable uint8 * to pixel data starting at a specific pixel in the buffer.
 		/// \param row Start row for buffer pointer.
@@ -316,6 +322,17 @@ class dng_pixel_buffer
 			{
 			
 			ASSERT_PIXEL_TYPE (ttByte);
+
+			return (uint8 *) DirtyPixel (row, col, plane);
+			
+			}
+
+		uint8 * DirtyPixel_uint8_overrideType (int32 row,
+								  int32 col,
+								  uint32 plane = 0)
+			{
+			
+			// No type check
 
 			return (uint8 *) DirtyPixel (row, col, plane);
 			
@@ -636,7 +653,6 @@ class dng_pixel_buffer
 
 		/// Initialize a rectangular area of pixel buffer to zeros.
 		/// \param area Rectangle of pixel buffer to zero.
-		/// \param area Area to zero
 		/// \param plane Plane to start filling on.
 		/// \param planes Number of planes to fill.
 

@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2008 Adobe Systems Incorporated
+// Copyright 2008-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_opcodes.cpp#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_opcodes.h"
@@ -114,7 +107,9 @@ void dng_opcode::PutData (dng_stream &stream) const
 /*****************************************************************************/
 
 bool dng_opcode::AboutToApply (dng_host &host,
-							   dng_negative &negative)
+							   dng_negative &negative,
+							   const dng_rect &imageBounds,
+							   uint32 imagePlanes)
 	{
 	
 	if (SkipIfPreview () && host.ForPreview ())
@@ -148,6 +143,11 @@ bool dng_opcode::AboutToApply (dng_host &host,
 		
 	else if (!IsNOP ())
 		{
+
+		DoAboutToApply (host,
+						negative,
+						imageBounds,
+						imagePlanes);
 		
 		return true;
 		
@@ -305,12 +305,14 @@ class dng_filter_opcode_task: public dng_filter_task
 			}
 
 		virtual void Start (uint32 threadCount,
+							const dng_rect &dstArea,
 							const dng_point &tileSize,
 							dng_memory_allocator *allocator,
 							dng_abort_sniffer *sniffer)
 			{
 			
 			dng_filter_task::Start (threadCount,
+									dstArea,
 									tileSize,
 									allocator,
 									sniffer);
@@ -445,6 +447,7 @@ class dng_inplace_opcode_task: public dng_area_task
 			}
 			
 		virtual void Start (uint32 threadCount,
+							const dng_rect & /* dstArea */,
 							const dng_point &tileSize,
 							dng_memory_allocator *allocator,
 							dng_abort_sniffer * /* sniffer */)

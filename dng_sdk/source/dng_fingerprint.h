@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_fingerprint.h#5 $ */ 
-/* $DateTime: 2016/01/20 16:00:38 $ */
-/* $Change: 1060141 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Fingerprint (cryptographic hashing) support for generating strong hashes of image
@@ -45,6 +40,8 @@ class dng_fingerprint
 	public:
 	
 		dng_fingerprint ();
+        
+        dng_fingerprint (const char *hex);
 		
 		/// Check if fingerprint is all zeros.
 
@@ -75,6 +72,10 @@ class dng_fingerprint
 			return !(*this == print);
 			}
 			
+		/// Comparision test for fingerprints.
+			
+        bool operator< (const dng_fingerprint &print) const;
+        
 		/// Produce a 32-bit hash value from fingerprint used for faster hashing of
 		/// fingerprints.
 			

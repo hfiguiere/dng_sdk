@@ -546,6 +546,7 @@
 		3852C9FC0BD6F4E20048EA83 /* dng_tone_curve.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_tone_curve.h; path = ../../source/dng_tone_curve.h; sourceTree = SOURCE_ROOT; };
 		C7085FE7097EF22B00F3BF1D /* dng_filter_task.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_filter_task.cpp; path = ../../source/dng_filter_task.cpp; sourceTree = SOURCE_ROOT; };
 		C7085FE8097EF22B00F3BF1D /* dng_filter_task.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_filter_task.h; path = ../../source/dng_filter_task.h; sourceTree = SOURCE_ROOT; };
+		C70F691F22515E8D000B551D /* jconfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = jconfig.h; path = ../../../libjpeg/jconfig.h; sourceTree = "<group>"; };
 		C7175EA909CDD1710067F2AA /* dng_1d_function.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_1d_function.cpp; path = ../../source/dng_1d_function.cpp; sourceTree = SOURCE_ROOT; };
 		C7175EAA09CDD1710067F2AA /* dng_1d_function.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_1d_function.h; path = ../../source/dng_1d_function.h; sourceTree = SOURCE_ROOT; };
 		C719F5FC08E78313000A0AC5 /* dng_iptc.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_iptc.cpp; path = ../../source/dng_iptc.cpp; sourceTree = SOURCE_ROOT; };
@@ -626,6 +627,8 @@
 		C78B9514157AFBB600A4675C /* jctrans.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = jctrans.c; path = ../../../libjpeg/jctrans.c; sourceTree = "<group>"; };
 		C78E9D3009993D73003C04F9 /* dng_render.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_render.cpp; path = ../../source/dng_render.cpp; sourceTree = SOURCE_ROOT; };
 		C78E9D3109993D73003C04F9 /* dng_render.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_render.h; path = ../../source/dng_render.h; sourceTree = SOURCE_ROOT; };
+		C7A57B562252872A00DEF170 /* dngsdkRoot.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = dngsdkRoot.xcconfig; path = xcconfig/dngsdkRoot.xcconfig; sourceTree = "<group>"; };
+		C7A57B572252872A00DEF170 /* dngsdkBuild.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = dngsdkBuild.xcconfig; path = xcconfig/dngsdkBuild.xcconfig; sourceTree = "<group>"; };
 		C7A7DE240EB0D8A900B6A136 /* dng_lens_correction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_lens_correction.cpp; path = ../../source/dng_lens_correction.cpp; sourceTree = SOURCE_ROOT; };
 		C7A7DE250EB0D8A900B6A136 /* dng_lens_correction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_lens_correction.h; path = ../../source/dng_lens_correction.h; sourceTree = SOURCE_ROOT; };
 		C7A8C4AE08DCB2EF0075C20C /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
@@ -634,6 +637,7 @@
 		C7CD211B08F9681900D265DD /* dng_xmp_sdk.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_xmp_sdk.h; path = ../../source/dng_xmp_sdk.h; sourceTree = SOURCE_ROOT; };
 		C7CD211C08F9681900D265DD /* dng_xmp.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_xmp.cpp; path = ../../source/dng_xmp.cpp; sourceTree = SOURCE_ROOT; };
 		C7CD211D08F9681900D265DD /* dng_xmp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_xmp.h; path = ../../source/dng_xmp.h; sourceTree = SOURCE_ROOT; };
+		C7DCA31F224C4A14001231BB /* dng_simd_type.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dng_simd_type.h; path = ../../source/dng_simd_type.h; sourceTree = "<group>"; };
 		C7E084E80917BC1300739AD2 /* dng_mutex.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = dng_mutex.cpp; path = ../../source/dng_mutex.cpp; sourceTree = SOURCE_ROOT; };
 		C7E084E90917BC1300739AD2 /* dng_mutex.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = dng_mutex.h; path = ../../source/dng_mutex.h; sourceTree = SOURCE_ROOT; };
 		C7E13A410EA54EA7007EB19C /* dng_opcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dng_opcodes.cpp; path = ../../source/dng_opcodes.cpp; sourceTree = SOURCE_ROOT; };
@@ -883,6 +887,7 @@
 				C7FFA5A408DCA62C00743F0C /* dng_sdk_limits.h */,
 				C7FFA5A508DCA62C00743F0C /* dng_shared.cpp */,
 				C7FFA5A608DCA62C00743F0C /* dng_shared.h */,
+				C7DCA31F224C4A14001231BB /* dng_simd_type.h */,
 				C7FFA5A708DCA62C00743F0C /* dng_simple_image.cpp */,
 				C7FFA5A808DCA62C00743F0C /* dng_simple_image.h */,
 				C76C420C099B0FAE00E3871C /* dng_spline.cpp */,
@@ -930,9 +935,11 @@
 		347D792B1CD7D5B000C28650 /* xcconfig */ = {
 			isa = PBXGroup;
 			children = (
+				C7A57B572252872A00DEF170 /* dngsdkBuild.xcconfig */,
 				347D792C1CD7D5C000C28650 /* dngsdkDebug.xcconfig */,
 				347D792D1CD7D5C000C28650 /* dngsdkFlags.xcconfig */,
 				347D792E1CD7D5C000C28650 /* dngsdkRelease.xcconfig */,
+				C7A57B562252872A00DEF170 /* dngsdkRoot.xcconfig */,
 				347D792F1CD7D5C000C28650 /* dngsdkValidateDebug.xcconfig */,
 				347D79301CD7D5C000C28650 /* dngsdkValidateFlags.xcconfig */,
 				347D79311CD7D5C000C28650 /* dngsdkValidateRelease.xcconfig */,
@@ -960,6 +967,7 @@
 				C78B94E5157AF94400A4675C /* jcmarker.c */,
 				C78B9490157AF66400A4675C /* jcmaster.c */,
 				C78B950C157AFB2F00A4675C /* jcomapi.c */,
+				C70F691F22515E8D000B551D /* jconfig.h */,
 				C78B950F157AFB7F00A4675C /* jcparam.c */,
 				C78B9512157AFBB600A4675C /* jcprepct.c */,
 				C78B9513157AFBB600A4675C /* jcsample.c */,

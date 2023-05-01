@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_validate.cpp#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
 
 // Process exit codes
 // ------------------
@@ -57,13 +52,15 @@
 		
 /*****************************************************************************/
 
-#define kDNGValidateVersion "1.4"
+#define kDNGValidateVersion "1.5"
 		
 /*****************************************************************************/
 
 static bool gFourColorBayer = false;
 		
 static int32 gMosaicPlane = -1;
+
+static bool gIgnoreEnhanced = false;
 
 static uint32 gPreferredSize = 0;
 static uint32 gMinimumSize   = 0;
@@ -78,6 +75,8 @@ static uint32 gFinalPixelType = ttByte;
 static dng_string gDumpStage1;
 static dng_string gDumpStage2;
 static dng_string gDumpStage3;
+static dng_string gDumpTransparency;
+static dng_string gDumpDepthMap;
 static dng_string gDumpTIF;
 static dng_string gDumpDNG;
 
@@ -144,6 +143,16 @@ static dng_error_code dng_validate (const char *filename)
 			
 			negative->PostParse (host, stream, info);
 			
+            if (info.fEnhancedIndex != -1 && !gIgnoreEnhanced)
+                {
+                
+                dng_timer timer ("Read enhanced image time");
+
+                negative->ReadEnhancedImage (host, stream, info);
+                
+                }
+                
+            else
 				{
 				
 				dng_timer timer ("Raw image read time");
@@ -160,7 +169,16 @@ static dng_error_code dng_validate (const char *filename)
 				negative->ReadTransparencyMask (host, stream, info);
 				
 				}
-				
+    
+            if (info.fDepthIndex != -1)
+                {
+                
+                dng_timer timer ("Depth map read time");
+
+                negative->ReadDepthMap (host, stream, info);
+                
+                }
+    
 			negative->ValidateRawImageDigest (host);
 				
 			}
@@ -169,18 +187,23 @@ static dng_error_code dng_validate (const char *filename)
 			
 		if (gDumpStage1.NotEmpty ())
 			{
+   
+            if (negative->Stage1Image ())
+                {
 			
-			dng_file_stream stream2 (gDumpStage1.Get (), true);
-			
-			const dng_image &stage1 = *negative->Stage1Image ();
-			
-			dng_image_writer writer;
-			
-			writer.WriteTIFF (host,
-							  stream2,
-							  stage1,
-							  stage1.Planes () >= 3 ? piRGB 
-												    : piBlackIsZero);
+                dng_file_stream stream2 (gDumpStage1.Get (), true);
+                
+                const dng_image &stage1 = *negative->Stage1Image ();
+                
+                dng_image_writer writer;
+                
+                writer.WriteTIFF (host,
+                                  stream2,
+                                  stage1,
+                                  stage1.Planes () >= 3 ? piRGB
+                                                        : piBlackIsZero);
+                    
+                }
 
 			gDumpStage1.Clear ();
 			
@@ -190,15 +213,9 @@ static dng_error_code dng_validate (const char *filename)
 			
 		negative->SynchronizeMetadata ();
 		
-		// Four color Bayer option.
-		
-		if (gFourColorBayer)
-			{
-			negative->SetFourColorBayer ();
-			}
-			
 		// Build stage 2 image.
 		
+        if (negative->Stage1Image ())
 			{
 			
 			dng_timer timer ("Linearization time");
@@ -211,23 +228,36 @@ static dng_error_code dng_validate (const char *filename)
 			{
 			
 			dng_file_stream stream2 (gDumpStage2.Get (), true);
+   
+            if (negative->Stage2Image ())
+                {
 			
-			const dng_image &stage2 = *negative->Stage2Image ();
-						
-			dng_image_writer writer;
-			
-			writer.WriteTIFF (host,
-							  stream2,
-							  stage2,
-							  stage2.Planes () >= 3 ? piRGB 
-												    : piBlackIsZero);
+                const dng_image &stage2 = *negative->Stage2Image ();
+                    
+                dng_image_writer writer;
+                
+                writer.WriteTIFF (host,
+                                  stream2,
+                                  stage2,
+                                  stage2.Planes () >= 3 ? piRGB
+                                                        : piBlackIsZero);
+                    
+                }
 			
 			gDumpStage2.Clear ();
 			
 			}
 			
+        // Four color Bayer option.
+        
+        if (gFourColorBayer)
+            {
+            negative->SetFourColorBayer ();
+            }
+            
 		// Build stage 3 image.
 			
+        if (negative->Stage2Image ())
 			{
 			
 			dng_timer timer ("Interpolate time");
@@ -236,6 +266,15 @@ static dng_error_code dng_validate (const char *filename)
 									    gMosaicPlane);
 							
 			}
+   
+        else
+            {
+            
+            negative->ResizeTransparencyToMatchStage3 (host);
+            
+            negative->ResizeDepthToMatchStage3 (host);
+            
+            }
 			
 		// Convert to proxy, if requested.
 		
@@ -282,6 +321,52 @@ static dng_error_code dng_validate (const char *filename)
 			
 			}
 			
+        if (gDumpTransparency.NotEmpty ())
+            {
+   
+            if (negative->TransparencyMask ())
+                {
+            
+                dng_file_stream stream2 (gDumpTransparency.Get (), true);
+                
+                const dng_image &transparencyMask = *negative->TransparencyMask ();
+                
+                dng_image_writer writer;
+                
+                writer.WriteTIFF (host,
+                                  stream2,
+                                  transparencyMask,
+                                  piBlackIsZero);
+                    
+                }
+            
+            gDumpTransparency.Clear ();
+            
+            }
+
+        if (gDumpDepthMap.NotEmpty ())
+            {
+   
+            if (negative->HasDepthMap ())
+                {
+            
+                dng_file_stream stream2 (gDumpDepthMap.Get (), true);
+                
+                const dng_image &depthMap = *negative->DepthMap ();
+                
+                dng_image_writer writer;
+                
+                writer.WriteTIFF (host,
+                                  stream2,
+                                  depthMap,
+                                  piBlackIsZero);
+                    
+                }
+            
+            gDumpDepthMap.Clear ();
+            
+            }
+
 		// Output DNG file if requested.
 			
 		if (gDumpDNG.NotEmpty ())
@@ -457,6 +542,7 @@ static dng_error_code dng_validate (const char *filename)
 
 				negative->GetXMP ()->RemoveProperties (XMP_NS_CRS);
 				negative->GetXMP ()->RemoveProperties (XMP_NS_CRSS);
+				negative->GetXMP ()->RemoveProperties (XMP_NS_CRD);
 				
 				}
 			
@@ -527,31 +613,34 @@ int main (int argc, char *argv [])
 					 "(32-bit)"
 					 #endif
 					 "\n"
-					 "Copyright 2005-2016 Adobe Systems, Inc.\n"
+					 "Copyright 2005-2019 Adobe Systems, Inc.\n"
 					 "\n"
 					 "Usage:  %s [options] file1 file2 ...\n"
 					 "\n"
 					 "Valid options:\n"
-					 "-v            Verbose mode\n"
-					 "-d <num>      Dump line limit (implies -v)\n"
-					 "-b4           Use four-color Bayer interpolation\n"
-					 "-s <num>      Use this sample of multi-sample CFAs\n"
-					 "-size <num>   Preferred preview image size\n"
-					 "-min <num>    Minimum preview image size\n"
-					 "-max <num>    Maximum preview image size\n" 
-					 "-proxy <num>  Target size for proxy DNG\n"
-					 "-cs1          Color space: \"sRGB\" (default)\n"
-					 "-cs2          Color space: \"Adobe RGB\"\n"
-					 "-cs3          Color space: \"ProPhoto RGB\"\n"
-					 "-cs4          Color space: \"ColorMatch RGB\"\n"
-					 "-cs5          Color space: \"Gray Gamma 1.8\"\n"
-					 "-cs6          Color space: \"Gray Gamma 2.2\"\n"
-					 "-16           16-bits/channel output\n"
-					 "-1 <file>     Write stage 1 image to \"<file>.tif\"\n"
-					 "-2 <file>     Write stage 2 image to \"<file>.tif\"\n"
-					 "-3 <file>     Write stage 3 image to \"<file>.tif\"\n"
-					 "-tif <file>   Write TIF image to \"<file>.tif\"\n"
-					 "-dng <file>   Write DNG image to \"<file>.dng\"\n"
+					 "-v                    Verbose mode\n"
+					 "-d <num>              Dump line limit (implies -v)\n"
+					 "-b4                   Use four-color Bayer interpolation\n"
+					 "-s <num>              Use this sample of multi-sample CFAs\n"
+                     "-ignoreEnhanced       Ignore the enhanced image IFD\n"
+					 "-size <num>           Preferred preview image size\n"
+					 "-min <num>            Minimum preview image size\n"
+					 "-max <num>            Maximum preview image size\n"
+					 "-proxy <num>          Target size for proxy DNG\n"
+					 "-cs1                  Color space: \"sRGB\" (default)\n"
+					 "-cs2                  Color space: \"Adobe RGB\"\n"
+					 "-cs3                  Color space: \"ProPhoto RGB\"\n"
+					 "-cs4                  Color space: \"ColorMatch RGB\"\n"
+					 "-cs5                  Color space: \"Gray Gamma 1.8\"\n"
+					 "-cs6                  Color space: \"Gray Gamma 2.2\"\n"
+					 "-16                   16-bits/channel output\n"
+					 "-1 <file>             Write stage 1 image to \"<file>.tif\"\n"
+					 "-2 <file>             Write stage 2 image to \"<file>.tif\"\n"
+					 "-3 <file>             Write stage 3 image to \"<file>.tif\"\n"
+                     "-transparency <file>  Write transparency mask to \"<file>.tif\"\n"
+                     "-depthMap <file>      Write depth map to \"<file>.tif\"\n"
+					 "-tif <file>           Write TIF image to \"<file>.tif\"\n"
+					 "-dng <file>           Write DNG image to \"<file>.dng\"\n"
 					 "\n",
 					 argv [0]);
 					 
@@ -614,6 +703,11 @@ int main (int argc, char *argv [])
 				gFourColorBayer = true;
 				}
 					
+            else if (option.Matches ("ignoreEnhanced", true))
+                {
+                gIgnoreEnhanced = true;
+                }
+                
 			else if (option.Matches ("size", true))
 				{
 				
@@ -796,6 +890,52 @@ int main (int argc, char *argv [])
 				
 				}
 				
+            else if (option.Matches ("transparency"))
+                {
+                
+                gDumpTransparency.Clear ();
+                
+                if (index + 1 < argc)
+                    {
+                    gDumpTransparency.Set (argv [++index]);
+                    }
+                    
+                if (gDumpTransparency.IsEmpty () || gDumpTransparency.StartsWith ("-"))
+                    {
+                    fprintf (stderr, "*** Missing file name after -transparency\n");
+                    return 1;
+                    }
+                
+                if (!gDumpTransparency.EndsWith (".tif"))
+                    {
+                    gDumpTransparency.Append (".tif");
+                    }
+                
+                }
+                
+            else if (option.Matches ("depthMap"))
+                {
+                
+                gDumpDepthMap.Clear ();
+                
+                if (index + 1 < argc)
+                    {
+                    gDumpDepthMap.Set (argv [++index]);
+                    }
+                    
+                if (gDumpDepthMap.IsEmpty () || gDumpDepthMap.StartsWith ("-"))
+                    {
+                    fprintf (stderr, "*** Missing file name after -depthMap\n");
+                    return 1;
+                    }
+                
+                if (!gDumpDepthMap.EndsWith (".tif"))
+                    {
+                    gDumpDepthMap.Append (".tif");
+                    }
+                
+                }
+                
 			else if (option.Matches ("tif", true))
 				{
 				

@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2008 Adobe Systems Incorporated
+// Copyright 2008-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_bad_pixels.h#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Opcodes to fix defective pixels, including individual pixels and regions (such as
@@ -80,7 +75,7 @@ class dng_opcode_FixBadPixelsConstant: public dng_filter_opcode
 	
 		bool IsGreen (int32 row, int32 col) const
 			{
-			return (((uint32) row + (uint32) col + fBayerPhase + (fBayerPhase >> 1)) & 1) == 1;
+			return (((uint32) row + (uint32) col + fBayerPhase + (fBayerPhase >> 1)) & 1) == 0;
 			}
 
 	};
@@ -174,7 +169,7 @@ class dng_bad_pixel_list
 		
 		/// Add the specified rectangle to the list of bad rectangles.
 		///
-		/// \param pt The bad rectangle to add.
+		/// \param r The bad rectangle to add.
 
 		void AddRect (const dng_rect &r);
 		

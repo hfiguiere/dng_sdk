@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2015 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_xmp_sdk.h#3 $ */ 
-/* $DateTime: 2015/07/31 23:53:38 $ */
-/* $Change: 1033820 $ */
-/* $Author: tknoll $ */
-
 /*****************************************************************************/
 
 #ifndef __dng_xmp_sdk__
@@ -27,6 +20,7 @@
 
 extern const char *XMP_NS_TIFF;
 extern const char *XMP_NS_EXIF;
+extern const char *XMP_NS_EXIFEX;
 extern const char *XMP_NS_PHOTOSHOP;
 extern const char *XMP_NS_XAP;
 extern const char *XMP_NS_XAP_RIGHTS;
@@ -36,6 +30,7 @@ extern const char *XMP_NS_MM;
 
 extern const char *XMP_NS_CRS;
 extern const char *XMP_NS_CRSS;
+extern const char *XMP_NS_CRD;
 
 extern const char *XMP_NS_LCP;
 
@@ -155,7 +150,8 @@ class dng_xmp_sdk
 
 		bool GetAltLangDefault (const char *ns,
 								const char *path,
-								dng_string &s) const;
+								dng_string &s,
+                                bool silent = false) const;
 								
 		bool GetLocalString (const char *ns,
 							 const char *path,

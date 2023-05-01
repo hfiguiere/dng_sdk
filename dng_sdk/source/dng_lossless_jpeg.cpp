@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_lossless_jpeg.cpp#4 $ */ 
-/* $DateTime: 2016/01/20 16:00:38 $ */
-/* $Change: 1060141 $ */
-/* $Author: erichan $ */
- 
 /*****************************************************************************/
 
 // Lossless JPEG code adapted from:
@@ -415,6 +408,15 @@ class dng_lossless_decoder: private dng_uncopyable
 						uint32 &imageChannels);
 
 		void FinishRead ();
+		
+		#if qSupportHasselblad_3FR
+	
+		bool IsHasselblad3FR ()
+			{
+			return fHasselblad3FR;
+			}
+		
+		#endif
 
 	private:
 
@@ -1476,10 +1478,47 @@ inline void dng_lossless_decoder::FillBitBuffer (int32 nbits)
 		while (bitsLeft < kMinGetBits)
 			{
 			
-			int32 c0 = GetJpegChar ();
-			int32 c1 = GetJpegChar ();
-			int32 c2 = GetJpegChar ();
-			int32 c3 = GetJpegChar ();
+			int32 c0 = 0;
+			int32 c1 = 0;
+			int32 c2 = 0;
+			int32 c3 = 0;
+			
+			try
+				{
+				c0 = GetJpegChar ();
+				c1 = GetJpegChar ();
+				c2 = GetJpegChar ();
+				c3 = GetJpegChar ();
+				}
+				
+			catch (dng_exception &except)
+				{
+				
+				// If we got any exception other than EOF, rethrow.
+				
+				if (except.ErrorCode () != dng_error_end_of_file)
+					{
+					throw except;
+					}
+					
+				// Some Hasselblad files now use the JPEG end of image marker.
+				// If we DIDN'T hit that, rethrow.
+				// This sequence also sometimes occurs in the image data, so
+				// we can't simply check for it and exit - we need to wait until
+				// we throw the EOF and then look to see if we had it.
+					
+				// Look for the marker in c1 and c2 as well.
+				// (if we get it in c2 and c3, we won't throw.)
+				
+				if (!((c0 == 0xFF && c1 == 0xD9) ||
+					  (c1 == 0xFF && c2 == 0xD9)))
+					{
+					throw except;
+					}
+				
+				// Swallow the case where we hit EOF with the JPEG EOI marker.
+					
+				}
 			
 			getBuffer = (getBuffer << 8) | c3;
 			getBuffer = (getBuffer << 8) | c2;
@@ -2571,7 +2610,8 @@ void DecodeLosslessJPEG (dng_stream &stream,
 					     dng_spooler &spooler,
 					     uint32 minDecodedSize,
 					     uint32 maxDecodedSize,
-						 bool bug16)
+						 bool bug16,
+						 uint64 endOfData)
 	{
 	
 	dng_lossless_decoder decoder (&stream,
@@ -2598,6 +2638,33 @@ void DecodeLosslessJPEG (dng_stream &stream,
 		}
 	
 	decoder.FinishRead ();
+	
+	uint64 streamPos = stream.Position ();
+	
+	if (streamPos > endOfData)
+		{
+		
+		bool throwBadFormat = true;
+		
+		// Per Hasselblad's request:
+		// If we have a Hassy file with exactly four extra bytes,
+		// let it through; the file is likely still valid.
+		
+		#if qSupportHasselblad_3FR
+		
+		if (decoder.IsHasselblad3FR () &&
+			streamPos - endOfData == 4)
+			{
+			throwBadFormat = false;
+			}
+			
+		#endif
+		
+		if (throwBadFormat)
+			{
+			ThrowBadFormat ();
+			}
+		}
 	
 	}
 

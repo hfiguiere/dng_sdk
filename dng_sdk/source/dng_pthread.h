@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2002-2008 Adobe Systems Incorporated
+// Copyright 2002-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_pthread.h#3 $ */ 
-/* $DateTime: 2015/07/08 12:06:54 $ */
-/* $Change: 1029827 $ */
-/* $Author: krishnas $ */
-
 /*****************************************************************************/
 
 #ifndef __dng_pthread__
@@ -168,7 +161,7 @@ void dng_pthread_terminate();
 #undef PTHREAD_ONCE_INIT
 #define PTHREAD_ONCE_INIT DNG_PTHREAD_ONCE_INIT
 
-#if !qWinUniversal
+#if _MSC_VER < 1900
 #define timespec dng_timespec
 #endif
 

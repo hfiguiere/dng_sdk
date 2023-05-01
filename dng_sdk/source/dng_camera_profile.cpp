@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_camera_profile.cpp#5 $ */ 
-/* $DateTime: 2016/01/20 16:00:38 $ */
-/* $Change: 1060141 $ */
-/* $Author: erichan $ */
 
 #include "dng_camera_profile.h"
 
@@ -925,7 +920,9 @@ void dng_camera_profile::ReadHueSatMap (dng_stream &stream,
 			}
 			
 		}
-	
+
+	hueSatMap.AssignNewUniqueRuntimeFingerprint ();
+
 	}
 
 /*****************************************************************************/

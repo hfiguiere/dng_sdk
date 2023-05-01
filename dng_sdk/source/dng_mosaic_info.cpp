@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2009 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_mosaic_info.cpp#5 $ */ 
-/* $DateTime: 2016/01/20 16:00:38 $ */
-/* $Change: 1060141 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_mosaic_info.h"
@@ -2000,6 +1993,15 @@ void dng_mosaic_info::Interpolate (dng_host &host,
 						 srcPlane);
 		
 		}
+	
+	}
+
+/*****************************************************************************/
+
+bool dng_mosaic_info::SupportsPreservedBlackLevels () const
+	{
+	
+	return false;
 	
 	}
 

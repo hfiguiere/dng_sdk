@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_resample.cpp#4 $ */ 
-/* $DateTime: 2016/01/20 16:00:38 $ */
-/* $Change: 1060141 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_resample.h"
@@ -520,6 +513,7 @@ class dng_resample_task: public dng_filter_task
 		virtual dng_point SrcTileSize (const dng_point &dstTileSize);
 			
 		virtual void Start (uint32 threadCount,
+							const dng_rect &dstArea,
 							const dng_point &tileSize,
 							dng_memory_allocator *allocator,
 							dng_abort_sniffer *sniffer);
@@ -622,6 +616,7 @@ dng_point dng_resample_task::SrcTileSize (const dng_point & /* dstTileSize */)
 /*****************************************************************************/
 
 void dng_resample_task::Start (uint32 threadCount,
+							   const dng_rect &dstArea,
 							   const dng_point &tileSize,
 							   dng_memory_allocator *allocator,
 							   dng_abort_sniffer *sniffer)
@@ -681,6 +676,7 @@ void dng_resample_task::Start (uint32 threadCount,
 	// Allocate the pixel buffers.
 
 	dng_filter_task::Start (threadCount,
+							dstArea,
 							tileSize,
 							allocator,
 							sniffer);

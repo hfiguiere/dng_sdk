@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2008 Adobe Systems Incorporated
+// Copyright 2008-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:	Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_lens_correction.cpp#4 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include <cfloat>
@@ -343,7 +336,7 @@ dng_warp_params_rectilinear::~dng_warp_params_rectilinear ()
 
 bool dng_warp_params_rectilinear::IsRadNOP (uint32 plane) const
 	{
-	
+
 	DNG_ASSERT (plane < fPlanes, "plane out of range.");
 
 	const dng_vector &r = fRadParams [plane];
@@ -397,7 +390,7 @@ bool dng_warp_params_rectilinear::IsValid () const
 
 void dng_warp_params_rectilinear::PropagateToAllPlanes (uint32 totalPlanes)
 	{
-	
+
 	for (uint32 plane = fPlanes; plane < totalPlanes; plane++)
 		{
 
@@ -405,6 +398,8 @@ void dng_warp_params_rectilinear::PropagateToAllPlanes (uint32 totalPlanes)
 		fTanParams [plane] = fTanParams [0];
 
 		}
+
+	fPlanes = totalPlanes;
 
 	}
 
@@ -821,6 +816,8 @@ void dng_warp_params_fisheye::PropagateToAllPlanes (uint32 totalPlanes)
 		fRadParams [plane] = fRadParams [0];
 
 		}
+
+	fPlanes = totalPlanes;
 
 	}
 
@@ -2003,6 +2000,18 @@ dng_vignette_radial_params::dng_vignette_radial_params (const dng_std_vector<rea
 
 /*****************************************************************************/
 
+dng_vignette_radial_params::dng_vignette_radial_params 
+	(const dng_vignette_radial_params &params)
+	{
+	
+	fParams = params.fParams;
+
+	fCenter = params.fCenter;
+	
+	}
+
+/*****************************************************************************/
+
 bool dng_vignette_radial_params::IsNOP () const
 	{
 
@@ -2291,9 +2300,9 @@ void dng_opcode_FixVignetteRadial::Prepare (dng_negative &negative,
 	
 	fImagePlanes = imagePlanes;
 
-	// Set the vignette correction curve.
+	// Get the vignette radial params.
 
-	const dng_vignette_radial_function curve (fParams);
+	dng_vignette_radial_params params = MakeParamsForRender (negative);
 
 	// Grab the destination image area.
 
@@ -2303,11 +2312,11 @@ void dng_opcode_FixVignetteRadial::Prepare (dng_negative &negative,
 
 	const dng_point_real64 centerPixel (Lerp_real64 (bounds.t,
 													 bounds.b,
-													 fParams.fCenter.v),
+													 params.fCenter.v),
 
 										Lerp_real64 (bounds.l,
 													 bounds.r,
-													 fParams.fCenter.h));
+													 params.fCenter.h));
 
 	const real64 pixelScaleV = 1.0 / negative.PixelAspectRatio ();
 
@@ -2335,54 +2344,63 @@ void dng_opcode_FixVignetteRadial::Prepare (dng_negative &negative,
 	fSrcOriginH += fSrcStepH >> 1;
 	fSrcOriginV += fSrcStepV >> 1;
 	
-	// Evaluate 32-bit vignette correction table.
-	
-	dng_1d_table table32;
-	
-	table32.Initialize (allocator,
-						curve,
-						false);
-	
-	// Find maximum scale factor.
-	
-	const real64 maxScale = Max_real32 (table32.Interpolate (0.0f),
-										table32.Interpolate (1.0f));
-								  
-	// Find table input bits.
-	
-	fTableInputBits = 16;
-								  
-	// Find table output bits.
-	
-	fTableOutputBits = 15;
-	
-	while ((1 << fTableOutputBits) * maxScale > 65535.0)
+	if (!fGainTable.Get ())
 		{
-		fTableOutputBits--;
-		}
+
+		// Set the vignette correction curve.
+
+		const dng_vignette_radial_function curve (params);
+
+		// Evaluate 32-bit vignette correction table.
 	
-	// Allocate 16-bit scale table.
+		dng_1d_table table32;
 	
-	const uint32 tableEntries = (1 << fTableInputBits) + 1;
+		table32.Initialize (allocator,
+							curve,
+							false);
 	
-	fGainTable.Reset (allocator.Allocate (tableEntries * (uint32) sizeof (uint16)));
+		// Find maximum scale factor.
 	
-	uint16 *table16 = fGainTable->Buffer_uint16 ();
+		const real64 maxScale = Max_real32 (table32.Interpolate (0.0f),
+											table32.Interpolate (1.0f));
+								  
+		// Find table input bits.
 	
-	// Interpolate 32-bit table into 16-bit table.
+		fTableInputBits = 16;
+								  
+		// Find table output bits.
 	
-	const real32 scale0 = 1.0f / (1 << fTableInputBits );
-	const real32 scale1 = 1.0f * (1 << fTableOutputBits);
+		fTableOutputBits = 15;
 	
-	for (uint32 index = 0; index < tableEntries; index++)
-		{
+		while ((1 << fTableOutputBits) * maxScale > 65535.0)
+			{
+			fTableOutputBits--;
+			}
+	
+		// Allocate 16-bit scale table.
+	
+		const uint32 tableEntries = (1 << fTableInputBits) + 1;
+	
+		fGainTable.Reset (allocator.Allocate (tableEntries * (uint32) sizeof (uint16)));
+	
+		uint16 *table16 = fGainTable->Buffer_uint16 ();
+	
+		// Interpolate 32-bit table into 16-bit table.
+	
+		const real32 scale0 = 1.0f / (1 << fTableInputBits );
+		const real32 scale1 = 1.0f * (1 << fTableOutputBits);
+	
+		for (uint32 index = 0; index < tableEntries; index++)
+			{
 		
-		real32 x = index * scale0;
+			real32 x = index * scale0;
 		
-		real32 y = table32.Interpolate (x) * scale1;
+			real32 y = table32.Interpolate (x) * scale1;
 		
-		table16 [index] = (uint16) Round_uint32 (y);
+			table16 [index] = (uint16) Round_uint32 (y);
 		
+			}
+
 		}
 
 	// Prepare vignette mask buffers.
@@ -2395,7 +2413,16 @@ void dng_opcode_FixVignetteRadial::Prepare (dng_negative &negative,
 													 tileSize,
 													 imagePlanes, 
 													 padSIMDBytes);
-								   
+
+		// Support repeated Prepare() calls by ensuring all buffers are reset.
+
+		for (uint32 threadIndex = 0; threadIndex < kMaxMPThreads; threadIndex++)
+			{
+				
+			fMaskBuffers [threadIndex] . Reset ();
+				
+			}
+
 		for (uint32 threadIndex = 0; threadIndex < threadCount; threadIndex++)
 			{
 				
@@ -2409,7 +2436,7 @@ void dng_opcode_FixVignetteRadial::Prepare (dng_negative &negative,
 
 /*****************************************************************************/
 
-void dng_opcode_FixVignetteRadial::ProcessArea (dng_negative & /* negative */,
+void dng_opcode_FixVignetteRadial::ProcessArea (dng_negative &negative,
 												uint32 threadIndex,
 												dng_pixel_buffer &buffer,
 												const dng_rect &dstArea,
@@ -2439,6 +2466,8 @@ void dng_opcode_FixVignetteRadial::ProcessArea (dng_negative & /* negative */,
 					  fGainTable->Buffer_uint16 ());
 
 	// Apply mask.
+ 
+    uint16 blackLevel = (Stage () >= 2) ? negative.Stage3BlackLevel () : 0;
 
 	DoVignette32 (buffer.DirtyPixel_real32 (dstArea.t, dstArea.l),
 				  maskPixelBuffer.ConstPixel_uint16 (dstArea.t, dstArea.l),
@@ -2448,7 +2477,8 @@ void dng_opcode_FixVignetteRadial::ProcessArea (dng_negative & /* negative */,
 				  buffer.RowStep (),
 				  buffer.PlaneStep (),
 				  maskPixelBuffer.RowStep (),
-				  fTableOutputBits);
+				  fTableOutputBits,
+                  blackLevel);
 
 	}
 
@@ -2461,6 +2491,18 @@ uint32 dng_opcode_FixVignetteRadial::ParamBytes ()
 	
 	return ((N * sizeof (real64)) +	 // Vignette coefficients.
 			(2 * sizeof (real64)));	 // Optical center.
+	
+	}
+
+/*****************************************************************************/
+
+dng_vignette_radial_params dng_opcode_FixVignetteRadial::MakeParamsForRender
+	(const dng_negative &negative)
+	{
+	
+	(void) negative;
+
+	return fParams;
 	
 	}
 

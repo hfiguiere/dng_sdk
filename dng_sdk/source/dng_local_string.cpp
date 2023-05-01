@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2015 Adobe Systems Incorporated
+// Copyright 2015-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_local_string.cpp#2 $ */ 
-/* $DateTime: 2015/08/06 23:46:40 $ */
-/* $Change: 1034773 $ */
-/* $Author: tknoll $ */
-
 /*****************************************************************************/
 
 #include "dng_local_string.h"
@@ -69,11 +62,28 @@ void dng_local_string::SetDefaultText (const dng_string &s)
 void dng_local_string::AddTranslation (const dng_string &language,
                                        const dng_string &translation)
     {
+    
+    dng_string safeLanguage (language);
+    
+    safeLanguage.Truncate (255);
 
-    fDictionary.push_back (dictionary_entry (language,
+    fDictionary.push_back (dictionary_entry (safeLanguage,
                                              translation));
 
     }
+
+/*****************************************************************************/
+
+void dng_local_string::Set (const char *s)
+	{
+	
+	dng_string defaultText;
+	
+	defaultText.Set (s);
+	
+	*this = dng_local_string (defaultText);
+	
+	}
 
 /*****************************************************************************/
 
@@ -161,5 +171,21 @@ bool dng_local_string::operator== (const dng_local_string &s) const
     return true;
 
     }
-		
+			
+/*****************************************************************************/
+
+void dng_local_string::Truncate (uint32 maxBytes)
+    {
+    
+    fDefaultText.Truncate (maxBytes);
+    
+    for (uint32 index = 0; index < TranslationCount (); index++)
+        {
+        
+        fDictionary [index] . fTranslation . Truncate (maxBytes);
+
+        }
+    
+    }
+			
 /*****************************************************************************/

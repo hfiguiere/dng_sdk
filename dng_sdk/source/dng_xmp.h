@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2011 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_xmp.h#6 $ */ 
-/* $DateTime: 2016/03/19 01:14:39 $ */
-/* $Change: 1068180 $ */
-/* $Author: ccastleb $ */
-
 /*****************************************************************************/
 
 #ifndef __dng_xmp__
@@ -170,7 +163,8 @@ class dng_xmp
 								
 		bool GetAltLangDefault (const char *ns,
 								const char *path,
-								dng_string &s) const;
+								dng_string &s,
+                                bool silent = false) const;
 								
 		bool GetLocalString (const char *ns,
 							 const char *path,
@@ -401,10 +395,14 @@ class dng_xmp
 		void SyncFlash (uint32 &flashState,
 						uint32 &flashMask,
 						uint32 options);
+      
+        void SyncExifDate (const char *ns,
+                           const char *path,
+                           dng_date_time_info &exifDateTime,
+                           bool canRemoveFromXMP,
+                           bool removeFromXMP,
+                           const dng_time_zone &fakeTimeZone);
 						
-		bool DateTimeIsDateOnly (const char *ns,
-							     const char *path);
-
 		virtual void SyncApproximateFocusDistance (dng_exif &exif,
 												   const uint32 readOnly);
 		

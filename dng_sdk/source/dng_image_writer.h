@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_image_writer.h#3 $ */ 
-/* $DateTime: 2016/02/22 21:25:58 $ */
-/* $Change: 1064312 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Support for writing DNG images to files.
@@ -22,18 +17,23 @@
 
 /*****************************************************************************/
 
+#include "dng_area_task.h"
 #include "dng_auto_ptr.h"
 #include "dng_classes.h"
 #include "dng_fingerprint.h"
 #include "dng_memory.h"
+#include "dng_mutex.h"
 #include "dng_point.h"
 #include "dng_rational.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_sdk_limits.h"
 #include "dng_string.h"
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
 #include "dng_types.h"
 #include "dng_uncopyable.h"
+
+#include <atomic>
 
 /*****************************************************************************/
 
@@ -813,7 +813,11 @@ class exif_tag_set: private dng_uncopyable
 		tag_string fSubsecTime;
 		tag_string fSubsecTimeOriginal;
 		tag_string fSubsecTimeDigitized;
-		
+  
+        tag_string fOffsetTime;
+        tag_string fOffsetTimeOriginal;
+        tag_string fOffsetTimeDigitized;
+
 		tag_string fMake;
 		tag_string fModel;
 		tag_string fArtist;
@@ -841,6 +845,15 @@ class exif_tag_set: private dng_uncopyable
 		tag_string fLensMake;
 		tag_string fLensModel;
 		tag_string fLensSerialNumber;
+  
+        // EXIF 2.3.1 tags.
+        
+        tag_srational fTemperature;
+        tag_urational fHumidity;
+        tag_urational fPressure;
+        tag_srational fWaterDepth;
+        tag_urational fAcceleration;
+        tag_srational fCameraElevationAngle;
 		
 		uint8 fGPSVersionData [4];
 		
@@ -974,8 +987,10 @@ enum dng_metadata_subset
 	kMetadataSubset_All,
 	kMetadataSubset_AllExceptLocationInfo,
 	kMetadataSubset_AllExceptCameraAndLocation,
+    KMetadataSubset_AllExceptCameraRawInfo,
+	KMetadataSubset_AllExceptCameraRawInfoAndLocation,
 	
-	kMetadataSubset_Last = kMetadataSubset_AllExceptCameraAndLocation
+    kMetadataSubset_Last = KMetadataSubset_AllExceptCameraRawInfoAndLocation
 	
 	};
 
@@ -1127,13 +1142,13 @@ class dng_image_writer
 		/// \param maxBackwardVersion The DNG file should be readable by readers at least back to this version.
 		/// \param uncompressed True to force uncompressed images. Otherwise use normal compression.
 
-		virtual void WriteDNG (dng_host &host,
-							   dng_stream &stream,
-							   const dng_negative &negative,
-							   const dng_metadata &metadata,
-							   const dng_preview_list *previewList = NULL,
-							   uint32 maxBackwardVersion = dngVersion_SaveDefault,
-							   bool uncompressed = false);
+		virtual void WriteDNGWithMetadata (dng_host &host,
+										   dng_stream &stream,
+										   const dng_negative &negative,
+										   const dng_metadata &metadata,
+										   const dng_preview_list *previewList = NULL,
+										   uint32 maxBackwardVersion = dngVersion_SaveDefault,
+										   bool uncompressed = false);
 
 		/// Resolve metadata conflicts and apply metadata policies in keeping
 		/// with Metadata Working Group (MWG) guidelines.
@@ -1184,7 +1199,94 @@ class dng_image_writer
 								AutoPtr<dng_memory_block> &subTileBlockBuffer,
 								AutoPtr<dng_memory_block> &tempBuffer,
                                 bool usingMultipleThreads);
-								
+	
+		virtual void DoWriteTiles (dng_host &host,
+								   const dng_ifd &ifd,
+								   dng_basic_tag_set &basic,
+								   dng_stream &stream,
+								   const dng_image &image,
+								   uint32 fakeChannels,
+								   uint32 tilesDown,
+								   uint32 tilesAcross,
+								   uint32 compressedSize,
+								   const dng_safe_uint32 &uncompressedSize);
+							
+	};
+
+/*****************************************************************************/
+
+class dng_write_tiles_task : public dng_area_task,
+							 private dng_uncopyable
+	{
+	
+	protected:
+	
+		dng_image_writer &fImageWriter;
+		
+		dng_host &fHost;
+		
+		const dng_ifd &fIFD;
+		
+		dng_basic_tag_set &fBasic;
+		
+		dng_stream &fStream;
+		
+		const dng_image &fImage;
+		
+		uint32 fFakeChannels;
+		
+		uint32 fTilesDown;
+		
+		uint32 fTilesAcross;
+		
+		uint32 fCompressedSize;
+		
+		uint32 fUncompressedSize;
+		
+		std::atomic_uint fNextTileIndex;
+		
+		dng_mutex fMutex;
+		
+		dng_condition fCondition;
+		
+		bool fTaskFailed;
+
+		uint32 fWriteTileIndex;
+		
+	public:
+	
+		dng_write_tiles_task (dng_image_writer &imageWriter,
+							  dng_host &host,
+							  const dng_ifd &ifd,
+							  dng_basic_tag_set &basic,
+							  dng_stream &stream,
+							  const dng_image &image,
+							  uint32 fakeChannels,
+							  uint32 tilesDown,
+							  uint32 tilesAcross,
+							  uint32 compressedSize,
+							  uint32 uncompressedSize);
+
+		void Process (uint32 threadIndex,
+					  const dng_rect &tile,
+					  dng_abort_sniffer *sniffer);
+
+	protected:
+
+		void ProcessTask (uint32 tileIndex,
+						  AutoPtr<dng_memory_block> &compressedBuffer,
+						  AutoPtr<dng_memory_block> &uncompressedBuffer,
+						  AutoPtr<dng_memory_block> &subTileBlockBuffer,
+						  AutoPtr<dng_memory_block> &tempBuffer,
+						  uint32 &tileByteCount, // output
+						  dng_memory_stream &tileStream, // output
+						  dng_abort_sniffer *sniffer);
+
+		void WriteTask (uint32 tileIndex,
+					    uint32 tileByteCount,
+					    dng_memory_stream &tileStream,
+						dng_abort_sniffer *sniffer);
+		
 	};
 	
 /*****************************************************************************/

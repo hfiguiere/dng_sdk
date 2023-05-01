@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_stream.cpp#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
-
 /*****************************************************************************/
 
 #include "dng_stream.h"
@@ -23,6 +16,7 @@
 #include "dng_flags.h"
 #include "dng_memory.h"
 #include "dng_tag_types.h"
+#include "dng_assertions.h"
 
 /*****************************************************************************/
 
@@ -265,7 +259,7 @@ uint64 dng_stream::PositionInOriginalFile () const
 
 /*****************************************************************************/
 
-void dng_stream::Get (void *data, uint32 count)
+void dng_stream::Get (void *data, uint32 count, uint32 maxOverRead)
 	{
 	
 	while (count)
@@ -313,7 +307,7 @@ void dng_stream::Get (void *data, uint32 count)
 		
 		if (count > fBufferSize)
 			{
-			
+			DNG_ASSERT(maxOverRead == 0, "Over-read of large size unexpected");
 			if (fPosition + count > Length ())
 				{
 				
@@ -345,7 +339,10 @@ void dng_stream::Get (void *data, uint32 count)
 			}
 		
 		fBufferEnd = Min_uint64 (fBufferStart + fBufferSize, Length ());
-		
+
+		if ((fBufferEnd - fPosition) < maxOverRead)
+			return; // ep, allow over-read requests
+		else
 		if (fBufferEnd <= fPosition)
 			{
 			
@@ -564,7 +561,6 @@ void dng_stream::Put_uint16 (uint16 x)
 	}
 
 /*****************************************************************************/
-
 uint32 dng_stream::Get_uint32 ()
 	{
 	

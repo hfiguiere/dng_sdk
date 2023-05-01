@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2015 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_info.h#5 $ */ 
-/* $DateTime: 2015/07/15 22:40:34 $ */
-/* $Change: 1031103 $ */
-/* $Author: mwendt $ */
 
 /** \file
  * Class for holding top-level information about a DNG image.
@@ -59,7 +54,11 @@ class dng_info: private dng_uncopyable
 		int32 fMainIndex;
 		
 		int32 fMaskIndex;
+  
+        int32 fDepthIndex;
 			
+        int32 fEnhancedIndex;
+        
         std::vector <dng_ifd *> fIFD;
 
         std::vector <dng_ifd *> fChainedIFD;

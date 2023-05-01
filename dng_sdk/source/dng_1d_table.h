@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_1d_table.h#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Definition of a lookup table based 1D floating-point to floating-point function abstraction using linear interpolation.
@@ -92,12 +87,8 @@ class dng_1d_table: private dng_uncopyable
 			
 			int32 index = (int32) y;
 
-			if (index < 0 || index > (int32) fTableCount)
-				{
-				
-				ThrowProgramError ("dng_1d_table::Interpolate parameter out of range");
-				
-				}
+			// Enable vectorization by using DNG_ASSERT instead of DNG_REQUIRE
+			DNG_ASSERT(!(index < 0 || index >(int32) fTableCount), "dng_1d_table::Interpolate parameter out of range");
 			
 			real32 z = (real32) index;
 						

@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_read_image.cpp#4 $ */ 
-/* $DateTime: 2016/01/19 19:30:05 $ */
-/* $Change: 1059976 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_read_image.h"
@@ -833,8 +826,10 @@ int32 dng_row_interleaved_image::MapRow (int32 row) const
 	int32 top = Bounds ().t;
 	
 	uint32 fieldRow = row - top;
+ 
+    uint32 field;
 	
-	for (uint32 field = 0; true; field++)
+	for (field = 0; true; field++)
 		{
 		
 		uint32 fieldRows = (rows - field + fFactor - 1) / fFactor;
@@ -842,18 +837,16 @@ int32 dng_row_interleaved_image::MapRow (int32 row) const
 		if (fieldRow < fieldRows)
 			{
 			
-			return fieldRow * fFactor + field + top;
+            break;
 			
 			}
 			
 		fieldRow -= fieldRows;
 		
 		}
-		
-	ThrowProgramError ();
-		
-	return 0;
-	
+  
+    return fieldRow * fFactor + field + top;
+
 	}
 	
 /*****************************************************************************/
@@ -1893,12 +1886,8 @@ bool dng_read_image::ReadLosslessJPEG (dng_host &host,
 					    spooler,
 					    decodedSize.Get (),
 					    decodedSize.Get (),
-						bug16);
-						
-	if (stream.Position () > tileOffset + tileByteCount)
-		{
-		ThrowBadFormat ();
-		}
+						bug16,
+						tileOffset + tileByteCount);
 
 	return true;
 	
@@ -2728,197 +2717,187 @@ bool dng_read_image::CanRead (const dng_ifd &ifd)
 	
 /*****************************************************************************/
 
-class dng_read_tiles_task : public dng_area_task,
-							private dng_uncopyable
+dng_read_tiles_task::dng_read_tiles_task (dng_read_image &readImage,
+										  dng_host &host,
+										  const dng_ifd &ifd,
+										  dng_stream &stream,
+										  dng_image &image,
+										  dng_jpeg_image *jpegImage,
+										  dng_fingerprint *jpegTileDigest,
+										  uint32 outerSamples,
+										  uint32 innerSamples,
+										  uint32 tilesDown,
+										  uint32 tilesAcross,
+										  uint64 *tileOffset,
+										  uint32 *tileByteCount,
+										  uint32 compressedSize,
+										  uint32 uncompressedSize)
+
+	:	dng_area_task ("dng_read_tiles_task")
+
+	,	fReadImage        (readImage)
+	,	fHost		      (host)
+	,	fIFD		      (ifd)
+	,	fStream		      (stream)
+	,	fImage		      (image)
+	,	fJPEGImage		  (jpegImage)
+	,	fJPEGTileDigest   (jpegTileDigest)
+	,	fOuterSamples     (outerSamples)
+	,	fInnerSamples     (innerSamples)
+	,	fTilesDown        (tilesDown)
+	,	fTilesAcross	  (tilesAcross)
+	,	fTileOffset		  (tileOffset)
+	,	fTileByteCount	  (tileByteCount)
+	,	fCompressedSize   (compressedSize)
+	,	fUncompressedSize (uncompressedSize)
+	,	fMutex			  ("dng_read_tiles_task")
+	,	fNextTileIndex	  (0)
+
+	{
+
+	fMinTaskArea = 16 * 16;
+	fUnitCell    = dng_point (16, 16);
+	fMaxTileSize = dng_point (16, 16);
+
+	}
+	
+/*****************************************************************************/
+
+void dng_read_tiles_task::Process (uint32 /* threadIndex */,
+								   const dng_rect & /* tile */,
+								   dng_abort_sniffer *sniffer)
+	{
+			
+	AutoPtr<dng_memory_block> compressedBuffer;
+	AutoPtr<dng_memory_block> uncompressedBuffer;
+	AutoPtr<dng_memory_block> subTileBlockBuffer;
+
+	if (!fJPEGImage)
+		{
+		compressedBuffer.Reset (fHost.Allocate (fCompressedSize));
+		}
+
+	if (fUncompressedSize)
+		{
+		uncompressedBuffer.Reset (fHost.Allocate (fUncompressedSize));
+		}
+
+	while (true)
+		{
+
+		uint32 tileIndex;
+		uint32 byteCount;
+
+			{
+
+			dng_lock_mutex lock (&fMutex);
+
+			if (fNextTileIndex == fOuterSamples * fTilesDown * fTilesAcross)
+				{
+				return;
+				}
+
+			tileIndex = fNextTileIndex++;
+
+			ReadTask (tileIndex,
+					  byteCount,
+					  compressedBuffer.Get ());
+
+			}
+
+		ProcessTask (tileIndex,
+					 byteCount,
+					 sniffer,
+					 compressedBuffer,
+					 uncompressedBuffer,
+					 subTileBlockBuffer);
+
+		}
+
+	}
+
+/*****************************************************************************/
+
+void dng_read_tiles_task::ReadTask (uint32 tileIndex,
+									uint32 &byteCount,
+									dng_memory_block *compressedBuffer)
 	{
 	
-	private:
-	
-		dng_read_image &fReadImage;
-		
-		dng_host &fHost;
-		
-		const dng_ifd &fIFD;
-		
-		dng_stream &fStream;
-		
-		dng_image &fImage;
-		
-		dng_jpeg_image *fJPEGImage;
-		
-		dng_fingerprint *fJPEGTileDigest;
-		
-		uint32 fOuterSamples;
-		
-		uint32 fInnerSamples;
-		
-		uint32 fTilesDown;
-		
-		uint32 fTilesAcross;
-		
-		uint64 *fTileOffset;
-		
-		uint32 *fTileByteCount;
-		
-		uint32 fCompressedSize;
-		
-		uint32 fUncompressedSize;
-		
-		dng_mutex fMutex;
-		
-		uint32 fNextTileIndex;
-		
-	public:
-	
-		dng_read_tiles_task (dng_read_image &readImage,
-							 dng_host &host,
-							 const dng_ifd &ifd,
-							 dng_stream &stream,
-							 dng_image &image,
-							 dng_jpeg_image *jpegImage,
-							 dng_fingerprint *jpegTileDigest,
-							 uint32 outerSamples,
-							 uint32 innerSamples,
-							 uint32 tilesDown,
-							 uint32 tilesAcross,
-							 uint64 *tileOffset,
-							 uint32 *tileByteCount,
-							 uint32 compressedSize,
-							 uint32 uncompressedSize)
+	TempStreamSniffer noSniffer (fStream, NULL);
 
-			:	dng_area_task ("dng_read_tiles_task")
-		
-			,	fReadImage        (readImage)
-			,	fHost		      (host)
-			,	fIFD		      (ifd)
-			,	fStream		      (stream)
-			,	fImage		      (image)
-			,	fJPEGImage		  (jpegImage)
-			,	fJPEGTileDigest   (jpegTileDigest)
-			,	fOuterSamples     (outerSamples)
-			,	fInnerSamples     (innerSamples)
-			,	fTilesDown        (tilesDown)
-			,	fTilesAcross	  (tilesAcross)
-			,	fTileOffset		  (tileOffset)
-			,	fTileByteCount	  (tileByteCount)
-			,	fCompressedSize   (compressedSize)
-			,	fUncompressedSize (uncompressedSize)
-			,	fMutex			  ("dng_read_tiles_task")
-			,	fNextTileIndex	  (0)
-			
-			{
-			
-			fMinTaskArea = 16 * 16;
-			fUnitCell    = dng_point (16, 16);
-			fMaxTileSize = dng_point (16, 16);
-			
-			}
-	
-		void Process (uint32 /* threadIndex */,
-					  const dng_rect & /* tile */,
-					  dng_abort_sniffer *sniffer)
-			{
-			
-			AutoPtr<dng_memory_block> compressedBuffer;
-			AutoPtr<dng_memory_block> uncompressedBuffer;
-			AutoPtr<dng_memory_block> subTileBlockBuffer;
-			
-			if (!fJPEGImage)
-				{
-				compressedBuffer.Reset (fHost.Allocate (fCompressedSize));
-				}
-			
-			if (fUncompressedSize)
-				{
-				uncompressedBuffer.Reset (fHost.Allocate (fUncompressedSize));
-				}
-			
-			while (true)
-				{
-				
-				uint32 tileIndex;
-				uint32 byteCount;
-				
-					{
-					
-					dng_lock_mutex lock (&fMutex);
-					
-					if (fNextTileIndex == fOuterSamples * fTilesDown * fTilesAcross)
-						{
-						return;
-						}
-						
-					tileIndex = fNextTileIndex++;
-					
-					TempStreamSniffer noSniffer (fStream, NULL);
+	fStream.SetReadPosition (fTileOffset [tileIndex]);
 
-					fStream.SetReadPosition (fTileOffset [tileIndex]);
-					
-					byteCount = fTileByteCount [tileIndex];
-					
-					if (fJPEGImage)
-						{
-						
-						fJPEGImage->fJPEGData [tileIndex] . Reset (fHost.Allocate (byteCount));
-						
-						}
-					
-					fStream.Get (fJPEGImage ? fJPEGImage->fJPEGData [tileIndex]->Buffer ()
-											: compressedBuffer->Buffer (),
-								 byteCount);
-					
-					}
-					
-				dng_abort_sniffer::SniffForAbort (sniffer);
-				
-				if (fJPEGTileDigest)
-					{
-					
-					dng_md5_printer printer;
-					
-					printer.Process (compressedBuffer->Buffer (),
-									 byteCount);
-									 
-					fJPEGTileDigest [tileIndex] = printer.Result ();
-					
-					}
-					
-				dng_stream tileStream (fJPEGImage ? fJPEGImage->fJPEGData [tileIndex]->Buffer ()
-												  : compressedBuffer->Buffer (),
-									   byteCount);
-									   
-				tileStream.SetLittleEndian (fStream.LittleEndian ());
-							
-				uint32 plane = tileIndex / (fTilesDown * fTilesAcross);
-				
-				uint32 rowIndex = (tileIndex - plane * fTilesDown * fTilesAcross) / fTilesAcross;
-				
-				uint32 colIndex = tileIndex - (plane * fTilesDown + rowIndex) * fTilesAcross;
-				
-				dng_rect tileArea = fIFD.TileArea (rowIndex, colIndex);
-				
-				dng_host host (&fHost.Allocator (),
-							   sniffer);				// Cannot use sniffer attached to main host
-				
-				fReadImage.ReadTile (host,
-									 fIFD,
-									 tileStream,
-									 fImage,
-									 tileArea,
-									 plane,
-									 fInnerSamples,
-									 byteCount,
-									 fJPEGImage ? fJPEGImage->fJPEGData [tileIndex]
-												: compressedBuffer,
-									 uncompressedBuffer,
-									 subTileBlockBuffer,
-                                     true);
-					
-				}
-			
-			}
-		
-	};
+	byteCount = fTileByteCount [tileIndex];
+
+	if (fJPEGImage)
+		{
+
+		fJPEGImage->fJPEGData [tileIndex] . Reset (fHost.Allocate (byteCount));
+
+		}
+
+	fStream.Get (fJPEGImage ? fJPEGImage->fJPEGData [tileIndex]->Buffer ()
+							: compressedBuffer->Buffer (),
+				 byteCount);	
+
+	}
+
+/*****************************************************************************/
+
+void dng_read_tiles_task::ProcessTask (uint32 tileIndex,
+									   uint32 byteCount,
+									   dng_abort_sniffer *sniffer,
+									   AutoPtr<dng_memory_block> &compressedBuffer,
+									   AutoPtr<dng_memory_block> &uncompressedBuffer,
+									   AutoPtr<dng_memory_block> &subTileBlockBuffer)
+	{
+	
+	dng_abort_sniffer::SniffForAbort (sniffer);
+
+	if (fJPEGTileDigest)
+		{
+
+		dng_md5_printer printer;
+
+		printer.Process (compressedBuffer->Buffer (),
+						 byteCount);
+
+		fJPEGTileDigest [tileIndex] = printer.Result ();
+
+		}
+
+	dng_stream tileStream (fJPEGImage ? fJPEGImage->fJPEGData [tileIndex]->Buffer ()
+									  : compressedBuffer->Buffer (),
+						   byteCount);
+
+	tileStream.SetLittleEndian (fStream.LittleEndian ());
+
+	uint32 plane = tileIndex / (fTilesDown * fTilesAcross);
+
+	uint32 rowIndex = (tileIndex - plane * fTilesDown * fTilesAcross) / fTilesAcross;
+
+	uint32 colIndex = tileIndex - (plane * fTilesDown + rowIndex) * fTilesAcross;
+
+	dng_rect tileArea = fIFD.TileArea (rowIndex, colIndex);
+
+	dng_host host (&fHost.Allocator (),
+				   sniffer);				// Cannot use sniffer attached to main host
+
+	fReadImage.ReadTile (host,
+						 fIFD,
+						 tileStream,
+						 fImage,
+						 tileArea,
+						 plane,
+						 fInnerSamples,
+						 byteCount,
+						 fJPEGImage ? fJPEGImage->fJPEGData [tileIndex]
+									: compressedBuffer,
+						 uncompressedBuffer,
+						 subTileBlockBuffer,
+						 true);
+
+	}
 
 /*****************************************************************************/
 
@@ -2930,8 +2909,23 @@ void dng_read_image::Read (dng_host &host,
 						   dng_fingerprint *jpegDigest)
 	{
 	
-	uint32 tileIndex;
+	// Reject images that are too big.
+
+	// Allow up to 2 * kMaxImageSide to deal with intermediate image objects
+	// (e.g., rotated and padded).
+
+	static const uint32 kLimit = 2 * kMaxImageSide;
+
+	if (ifd.fImageWidth  > kLimit ||
+		ifd.fImageLength > kLimit)
+		{
+		
+		ThrowBadFormat ("dng_read_image::Read image too large");
+		
+		}
 	
+	uint32 tileIndex;
+
 	// Deal with row interleaved images.
 	
 	if (ifd.fRowInterleaveFactor > 1 &&
@@ -3322,28 +3316,21 @@ void dng_read_image::Read (dng_host &host,
 	
 	if (useMultipleThreads)
 		{
-		
-		uint32 threadCount = Min_uint32 (outerSamples * tilesDown * tilesAcross,
-										 host.PerformAreaTaskThreads ());
-		
-		dng_read_tiles_task task (*this,
-								  host,
-								  ifd,
-								  stream,
-								  image,
-								  jpegImage,
-								  jpegTileDigest.Get (),
-								  outerSamples,
-								  innerSamples,
-								  tilesDown,
-								  tilesAcross,
-								  tileOffset,
-								  tileByteCount,
-								  maxTileByteCount,
-								  uncompressedSize);
-								  
-		host.PerformAreaTask (task,
-							  dng_rect (0, 0, 16, 16 * threadCount));
+
+		DoReadTiles (host,
+					 ifd,
+					 stream,
+					 image,
+					 jpegImage,
+					 jpegTileDigest.Get (),
+					 outerSamples,
+					 innerSamples,
+					 tilesDown,
+					 tilesAcross,
+					 tileOffset,
+					 tileByteCount,
+					 maxTileByteCount,
+					 uncompressedSize);
 		
 		}
 		
@@ -3507,6 +3494,48 @@ void dng_read_image::Read (dng_host &host,
 		
 		}
 
+	}
+
+/*****************************************************************************/
+
+void dng_read_image::DoReadTiles (dng_host &host,
+								  const dng_ifd &ifd,
+								  dng_stream &stream,
+								  dng_image &image,
+								  dng_jpeg_image *jpegImage,
+								  dng_fingerprint *jpegTileDigest,
+								  uint32 outerSamples,
+								  uint32 innerSamples,
+								  uint32 tilesDown,
+								  uint32 tilesAcross,
+								  uint64 *tileOffset,
+								  uint32 *tileByteCount,
+								  uint32 compressedSize,
+								  uint32 uncompressedSize)
+	{
+	
+	uint32 threadCount = Min_uint32 (outerSamples * tilesDown * tilesAcross,
+									 host.PerformAreaTaskThreads ());
+
+	dng_read_tiles_task task (*this,
+							  host,
+							  ifd,
+							  stream,
+							  image,
+							  jpegImage,
+							  jpegTileDigest,
+							  outerSamples,
+							  innerSamples,
+							  tilesDown,
+							  tilesAcross,
+							  tileOffset,
+							  tileByteCount,
+							  compressedSize,
+							  uncompressedSize);
+
+	host.PerformAreaTask (task,
+						  dng_rect (0, 0, 16, 16 * threadCount));
+	
 	}
 
 /*****************************************************************************/

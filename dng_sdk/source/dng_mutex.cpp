@@ -1,16 +1,12 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_mutex.cpp#5 $ */ 
-/* $DateTime: 2015/07/10 17:25:07 $ */
-/* $Change: 1030312 $ */
-/* $Author: bkaskel $ */
-
+#include "dng_abort_sniffer.h"
 #include "dng_mutex.h"
 
 #include "dng_assertions.h"
@@ -137,7 +133,7 @@ dng_mutex::dng_mutex (const char *mutexName, uint32 mutexLevel)
 	#endif
 	
 	#endif
-	
+
 	}
 
 /*****************************************************************************/
@@ -150,13 +146,14 @@ dng_mutex::~dng_mutex ()
 	pthread_mutex_destroy (&fPthreadMutex);
 
 	#endif
-	
+
 	}
 
 /*****************************************************************************/
 
 void dng_mutex::Lock ()
 	{
+
     #if qDNGThreadSafe
 	#if qDNGThreadTestMutexLevels
 
@@ -229,17 +226,21 @@ void dng_mutex::Lock ()
 	gInnermostMutexHolder.SetInnermostMutex (this);
 
     #else
-        
+     
+	// Register the fact that we're trying to lock this mutex.
+
 	int result = pthread_mutex_lock (&fPthreadMutex);
 
 	if (result != 0)
 		{
 
-		DNG_ASSERT (result == 0, "pthread_mutex_lock failed.");
+		DNG_REPORT ("pthread_mutex_lock failed");
 
 		ThrowProgramError ();
 		
 		}
+
+	// Register the fact that we've now successfully acquired the mutex.
 
 	#endif
     #endif
@@ -272,9 +273,9 @@ void dng_mutex::Unlock ()
 	fPrevHeldMutex = NULL;
 
     #endif
-        
+
 	pthread_mutex_unlock (&fPthreadMutex);
-	
+
 	#endif
         
 	}
@@ -445,17 +446,20 @@ bool dng_condition::Wait (dng_mutex &mutex, double timeoutSecs)
 		now.tv_sec  = (long) timeoutSecs;
 		now.tv_nsec = (long) ((timeoutSecs - now.tv_sec) * 1000000000);
 
-#if qWinUniversal
-		//krishnas - windows universal defines timespec in time.h and it is different size than dng_timespec on 64 bit.
+		#if defined(_MSC_VER) && _MSC_VER >= 1900 
+		
 		struct dng_timespec tempNow;
 		
 		tempNow.tv_sec = (long) now.tv_sec;
 		tempNow.tv_nsec = now.tv_nsec;
 
 		timedOut = (pthread_cond_timedwait (&fPthreadCondition, &mutex.fPthreadMutex, &tempNow) == ETIMEDOUT);
-#else
-		timedOut = (pthread_cond_timedwait(&fPthreadCondition, &mutex.fPthreadMutex, &now) == ETIMEDOUT);
-#endif
+
+		#else
+
+		timedOut = (pthread_cond_timedwait (&fPthreadCondition, &mutex.fPthreadMutex, &now) == ETIMEDOUT);
+
+		#endif
 
 		}
 

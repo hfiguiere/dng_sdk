@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_parse_utils.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
-
 /*****************************************************************************/
 
 #ifndef __dng_parse_utils__
@@ -105,6 +98,12 @@ const char * LookupPreviewColorSpace (uint32 key);
 const char * LookupJPEGMarker (uint32 key);
 
 const char * LookupSensitivityType (uint32 key);
+
+const char * LookupDepthFormat (uint32 key);
+
+const char * LookupDepthUnits (uint32 key);
+
+const char * LookupDepthMeasureType (uint32 key);
 
 /*****************************************************************************/
 

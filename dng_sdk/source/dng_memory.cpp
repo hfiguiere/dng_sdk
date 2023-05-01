@@ -1,22 +1,19 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_memory.cpp#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
-
-/*****************************************************************************/
-
 #include "dng_memory.h"
 
 #include "dng_bottlenecks.h"
 #include "dng_exceptions.h"
+
+#ifdef _MSC_VER
+#include <Windows.h>
+#endif
 
 /*****************************************************************************/
 
@@ -83,7 +80,7 @@ void dng_memory_data::Allocate (uint32 size)
 	
 	if (size)
 		{
-		
+		//printf("Calling malloc from %s\n", __FUNCTION__);
 		fBuffer = (char *) malloc (size);
 		
 		if (!fBuffer)
@@ -172,23 +169,6 @@ dng_memory_block * dng_memory_block::Clone (dng_memory_allocator &allocator) con
 
 /*****************************************************************************/
 
-class dng_malloc_block : public dng_memory_block
-	{
-	
-	private:
-	
-		void *fMalloc;
-	
-	public:
-	
-		dng_malloc_block (uint32 logicalSize);
-		
-		virtual ~dng_malloc_block ();
-		
-	};
-	
-/*****************************************************************************/
-
 dng_malloc_block::dng_malloc_block (uint32 logicalSize)
 
 	:	dng_memory_block (logicalSize)
@@ -199,7 +179,7 @@ dng_malloc_block::dng_malloc_block (uint32 logicalSize)
 
 	#if qLinux
 
-	// BULLSHIT: Need to change this alignment for AVX support?
+	// TO DO: Need to change this alignment for AVX support?
 
 	int err = ::posix_memalign ((void **) &fMalloc, 
 								16,
@@ -225,15 +205,20 @@ dng_malloc_block::dng_malloc_block (uint32 logicalSize)
 	
 	#else
 
-	fMalloc = (char *) malloc (PhysicalSize ());
-	
+	//fMalloc = (char *) VirtualAlloc (NULL, PhysicalSize (), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	//printf("Calling malloc from %s\n", __FUNCTION__);
+	fMalloc = (char *)malloc(PhysicalSize());
+
 	if (!fMalloc)
 		{
 		
 		ThrowMemoryFull ();
 					 
 		}
-		
+
+	//*(size_t*)(fMalloc) = size_t(PhysicalSize() + 16);
+	//fMalloc = (char*)fMalloc+16;
+
 	#endif
 
 	SetBuffer (fMalloc);
@@ -248,6 +233,8 @@ dng_malloc_block::~dng_malloc_block ()
 	if (fMalloc)
 		{
 		
+		//size_t size = *(size_t*)((char*)fMalloc - 16);
+		//VirtualFree(fMalloc, 0, MEM_RELEASE);
 		free (fMalloc);
 		
 		}
@@ -269,6 +256,24 @@ dng_memory_block * dng_memory_allocator::Allocate (uint32 size)
 		}
 	
 	return result;
+	
+	}
+
+/*****************************************************************************/
+
+void * dng_memory_allocator::Malloc (size_t size)
+	{
+	
+	return malloc (size);
+	
+	}
+
+/*****************************************************************************/
+
+void dng_memory_allocator::Free (void *ptr)
+	{
+	
+	free (ptr);
 	
 	}
 

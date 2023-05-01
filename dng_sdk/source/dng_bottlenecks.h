@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_bottlenecks.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
 
 /** \file
  * Indirection mechanism for performance-critical routines that might be replaced
@@ -550,7 +545,8 @@ typedef void (Vignette32Proc)
 			  int32 sRowStep,
 			  int32 sPlaneStep,
 			  int32 mRowStep,
-			  uint32 mBits);
+			  uint32 mBits,
+              uint16 blackLevel);
 
 /*****************************************************************************/
 
@@ -574,7 +570,8 @@ typedef void (BaselineMapPoly32Proc)
 			  const uint32 rowPitch,
 			  const uint32 colPitch,
 			  const real32 *coefficients,
-			  const uint32 degree);
+			  const uint32 degree,
+              uint16 blackLevel);
 
 /*****************************************************************************/
 
@@ -1683,7 +1680,8 @@ inline void DoVignette32 (real32 *sPtr,
 						  int32 sRowStep,
 						  int32 sPlaneStep,
 						  int32 mRowStep,
-						  uint32 mBits)
+						  uint32 mBits,
+                          uint16 blackLevel)
 	{
 	
 	(gDNGSuite.Vignette32) (sPtr,
@@ -1694,7 +1692,8 @@ inline void DoVignette32 (real32 *sPtr,
 							sRowStep,
 							sPlaneStep,
 							mRowStep,
-							mBits);
+							mBits,
+                            blackLevel);
 
 	}
 
@@ -1730,7 +1729,8 @@ inline void DoBaselineMapPoly32 (real32 *dPtr,
 								 const uint32 rowPitch,
 								 const uint32 colPitch,
 								 const real32 *coefficients,
-								 const uint32 degree)
+								 const uint32 degree,
+                                 uint16 blackLevel)
 	{
 	
 	(gDNGSuite.BaselineMapPoly32) (dPtr,
@@ -1740,7 +1740,8 @@ inline void DoBaselineMapPoly32 (real32 *dPtr,
 								   rowPitch,
 								   colPitch,
 								   coefficients,
-								   degree);
+								   degree,
+                                   blackLevel);
 	
 	}
 

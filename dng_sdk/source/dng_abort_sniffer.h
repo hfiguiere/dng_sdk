@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_abort_sniffer.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
 
 /** \file
  * Classes supporting user cancellation and progress tracking.
@@ -22,7 +17,9 @@
 
 /*****************************************************************************/
 
+#include "dng_classes.h"
 #include "dng_flags.h"
+#include "dng_string.h"
 #include "dng_types.h"
 #include "dng_uncopyable.h"
 
@@ -54,10 +51,13 @@ class dng_set_minimum_priority
 	private:
 	
 		dng_priority fPriority;
+
+		dng_string fName;
 	
 	public:
 	
-		dng_set_minimum_priority (dng_priority priority);
+		dng_set_minimum_priority (dng_priority priority,
+								  const char *name);
 		
 		~dng_set_minimum_priority ();
 	
@@ -79,7 +79,7 @@ class dng_abort_sniffer
 	private:
 	
 		dng_priority fPriority;
-	
+
 	public:
 	
 		dng_abort_sniffer ();
@@ -95,10 +95,7 @@ class dng_abort_sniffer
 			
 		/// Setter for priority level.
 		
-		void SetPriority (dng_priority priority)
-			{
-			fPriority = priority;
-			}
+		void SetPriority (dng_priority priority);
 
 		/// Check for pending user cancellation or other abort. ThrowUserCanceled 
 		/// will be called if one is pending. This static method is provided as a
@@ -125,6 +122,13 @@ class dng_abort_sniffer
 			return false;
 			}
 
+		// Specifies whether or not this sniffer may participate in
+		// priority-based waiting (sleep the current thread on which
+		// SniffForAbort is called, if another thread has higher priority).
+		// Default result is false. Subclass must override to return true.
+		
+		virtual bool SupportsPriorityWait () const;
+
 	protected:
 	
 		/// Should be implemented by derived classes to check for an user
@@ -150,7 +154,7 @@ class dng_abort_sniffer
 		/// From 0.0 to 1.0 .
 
 		virtual void UpdateProgress (real64 fract);
-			
+
 	};
 
 /******************************************************************************/

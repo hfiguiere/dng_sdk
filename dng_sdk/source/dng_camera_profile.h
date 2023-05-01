@@ -1,15 +1,10 @@
 /******************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /******************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_camera_profile.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
 
 /** \file
  * Support for DNG camera color profile information.
@@ -145,7 +140,7 @@ class dng_camera_profile_id
 			}
 			
 		/// Test for equality of two camera profile IDs.
-		/// \param The id of the camera profile ID to compare.
+		/// \param id The id of the camera profile ID to compare.
 
 		bool operator== (const dng_camera_profile_id &id) const
 			{
@@ -154,7 +149,7 @@ class dng_camera_profile_id
 			}
 
 		/// Test for inequality of two camera profile IDs.
-		/// \param The id of the camera profile ID to compare.
+		/// \param id The id of the camera profile ID to compare.
 
 		bool operator!= (const dng_camera_profile_id &id) const
 			{
@@ -551,7 +546,7 @@ class dng_camera_profile
 			}
 
 		/// Getter for camera profile embed policy.
-		/// \param Policy for profile.
+		/// \retval Policy for profile.
 
 		uint32 EmbedPolicy () const
 			{

@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2015 Adobe Systems Incorporated
+// Copyright 2015-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_local_string.h#2 $ */ 
-/* $DateTime: 2015/08/06 23:46:40 $ */
-/* $Change: 1034773 $ */
-/* $Author: tknoll $ */
-
 /*****************************************************************************/
 
 #ifndef __dng_local_string__
@@ -68,6 +61,8 @@ class dng_local_string
 
         void AddTranslation (const dng_string &language,
                              const dng_string &translation);
+		
+		void Set (const char *s);
 
         const dng_string & DefaultText () const
             {
@@ -112,6 +107,8 @@ class dng_local_string
 			{
 			return !(*this == s);
 			}
+        
+        void Truncate (uint32 maxBytes);
 			
     };
 

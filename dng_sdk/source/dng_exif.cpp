@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_exif.cpp#3 $ */ 
-/* $DateTime: 2015/09/11 13:55:15 $ */
-/* $Change: 1041714 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_exif.h"
@@ -39,10 +32,10 @@ dng_exif::dng_exif ()
 	,	fDateTime            ()
 	,	fDateTimeStorageInfo ()
 	
-	,	fDateTimeOriginal  ()
+	,	fDateTimeOriginal            ()
 	,	fDateTimeOriginalStorageInfo ()
 	
-	,	fDateTimeDigitized ()
+	,	fDateTimeDigitized            ()
 	,	fDateTimeDigitizedStorageInfo ()
 		
 	,	fTIFF_EP_StandardID (0)
@@ -166,6 +159,13 @@ dng_exif::dng_exif ()
 	
 	,	fOwnerName ()
 	,	fFirmware  ()
+
+    ,   fTemperature          ()
+    ,   fHumidity             ()
+    ,   fPressure             ()
+    ,   fWaterDepth           ()
+    ,   fAcceleration         ()
+    ,   fCameraElevationAngle ()
 
     ,   fTitle ()
 	
@@ -516,7 +516,7 @@ void dng_exif::SetExposureTime (real64 et, bool snap)
 		
 		}
 		
-	if (et >= 1.0 / 32768.0 && et <= 32768.0)
+	if (et >= 1.0 / 1073741824.0 && et <= 1073741824.0)
 		{
 		
 		if (et >= 100.0)
@@ -742,13 +742,27 @@ void dng_exif::UpdateDateTime (const dng_date_time_info &dt)
 bool dng_exif::AtLeastVersion0230 () const
 	{
 	
-	uint32 b0 = (fExifVersion >> 24) & 0xff;
-	uint32 b1 = (fExifVersion >> 16) & 0xff;
-	uint32 b2 = (fExifVersion >>  8) & 0xff;
-
-	return (b0 > 0) || (b1 >= 2 && b2 >= 3);
+	return fExifVersion >= DNG_CHAR4 ('0','2','3','0');
 	
 	}
+
+/*****************************************************************************/
+
+bool dng_exif::AtLeastVersion0231 () const
+    {
+    
+    return fExifVersion >= DNG_CHAR4 ('0','2','3','1');
+    
+    }
+
+/*****************************************************************************/
+
+void dng_exif::SetVersion0231 ()
+    {
+    
+    fExifVersion = DNG_CHAR4 ('0','2','3','1');
+    
+    }
 
 /*****************************************************************************/
 
@@ -1980,6 +1994,138 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 			
 			}
 			
+        case tcOffsetTime:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttAscii);
+            
+            dng_string offsetTime;
+            
+            ParseStringTag (stream,
+                            parentCode,
+                            tagCode,
+                            tagCount,
+                            offsetTime);
+                
+            fDateTime.SetOffsetTime (offsetTime);
+            
+            // The offset time tags were added to EXIF spec 2.3.1.
+            // We need EXIF spec version to figure out legacy fake time
+            // zones in XMP, so force a correct exif spec version if
+            // these EXIF tags are used.
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("OffsetTime: ");
+                
+                DumpString (offsetTime);
+                
+                printf ("\n");
+                
+                }
+                
+            #endif
+
+            break;
+            
+            }
+            
+        case tcOffsetTimeOriginal:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttAscii);
+            
+            dng_string offsetTime;
+            
+            ParseStringTag (stream,
+                            parentCode,
+                            tagCode,
+                            tagCount,
+                            offsetTime);
+                
+            fDateTimeOriginal.SetOffsetTime (offsetTime);
+            
+            // The offset time tags were added to EXIF spec 2.3.1.
+            // We need EXIF spec version to figure out legacy fake time
+            // zones in XMP, so force a correct exif spec version if
+            // these EXIF tags are used.
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("OffsetTimeOriginal: ");
+                
+                DumpString (offsetTime);
+                
+                printf ("\n");
+                
+                }
+                
+            #endif
+
+            break;
+            
+            }
+
+        case tcOffsetTimeDigitized:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttAscii);
+            
+            dng_string offsetTime;
+            
+            ParseStringTag (stream,
+                            parentCode,
+                            tagCode,
+                            tagCount,
+                            offsetTime);
+                
+            fDateTimeDigitized.SetOffsetTime (offsetTime);
+            
+            // The offset time tags were added to EXIF spec 2.3.1.
+            // We need EXIF spec version to figure out legacy fake time
+            // zones in XMP, so force a correct exif spec version if
+            // these EXIF tags are used.
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("OffsetTimeDigitized: ");
+                
+                DumpString (offsetTime);
+                
+                printf ("\n");
+                
+                }
+                
+            #endif
+
+            break;
+            
+            }
+
 		case tcComponentsConfiguration:
 			{
 			
@@ -2588,6 +2734,186 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 			
 			}
 			
+        case tcTemperature:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttSRational);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fTemperature = stream.TagValue_srational (tagType);
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("Temperature: %0.1f\n",
+                        fTemperature.As_real64 ());
+                
+                }
+                
+            #endif
+            
+            break;
+            
+            }
+            
+        case tcHumidity:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttRational);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fHumidity = stream.TagValue_urational (tagType);
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("Humidity: %0.1f\n",
+                        fHumidity.As_real64 ());
+                
+                }
+                
+            #endif
+            
+            break;
+            
+            }
+            
+        case tcPressure:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttRational);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fPressure = stream.TagValue_urational (tagType);
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("Pressure: %0.1f\n",
+                        fPressure.As_real64 ());
+                
+                }
+                
+            #endif
+            
+            break;
+            
+            }
+            
+        case tcWaterDepth:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttSRational);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fWaterDepth = stream.TagValue_srational (tagType);
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("WaterDepth: %0.1f\n",
+                        fWaterDepth.As_real64 ());
+                
+                }
+                
+            #endif
+            
+            break;
+            
+            }
+            
+        case tcAcceleration:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttRational);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fAcceleration = stream.TagValue_urational (tagType);
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("Acceleration: %0.1f\n",
+                        fAcceleration.As_real64 ());
+                
+                }
+                
+            #endif
+            
+            break;
+            
+            }
+            
+        case tcCameraElevationAngle:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttSRational);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fCameraElevationAngle = stream.TagValue_srational (tagType);
+            
+            if (!AtLeastVersion0231 ())
+                {
+                SetVersion0231 ();
+                }
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("CameraElevationAngle: %0.1f\n",
+                        fCameraElevationAngle.As_real64 ());
+                
+                }
+                
+            #endif
+            
+            break;
+            
+            }
+            
 		case tcFlashPixVersion:
 			{
 			

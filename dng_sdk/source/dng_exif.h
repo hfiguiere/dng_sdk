@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_exif.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
 
 /** \file
  * EXIF read access support. See the \ref spec_exif "EXIF specification" for full
@@ -205,6 +200,15 @@ class dng_exif
 		
 		dng_string fOwnerName;				 // EXIF 2.3: CameraOwnerName.
 		dng_string fFirmware;
+  
+        // EXIF 2.3.1:
+        
+        dng_srational fTemperature;
+        dng_urational fHumidity;
+        dng_urational fPressure;
+        dng_srational fWaterDepth;
+        dng_urational fAcceleration;
+        dng_srational fCameraElevationAngle;
         
         // Not really part of EXIF, but some formats may use.
         
@@ -250,7 +254,7 @@ class dng_exif
 							  bool snap = true);
 
 		/// Set shutter speed value (APEX units) and exposure time.
-		/// \param Shutter speed in APEX units.
+		/// \param ss Shutter speed in APEX units.
 		
 		void SetShutterSpeedValue (real64 ss);
 
@@ -297,6 +301,14 @@ class dng_exif
 		/// Returns true iff the EXIF version is at least 2.3.
 
 		bool AtLeastVersion0230 () const;
+  
+        /// Returns true iff the EXIF version is at least 2.3.1.
+        
+        bool AtLeastVersion0231 () const;
+        
+        /// Sets the EXIF version to 2.3.1.
+        
+        void SetVersion0231 ();
 
 		bool HasLensDistortInfo () const;
 		

@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_info.cpp#5 $ */ 
-/* $DateTime: 2015/07/31 20:31:54 $ */
-/* $Change: 1033755 $ */
-/* $Author: mwendt $ */
-
 /*****************************************************************************/
 
 #include "dng_info.h"
@@ -37,6 +30,8 @@ dng_info::dng_info ()
 	,	fShared					 ()
 	,	fMainIndex				 (-1)
 	,	fMaskIndex				 (-1)
+    ,   fDepthIndex              (-1)
+    ,   fEnhancedIndex           (-1)
 	,	fIFD				     ()
 	,	fChainedIFD   		     ()
     ,   fChainedSubIFD           ()
@@ -2584,7 +2579,67 @@ void dng_info::PostParse (dng_host &host)
 				}
 				
 			}
-			
+   
+        // Find depth index.
+        
+        for (index = 0; index < IFDCount (); index++)
+            {
+            
+            if (fIFD [index]->fNewSubFileType == sfDepthMap)
+                {
+                
+                if (fDepthIndex == -1)
+                    {
+                    
+                    fDepthIndex = index;
+                    
+                    }
+                    
+                #if qDNGValidate
+                    
+                else
+                    {
+
+                    ReportError ("Multiple IFDs marked as depth map image");
+                    
+                    }
+                    
+                #endif
+                    
+                }
+                
+            }
+            
+        // Find enhanced ifd index.
+        
+        for (index = 0; index < IFDCount (); index++)
+            {
+            
+            if (fIFD [index]->fNewSubFileType == sfEnhancedImage)
+                {
+                
+                if (fEnhancedIndex == -1)
+                    {
+                    
+                    fEnhancedIndex = index;
+                    
+                    }
+                    
+                #if qDNGValidate
+                    
+                else
+                    {
+
+                    ReportError ("Multiple IFDs marked as enhanced image");
+                    
+                    }
+                    
+                #endif
+                    
+                }
+                
+            }
+            
 		// Warn about Chained IFDs.
 			
 		#if qDNGValidate
@@ -2666,7 +2721,16 @@ bool dng_info::IsValidDNG ()
 				return false;
 				
 				}
-			
+    
+            // Also errors to depth map...
+            
+            if (index == (uint32) fDepthIndex)
+                {
+                
+                return false;
+                
+                }
+            
 			}
 		
 		}

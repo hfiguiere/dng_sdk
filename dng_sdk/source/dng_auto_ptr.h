@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_auto_ptr.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
 
 /** \file
  * Class to implement std::auto_ptr like functionality even on platforms which do not
@@ -176,7 +171,7 @@ class AutoArray: private dng_uncopyable
 	public:
 
 		/// Construct an AutoArray which owns the argument pointer.
-		/// \param p array pointer which constructed AutoArray takes ownership of. p
+		/// \param p_ array pointer which constructed AutoArray takes ownership of. p_
 		/// will be deleted on destruction or Reset unless Release is called first.
 
 		explicit AutoArray (T *p_ = 0) : p (p_) { }
@@ -199,9 +194,9 @@ class AutoArray: private dng_uncopyable
 			return p_;
 			}
 
-		/// If a pointer is owned, it is deleted. Ownership is taken of passed in
-		/// pointer.
-		/// \param p array pointer which constructed AutoArray takes ownership of. p
+		/// If an array pointer is owned, it is deleted. Ownership is
+		/// taken of the passed in pointer p_.
+		/// \param p_ array pointer which constructed AutoArray takes ownership of. p_
 		/// will be deleted on destruction or Reset unless Release is called first.
 
 		void Reset (T *p_ = 0)

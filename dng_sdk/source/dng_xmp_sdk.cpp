@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2015 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_xmp_sdk.cpp#5 $ */ 
-/* $DateTime: 2016/04/27 13:45:00 $ */
-/* $Change: 1074050 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_xmp_sdk.h"
@@ -59,6 +52,7 @@
 
 const char *XMP_NS_TIFF	      = "http://ns.adobe.com/tiff/1.0/";
 const char *XMP_NS_EXIF	      = "http://ns.adobe.com/exif/1.0/";
+const char *XMP_NS_EXIFEX	  = "http://cipa.jp/exif/1.0/";
 const char *XMP_NS_PHOTOSHOP  = "http://ns.adobe.com/photoshop/1.0/";
 const char *XMP_NS_XAP        = "http://ns.adobe.com/xap/1.0/";
 const char *XMP_NS_XAP_RIGHTS = "http://ns.adobe.com/xap/1.0/rights/";
@@ -68,9 +62,11 @@ const char *XMP_NS_MM         = "http://ns.adobe.com/xap/1.0/mm/";
 
 const char *XMP_NS_CRS		  = "http://ns.adobe.com/camera-raw-settings/1.0/";
 const char *XMP_NS_CRSS		  = "http://ns.adobe.com/camera-raw-saved-settings/1.0/";
-const char *XMP_NS_AUX		  = "http://ns.adobe.com/exif/1.0/aux/";
+const char *XMP_NS_CRD		  = "http://ns.adobe.com/camera-raw-defaults/1.0/";
 
 const char *XMP_NS_LCP		  = "http://ns.adobe.com/photoshop/1.0/camera-profile";
+
+const char *XMP_NS_AUX		  = "http://ns.adobe.com/exif/1.0/aux/";
 
 const char *XMP_NS_IPTC		  = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
 const char *XMP_NS_IPTC_EXT   = "http://iptc.org/std/Iptc4xmpExt/2008-02-29/";
@@ -83,7 +79,7 @@ const char *XMP_NS_PANO		  = "http://ns.adobe.com/photoshop/1.0/panorama-profile
 
 /******************************************************************************/
 
-#define CATCH_XMP(routine, fatal)\
+#define CATCH_XMP_ALT(routine, fatal, silent)\
 	\
 	catch (std::bad_alloc &)\
 		{\
@@ -96,9 +92,12 @@ const char *XMP_NS_PANO		  = "http://ns.adobe.com/photoshop/1.0/panorama-profile
 		const char *errMessage = error.GetErrMsg ();\
 		if (errMessage && strlen (errMessage) <= 128)\
 			{\
-			char errBuffer [256];\
-			sprintf (errBuffer, "Info: XMP " routine " threw '%s' exception", errMessage);\
-			DNG_REPORT (errBuffer);\
+            if (!silent)\
+                {\
+                char errBuffer [256];\
+                sprintf (errBuffer, "Info: XMP " routine " threw '%s' exception", errMessage);\
+                DNG_REPORT (errBuffer);\
+                }\
 			}\
 		else\
 			{\
@@ -112,7 +111,9 @@ const char *XMP_NS_PANO		  = "http://ns.adobe.com/photoshop/1.0/panorama-profile
 		DNG_REPORT ("Info: XMP " routine " threw unknown exception");\
 		if (fatal) ThrowProgramError ();\
 		}
-		
+
+#define CATCH_XMP(routine, fatal) CATCH_XMP_ALT(routine, fatal, false)
+
 /*****************************************************************************/
 
 class dng_xmp_private
@@ -235,8 +236,9 @@ void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces,
 				}
 				
 			// Register Lightroom beta settings namespace.
-			// We no longer read this but I don't want to cut it out this close
-			// to a release. [bruzenak]
+			// We no longer read this, but we do need to register
+			// it so we can clean up this namespace when saving
+			// new settings.
 			
 				{
 		
@@ -256,6 +258,18 @@ void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces,
 				
 				SXMPMeta::RegisterNamespace (XMP_NS_CRSS,
 											 "crss",
+											 &ss);
+				
+				}
+			
+			// Register CRD defaults namespace
+			
+				{
+				
+				TXMP_STRING_TYPE ss;
+				
+				SXMPMeta::RegisterNamespace (XMP_NS_CRD,
+											 "crd",
 											 &ss);
 				
 				}
@@ -1029,7 +1043,8 @@ bool dng_xmp_sdk::GetStringList (const char *ns,
 
 bool dng_xmp_sdk::GetAltLangDefault (const char *ns,
 									 const char *path,
-									 dng_string &s) const
+									 dng_string &s,
+                                     bool silent) const
 	{
 	
 	bool result = false;
@@ -1092,8 +1107,8 @@ bool dng_xmp_sdk::GetAltLangDefault (const char *ns,
 				}
 				
 			}
-			
-		CATCH_XMP ("GetLocalizedText", false)
+            
+		CATCH_XMP_ALT ("GetLocalizedText", false, silent)
 		
 		}
 		
@@ -1110,7 +1125,7 @@ bool dng_xmp_sdk::GetLocalString (const char *ns,
 
     dng_string defaultText;
 
-    if (GetAltLangDefault (ns, path, defaultText))
+    if (GetAltLangDefault (ns, path, defaultText, true))
         {
 
         s.SetDefaultText (defaultText);

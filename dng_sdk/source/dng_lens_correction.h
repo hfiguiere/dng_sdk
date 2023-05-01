@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2008 Adobe Systems Incorporated
+// Copyright 2008-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:	Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_lens_correction.h#3 $ */ 
-/* $DateTime: 2016/01/19 15:23:55 $ */
-/* $Change: 1059947 $ */
-/* $Author: erichan $ */
 
 /** \file
  * Opcodes to fix lens aberrations such as geometric distortion, lateral chromatic
@@ -499,6 +494,11 @@ class dng_opcode_WarpRectilinear: public dng_opcode
 
 		bool HasLateralCA () const;
 
+		const dng_warp_params_rectilinear & Params () const
+			{
+			return fWarpParams;
+			}
+
 	protected:
 
 		static uint32 ParamBytes (uint32 planes);
@@ -580,6 +580,8 @@ class dng_vignette_radial_params
 		dng_vignette_radial_params (const dng_std_vector<real64> &params,
 									const dng_point_real64 &center);
 
+		dng_vignette_radial_params (const dng_vignette_radial_params &params);
+
 		bool IsNOP () const;
 
 		bool IsValid () const;
@@ -623,6 +625,11 @@ class dng_opcode_FixVignetteRadial: public dng_inplace_opcode
 		
 		explicit dng_opcode_FixVignetteRadial (dng_stream &stream);
 	
+		const dng_vignette_radial_params & Params () const
+			{
+			return fParams;
+			}
+
 		virtual bool IsNOP () const;
 		
 		virtual bool IsValidForNegative (const dng_negative &) const;
@@ -651,6 +658,8 @@ class dng_opcode_FixVignetteRadial: public dng_inplace_opcode
 	protected:
 
 		static uint32 ParamBytes ();
+
+		virtual dng_vignette_radial_params MakeParamsForRender (const dng_negative &negative);
 
 	};
 

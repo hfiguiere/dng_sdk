@@ -1,15 +1,10 @@
 /*****************************************************************************/
-// Copyright 2006-2007 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_stream.h#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
 
 /** Data stream abstraction for serializing and deserializing sequences of
  *  basic types and RAW image data.
@@ -248,7 +243,7 @@ class dng_stream: private dng_uncopyable
 		/// \exception dng_exception with fErrorCode equal to dng_error_end_of_file 
 		/// if not enough data in stream.
 		
-		void Get (void *data, uint32 count);
+		void Get (void *data, uint32 count, uint32 maxOverRead=0);
 
 		/// Seek to a new position in stream for writing.
 		
@@ -348,8 +343,24 @@ class dng_stream: private dng_uncopyable
 		/// \exception dng_exception with fErrorCode equal to dng_error_end_of_file
 		/// if not enough data in stream.
 		
-		uint32 Get_uint32 ();
-		
+		uint32 Get_uint32();
+
+#if !qDNGBigEndian
+		inline // ep, enable compiler inlining
+		uint32 Get_uint32_LE ()
+			{
+	
+			uint32 x;
+	
+			Get (&x, 4, 3); // Allow 3-byte overread (undefined data returned but not used)
+
+			// No check for fSwapBytes
+
+			return x;
+	
+			}
+#endif
+
 		/// Put an unsigned 32-bit integer to stream and advance write position. 
 		/// Byte swap if byte swapping is turned on.
 		/// \param x One unsigned 32-bit integer.

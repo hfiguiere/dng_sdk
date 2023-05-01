@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2012 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_area_task.cpp#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
-
 /*****************************************************************************/
 
 #include "dng_area_task.h"
@@ -85,6 +78,7 @@ dng_rect dng_area_task::RepeatingTile3 () const
 /*****************************************************************************/
 
 void dng_area_task::Start (uint32 /* threadCount */,
+						   const dng_rect & /* dstArea */,
 						   const dng_point & /* tileSize */,
 						   dng_memory_allocator * /* allocator */,
 						   dng_abort_sniffer * /* sniffer */)
@@ -206,7 +200,7 @@ void dng_area_task::ProcessOnThread (uint32 threadIndex,
 									 dng_abort_sniffer *sniffer,
                                      dng_area_task_progress *progress)
 	{
-	
+
 	dng_rect repeatingTile1 = RepeatingTile1 ();
 	dng_rect repeatingTile2 = RepeatingTile2 ();
 	dng_rect repeatingTile3 = RepeatingTile3 ();
@@ -228,6 +222,7 @@ void dng_area_task::ProcessOnThread (uint32 threadIndex,
 		
 	dng_rect tile1;
 
+	// TODO_EP: Review & document case where these dynamic allocations appeared to have significant overhead
 	AutoPtr<dng_base_tile_iterator> iter1
 		(MakeTileIterator (threadIndex,
 						   repeatingTile3, 
@@ -318,7 +313,7 @@ void dng_area_task::Perform (dng_area_task &task,
 	
 	dng_point tileSize (task.FindTileSize (area));
 		
-	task.Start (1, tileSize, allocator, sniffer);
+	task.Start (1, area, tileSize, allocator, sniffer);
 	
 	task.ProcessOnThread (0, area, tileSize, sniffer, progress);
 			

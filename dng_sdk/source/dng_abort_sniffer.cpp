@@ -1,19 +1,13 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:  Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
 /*****************************************************************************/
 
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_abort_sniffer.cpp#2 $ */ 
-/* $DateTime: 2015/06/09 23:32:35 $ */
-/* $Change: 1026104 $ */
-/* $Author: aksherry $ */
-
-/*****************************************************************************/
-
 #include "dng_abort_sniffer.h"
+#include "dng_assertions.h"
 
 #include "dng_mutex.h"
 
@@ -23,13 +17,21 @@
 
 /*****************************************************************************/
 
+// TO DO: This priority-based wait mechanism is not compatible with thread
+// pools. Putting worker threads to sleep may result in deadlock because
+// higher priority work may not make progress (the pool may not be able to
+// spin up any new threads).
+
 class dng_priority_manager
 	{
 	
 	private:
-	
+
+		// Use lower-level mutex and condition_variable for priority manager
+		// since we don't want to include these in our priority tracking.
+
 		dng_mutex fMutex;
-		
+
 		dng_condition fCondition;
 		
 		uint32 fCounter [dng_priority_count];
@@ -38,12 +40,14 @@ class dng_priority_manager
 	
 		dng_priority_manager ();
 		
-		void Increment (dng_priority priority);
+		void Increment (dng_priority priority,
+						const char *name);
 	
-		void Decrement (dng_priority priority);
+		void Decrement (dng_priority priority,
+						const char *name);
 		
-		void Wait (dng_priority priority);
-		
+		void Wait (dng_abort_sniffer *sniffer);
+
 	private:
 	
 		dng_priority MinPriority ()
@@ -73,7 +77,7 @@ class dng_priority_manager
 
 dng_priority_manager::dng_priority_manager ()
 
-	:	fMutex     ("dng_priority_manager::fMutex")
+	:	fMutex	   ("dng_priority_manager::fMutex")
 	,	fCondition ()
 	
 	{
@@ -91,31 +95,70 @@ dng_priority_manager::dng_priority_manager ()
 
 /*****************************************************************************/
 
-void dng_priority_manager::Increment (dng_priority priority)
+void dng_priority_manager::Increment (dng_priority priority,
+									  const char *name)
 	{
 	
 	dng_lock_mutex lock (&fMutex);
-	
+
 	fCounter [priority] += 1;
+
+	#if 0
+
+	printf ("increment priority %d (%s) (%d, %d, %d)\n", 
+			(int) priority,
+			name,
+			fCounter [dng_priority_low],
+			fCounter [dng_priority_medium],
+			fCounter [dng_priority_high]);
+
+	#else
+
+	(void) name;
 	
+	#endif
+
 	}
 
 /*****************************************************************************/
 
-void dng_priority_manager::Decrement (dng_priority priority)
+void dng_priority_manager::Decrement (dng_priority priority,
+									  const char *name)
 	{
+
+	dng_priority oldMin = dng_priority_minimum;
+	dng_priority newMin = dng_priority_minimum;
+
+		{
+
+		dng_lock_mutex lock (&fMutex);
+
+		oldMin = MinPriority ();
+
+		fCounter [priority] -= 1;
+
+		newMin = MinPriority ();
+
+		#if 0
+
+		printf ("decrement priority %d (%s) (%d, %d, %d)\n", 
+				(int) priority,
+				name,
+				fCounter [dng_priority_low],
+				fCounter [dng_priority_medium],
+				fCounter [dng_priority_high]);
+
+		#else
+
+		(void) name;
+
+		#endif
 	
-	dng_lock_mutex lock (&fMutex);
-	
-	dng_priority oldMin = MinPriority ();
-	
-	fCounter [priority] -= 1;
-	
-	dng_priority newMin = MinPriority ();
+		}
 	
 	if (newMin < oldMin)
 		{
-		
+
 		fCondition.Broadcast ();
 		
 		}
@@ -124,38 +167,30 @@ void dng_priority_manager::Decrement (dng_priority priority)
 		
 /*****************************************************************************/
 
-void dng_priority_manager::Wait (dng_priority priority)
+void dng_priority_manager::Wait (dng_abort_sniffer *sniffer)
 	{
 
-	// Turning off the priority system for now. It seems we currently have a
-	// basic design bug in how the task priority system is implemented. The
-	// logic below attempts to completely sleep background threads when
-	// processing a high priority thread. This is really bad when the
-	// background thread is holding a mutex that the high priority thread
-	// needs.
+	if (!sniffer)
+		{
+		return;
+		}
 
-	#if 0
-	
+	const dng_priority priority = sniffer->Priority ();
+
 	if (priority < dng_priority_maximum)
 		{
 		
 		dng_lock_mutex lock (&fMutex);
-		
+
 		while (priority < MinPriority ())
 			{
 			
 			fCondition.Wait (fMutex);
-			
+
 			}
 		
 		}
 
-	#else
-
-	(void) priority;
-
-	#endif
-	
 	}
 		
 /*****************************************************************************/
@@ -164,21 +199,24 @@ static dng_priority_manager gPriorityManager;
 
 /*****************************************************************************/
 
-#endif
+#endif	// qDNGThreadSafe
 
 /*****************************************************************************/
 
-dng_set_minimum_priority::dng_set_minimum_priority (dng_priority priority)
+dng_set_minimum_priority::dng_set_minimum_priority (dng_priority priority,
+													const char *name)
 
 	:	fPriority (priority)
-	
+
 	{
 	
 	#if qDNGThreadSafe
 
-	gPriorityManager.Increment (fPriority);
+	gPriorityManager.Increment (fPriority, name);
 	
 	#endif
+
+	fName.Set (name);
 	
 	}
 
@@ -189,7 +227,7 @@ dng_set_minimum_priority::~dng_set_minimum_priority ()
 
 	#if qDNGThreadSafe
 
-	gPriorityManager.Decrement (fPriority);
+	gPriorityManager.Decrement (fPriority, fName.Get ());
 	
 	#endif
 	
@@ -200,7 +238,7 @@ dng_set_minimum_priority::~dng_set_minimum_priority ()
 dng_abort_sniffer::dng_abort_sniffer ()	
 
 	:	fPriority (dng_priority_maximum)
-	
+
 	{
 	
 	}
@@ -214,15 +252,36 @@ dng_abort_sniffer::~dng_abort_sniffer ()
 
 /*****************************************************************************/
 
+void dng_abort_sniffer::SetPriority (dng_priority priority)
+	{
+	
+	fPriority = priority;
+
+	}
+
+/*****************************************************************************/
+
+bool dng_abort_sniffer::SupportsPriorityWait () const
+	{
+	return false;
+	}
+
+/*****************************************************************************/
+
 void dng_abort_sniffer::SniffForAbort (dng_abort_sniffer *sniffer)
 	{
 
 	if (sniffer)
 		{
-		
+
 		#if qDNGThreadSafe
+
+		if (sniffer->SupportsPriorityWait ())
+			{
 		
-		gPriorityManager.Wait (sniffer->Priority ());
+			gPriorityManager.Wait (sniffer);
+
+			}
 		
 		#endif
 	

@@ -1,16 +1,9 @@
 /*****************************************************************************/
-// Copyright 2006-2008 Adobe Systems Incorporated
+// Copyright 2006-2019 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:	Adobe permits you to use, modify, and distribute this file in
 // accordance with the terms of the Adobe license agreement accompanying it.
-/*****************************************************************************/
-
-/* $Id: //mondo/camera_raw_main/camera_raw/dng_sdk/source/dng_shared.cpp#4 $ */ 
-/* $DateTime: 2016/01/20 16:00:38 $ */
-/* $Change: 1060141 $ */
-/* $Author: erichan $ */
-
 /*****************************************************************************/
 
 #include "dng_shared.h"
@@ -1214,7 +1207,6 @@ dng_shared::dng_shared ()
 	
 	,	fBaselineExposure	   (0, 1)
 	,	fBaselineNoise		   (1, 1)
-	,	fNoiseReductionApplied (0, 0)
 	,	fBaselineSharpness	   (1, 1)
 	,	fLinearResponseLimit   (1, 1)
 	,	fShadowScale		   (1, 1)
@@ -1251,14 +1243,18 @@ dng_shared::dng_shared ()
 
 	,	fAsShotProfileName ()
 
-	,	fNoiseProfile ()
-	
 	,	fOriginalDefaultFinalSize	  ()
 	,	fOriginalBestQualityFinalSize ()
 		
 	,	fOriginalDefaultCropSizeH ()
 	,	fOriginalDefaultCropSizeV ()
-		
+
+    ,   fDepthFormat      (depthFormatUnknown)
+    ,   fDepthNear        (0, 0)
+    ,   fDepthFar         (0, 0)
+    ,   fDepthUnits       (depthUnitsUnknown)
+    ,   fDepthMeasureType (depthMeasureUnknown)
+
 	{
 	
 	}
@@ -1989,98 +1985,6 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			
 			}
 			
-		case tcNoiseReductionApplied:
-			{
-			
-			if (!CheckTagType (parentCode, tagCode, tagType, ttRational))
-				return false;
-			
-			if (!CheckTagCount (parentCode, tagCode, tagCount, 1))
-				return false;
-			
-			fNoiseReductionApplied = stream.TagValue_urational (tagType);
-			
-			#if qDNGValidate
-
-			if (gVerbose)
-				{
-				
-				printf ("NoiseReductionApplied: %u/%u\n",
-						(unsigned) fNoiseReductionApplied.n,
-						(unsigned) fNoiseReductionApplied.d);
-						
-				}
-				
-			#endif
-				
-			break;
-			
-			}
-
-		case tcNoiseProfile:
-			{
-
-			if (!CheckTagType (parentCode, tagCode, tagType, ttDouble))
-				return false;
-
-			// Must be an even, positive number of doubles in a noise profile.
-			
-			if (!tagCount || (tagCount & 1))
-				return false;
-
-			// Determine number of planes (i.e., half the number of doubles).
-
-			const uint32 numPlanes = Pin_uint32 (0, 
-												 tagCount >> 1, 
-												 kMaxColorPlanes);
-
-			// Parse the noise function parameters.
-
-			dng_std_vector<dng_noise_function> noiseFunctions;
-
-			for (uint32 i = 0; i < numPlanes; i++)
-				{
-
-				const real64 scale	= stream.TagValue_real64 (tagType);
-				const real64 offset = stream.TagValue_real64 (tagType);
-
-				noiseFunctions.push_back (dng_noise_function (scale, offset));
-
-				}
-
-			// Store the noise profile.
-
-			fNoiseProfile = dng_noise_profile (noiseFunctions);
-
-			// Debug.
-
-			#if qDNGValidate
-
-			if (gVerbose)
-				{
-				
-				printf ("NoiseProfile:\n");
-				
-				printf ("  Planes: %u\n", (unsigned) numPlanes);
-					
-				for (uint32 plane = 0; plane < numPlanes; plane++)
-					{
-
-					printf ("  Noise function for plane %u: scale = %.20lf, offset = %.20lf\n",
-							(unsigned) plane,
-							noiseFunctions [plane].Scale  (),
-							noiseFunctions [plane].Offset ());
-
-					}
-				
-				}
-
-			#endif
-			
-			break;
-			
-			}
-			
 		case tcBaselineSharpness:
 			{
 			
@@ -2742,7 +2646,160 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			break;
 			
 			}
+        
+        case tcDepthFormat:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttShort);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fDepthFormat = stream.TagValue_uint32 (tagType);
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("DepthFormat: %s\n",
+                        LookupDepthFormat (fDepthFormat));
+                
+                }
+                
+            #endif
+                
+            break;
+            
+            }
 			
+        case tcDepthNear:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttRational);
+
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+
+            fDepthNear = stream.TagValue_urational (tagType);
+            
+            #if qDNGValidate
+                
+            if (gVerbose)
+                {
+                
+                printf ("DepthNear: ");
+                
+                if (fDepthNear == dng_urational (0, 0))
+                    {
+                    printf ("Unknown");
+                    }
+                else if (fDepthNear.d == 0)
+                    {
+                    printf ("Infinity");
+                    }
+                else
+                    {
+                    printf ("%0.2f", fDepthNear.As_real64 ());
+                    }
+                    
+                printf ("\n");
+                    
+                }
+                
+            #endif
+            
+            break;
+            
+            }
+        
+         case tcDepthFar:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttRational);
+
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+
+            fDepthFar = stream.TagValue_urational (tagType);
+            
+            #if qDNGValidate
+                
+            if (gVerbose)
+                {
+                
+                printf ("DepthFar: ");
+                
+                if (fDepthFar == dng_urational (0, 0))
+                    {
+                    printf ("Unknown");
+                    }
+                else if (fDepthFar.d == 0)
+                    {
+                    printf ("Infinity");
+                    }
+                else
+                    {
+                    printf ("%0.2f", fDepthFar.As_real64 ());
+                    }
+                    
+                printf ("\n");
+                    
+                }
+                
+            #endif
+            
+            break;
+            
+            }
+
+        case tcDepthUnits:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttShort);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fDepthUnits = stream.TagValue_uint32 (tagType);
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("DepthUnits: %s\n",
+                        LookupDepthUnits (fDepthUnits));
+                
+                }
+                
+            #endif
+                
+            break;
+            
+            }
+            
+        case tcDepthMeasureType:
+            {
+            
+            CheckTagType (parentCode, tagCode, tagType, ttShort);
+            
+            CheckTagCount (parentCode, tagCode, tagCount, 1);
+            
+            fDepthMeasureType = stream.TagValue_uint32 (tagType);
+            
+            #if qDNGValidate
+
+            if (gVerbose)
+                {
+                
+                printf ("DepthMeasureType: %s\n",
+                        LookupDepthMeasureType (fDepthMeasureType));
+                
+                }
+                
+            #endif
+                
+            break;
+            
+            }
+            
 		default:
 			{
 			
@@ -3087,21 +3144,6 @@ void dng_shared::PostParse (dng_host & /* host */,
 			#endif
 			
 			fBaselineSharpness = dng_urational (1, 1);
-							 
-			}
-
-		// Check NoiseProfile.
-
-		if (!fNoiseProfile.IsValid () && fNoiseProfile.NumFunctions () != 0)
-			{
-			
-			#if qDNGValidate
-			
-			ReportWarning ("Invalid NoiseProfile");
-						 
-			#endif
-			
-			fNoiseProfile = dng_noise_profile ();
 							 
 			}
 			
