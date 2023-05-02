@@ -19,6 +19,8 @@
 
 #endif	// AdobePrivate
 
+#include <string.h>
+
 #include "public/include/XMP_Environment.h"	// ! XMP_Environment.h must be the first included header.
 
 #include "public/include/XMP_Const.h"
