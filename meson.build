@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Hubert Figuière
+#
+# SPDX-License-Identifier: MIT
+
 project('dng_sdk', 'cpp')
 
 zlib = dependency('zlib')

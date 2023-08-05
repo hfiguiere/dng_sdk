@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2023 Hubert Figuière
+
+SPDX-License-Identifier: CC0-1.0
+-->
+
 DNG SDK
 =======
 
@@ -22,6 +28,11 @@ The `dng_validate` binary will be in
 
 Please don't consider this code to be under an OSI license.
 
+### This repository
+
+Files necessary to build on Linux are MIT licensed.  See the SPDX
+license tags.
+
 ### XMP SDK
 
 The XMP SDK as shipped doesn't have proper license annotation. However
@@ -29,6 +40,26 @@ the upsream XMP SDK is available at
 https://github.com/adobe/XMP-Toolkit-SDK and licensed under a
 BSD-3-Clause license. You should be able to use that version as a
 drop-in replacement.
+
+### zuid
+
+zuid is included in the copy of the XMP SDK.
+
+See `xmp/toolkit/third-party/zuid/documentation/Legal_Issues.txt`.
+
+### boost
+
+boost in included in the copy of the XMP SDK. Boost is licensed under
+the BSL-1.0.
+
+See `LICENSES/BSL-1.0.txt`.
+
+### uuid
+
+uuid in included in the copy of the XMP SDK. It is licensed under a
+BSD 3-Clause license.
+
+See `LICENSES/BSD-3-Clause.txt`.
 
 ### DNG SDK
 

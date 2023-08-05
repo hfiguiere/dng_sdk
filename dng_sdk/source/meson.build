@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Hubert Figuière
+#
+# SPDX-License-Identifier: MIT
+
 dng_sdk = static_library(
   'dng_sdk',
 
