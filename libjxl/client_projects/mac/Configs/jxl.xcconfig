@@ -1,0 +1,39 @@
+#include "../../../dng_sdk/projects/mac/xcconfig/dngsdkArchDeploy.xcconfig"
+#include "../../../dng_sdk/projects/mac/xcconfig/dngsdkLanguage.xcconfig"
+
+//#include "../../../cr_sdk/projects/mac/xcconfig/crsdkBuild.xcconfig"
+
+//HEADER_SEARCH_PATHS = . ./lib/include ./build/lib/include ./third_party/brotli/c/include ./third_party/googletest/googlemock/include ./third_party/googletest/googletest/include ./third_party/googletest/googletest ./third_party/highway ./third_party/skcms
+LIB_BASE = ../../libjxl
+HEADER_SEARCH_PATHS = $(LIB_BASE) $(LIB_BASE)/../client_projects/include $(LIB_BASE)/lib/include $(LIB_BASE)/build/lib/include $(LIB_BASE)/third_party/brotli/c/include $(LIB_BASE)/third_party/highway $(LIB_BASE)/third_party/skcms
+
+GCC_PREPROCESSOR_DEFINITIONS = JXL_INTERNAL_LIBRARY_BUILD TEST_DATA_PATH="\"foo\"" JPEGXL_ENABLE_SKCMS=1 JPEGXL_BUNDLE_SKCMS=0
+
+// Following is largely copied from crsdkBuild.xcconfig
+
+COPY_PHASE_STRIP         = YES
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+SKIP_INSTALL             = YES
+STRIP_STYLE              = non-global
+
+// Linking.
+
+DEAD_CODE_STRIPPING = YES
+MACH_O_TYPE = staticlib
+LD_GENERATE_MAP_FILE = YES
+
+// Packaging.
+
+EXECUTABLE_PREFIX = lib
+PRODUCT_NAME = $(TARGET_NAME)
+
+// TODO(erichan): should we use the same value as dng sdk? see dngsdkLanguage.xcconfig
+
+//CLANG_CXX_LANGUAGE_STANDARD = c++11
+//CLANG_CXX_LIBRARY			= libc++
+
+ALWAYS_SEARCH_USER_PATHS = NO
+
+// Add other settings here.
+
+// ...

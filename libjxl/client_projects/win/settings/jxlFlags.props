@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <JXL_LIB_BASE>../../libjxl</JXL_LIB_BASE>
+    <JXL_HEADER_PATHS>$(JXL_LIB_BASE);$(JXL_LIB_BASE)/../client_projects/include;$(JXL_LIB_BASE)/lib/include;$(JXL_LIB_BASE)/build/lib/include;$(JXL_LIB_BASE)/third_party/brotli/c/include;$(JXL_LIB_BASE)/third_party/highway;$(JXL_LIB_BASE)/third_party/skcms</JXL_HEADER_PATHS>
+    <JXL_FLAGS>JXL_THREADS_STATIC_DEFINE;JXL_STATIC_DEFINE;JXL_INTERNAL_LIBRARY_BUILD;TEST_DATA_PATH="\"foo\"";JPEGXL_ENABLE_SKCMS=1;JPEGXL_BUNDLE_SKCMS=0</JXL_FLAGS>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(JXL_HEADER_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(JXL_FLAGS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Cpp0xSupport>true</Cpp0xSupport>
+      <InterproceduralOptimization>SingleFile</InterproceduralOptimization>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <CCppSupport>Cpp17Support</CCppSupport>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

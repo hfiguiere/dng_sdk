@@ -1395,7 +1395,14 @@ bool  TradQT_Manager::ConvertGPSToXMPFormat(const char* strValue,SXMPMeta * xmp,
 		}
 		if (denom == 1) success &= false;
 		if (denom == 0) denom = 1;
+		////////////////////////////////////////////////////////////////
+		// ACR: replaced sprintf with sprintf_safe
+		#if 0
 		sprintf(altitude, "%u/%u", num, denom);
+		#else
+		sprintf_safe(altitude, sizeof(altitude), "%u/%u", num, denom);
+		#endif
+		////////////////////////////////////////////////////////////////
 
 		if (sscanf(strValue, "%s", next) == 1) {
 			if (strcmp(next, "CRSWGS-84/") == 0 || strcmp(next, "/") == 0)
@@ -1497,9 +1504,27 @@ bool TradQT_Manager::FormatLocationToGPSProperty(XMP_StringPtr ptrToStr, XMP_Str
 	}
 	char xmpValue[120];
 	if (decimalPosition > 0)
+		{
+		////////////////////////////////////////////////////////////////
+		// ACR: replaced sprintf with sprintf_safe
+		#if 0
 		sprintf(xmpValue, "%d,%.5lf%c", deg, fracMin, ref);
+		#else
+		sprintf_safe ( xmpValue, sizeof (xmpValue), "%d,%.5lf%c", deg, fracMin, ref);
+		#endif
+		////////////////////////////////////////////////////////////////
+		}
 	else
+		{
+		////////////////////////////////////////////////////////////////
+		// ACR: replaced sprintf with sprintf_safe
+		#if 0
 		sprintf(xmpValue, "%d,%d,%d%c", deg, min, sec, ref);
+		#else
+		sprintf_safe ( xmpValue, sizeof (xmpValue), "%d,%d,%d%c", deg, min, sec, ref);
+		#endif
+		////////////////////////////////////////////////////////////////
+		}
 	value = xmpValue;
 	
 	return true;
@@ -1541,7 +1566,14 @@ bool TradQT_Manager::FormatGPSPropertyToLocation(std::string &xmpValue, XMP_Stri
 			else {
 				mref[0] = (*strPtr == 'N') ? '+' : '-';
 				mref[1] = '\0';
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				(deg < 10) ? sprintf(d, "0%d", deg) : sprintf(d, "%d", deg);
+				#else
+				(deg < 10) ? sprintf_safe(d, sizeof (d), "0%d", deg) : sprintf_safe(d, sizeof (d), "%d", deg);
+				#endif
+				////////////////////////////////////////////////////////////////
 			}
 
 		}
@@ -1549,12 +1581,24 @@ bool TradQT_Manager::FormatGPSPropertyToLocation(std::string &xmpValue, XMP_Stri
 			degCheck = 100;
 			if ((ref != 'E') && (ref != 'W')) return false;
 			else {
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				if (deg < 10)
 					sprintf(d, "00%d", deg);
 				else if (deg<100)
 					sprintf(d, "0%d", deg);
 				else
 					sprintf(d, "%d", deg);
+				#else
+				if (deg < 10)
+					sprintf_safe(d, sizeof(d), "00%d", deg);
+				else if (deg<100)
+					sprintf_safe(d, sizeof(d), "0%d", deg);
+				else
+					sprintf_safe(d, sizeof(d), "%d", deg);
+				#endif
+				////////////////////////////////////////////////////////////////
 				mref[0] = (*strPtr == 'E') ? '+' : '-';
 				mref[1] = '\0';
 			}
@@ -1562,8 +1606,16 @@ bool TradQT_Manager::FormatGPSPropertyToLocation(std::string &xmpValue, XMP_Stri
 		}
 
 		if (minDenom == 1 && sec < 100 && min < 100) {
+			////////////////////////////////////////////////////////////////
+			// ACR: replaced sprintf with sprintf_safe
+			#if 0
 			(min < 10) ? sprintf(m, "0%d", min) : sprintf(m, "%d", min);
 			(sec < 10) ? sprintf(s, "0%d", sec) : sprintf(s, "%d", sec);
+			#else
+			(min < 10) ? sprintf_safe(m, sizeof (m), "0%d", min) : sprintf_safe(m, sizeof(m), "%d", min);
+			(sec < 10) ? sprintf_safe(s, sizeof (s), "0%d", sec) : sprintf_safe(s, sizeof(s), "%d", sec);
+			#endif
+			////////////////////////////////////////////////////////////////
 			strcpy(value, mref);
 			strcat(value, d);
 			strcat(value, m);
@@ -1571,6 +1623,9 @@ bool TradQT_Manager::FormatGPSPropertyToLocation(std::string &xmpValue, XMP_Stri
 		}
 
 		else {
+			////////////////////////////////////////////////////////////////
+			// ACR: replaced sprintf with sprintf_safe
+			#if 0
 			if (deg >= degCheck)
 				sprintf(value, "%c%0.5lf", mref[0], decimalDegrees);
 			else
@@ -1578,6 +1633,16 @@ bool TradQT_Manager::FormatGPSPropertyToLocation(std::string &xmpValue, XMP_Stri
 					sprintf(value, "%c0%0.5lf", mref[0], decimalDegrees);
 				else
 					sprintf(value, "%c00%0.5lf", mref[0], decimalDegrees);
+			#else
+			if (deg >= degCheck)
+				sprintf_safe(value, sizeof (value), "%c%0.5lf", mref[0], decimalDegrees);
+			else
+				if ((deg < 10 && (strncmp(propName,"GPSLatitude",strlen("GPSLatitude")) == 0)) || (deg < 100 && (strncmp(propName,"GPSLongitude", strlen("GPSLongitude")) == 0)))
+					sprintf_safe(value, sizeof (value), "%c0%0.5lf", mref[0], decimalDegrees);
+				else
+					sprintf_safe(value, sizeof (value), "%c00%0.5lf", mref[0], decimalDegrees);
+			#endif
+			////////////////////////////////////////////////////////////////
 		}
 	}
 	xmpValue = value;

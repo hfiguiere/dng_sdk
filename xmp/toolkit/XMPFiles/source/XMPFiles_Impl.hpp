@@ -180,6 +180,22 @@ extern bool ignoreLocalText;
 		#define XMP_StaticBuild 0
 	#endif
 	
+	// This can not be enables as it is for cr_sdk/Imagecore clients as of current
+	// (15.3) release. This has to do with the fact that 'EnableMiscHandlers'
+	// controls PNG support which is required by cr_sdk/Imagecore clients.
+	// 'EnablePacketScanning' requires 'EnablePacketScanning` flag and hence both
+	// need to be enabled.
+	// Moreover, 'EnableDynamicMediaHandlers' controls HEIF metadata support which
+	// again is required by current cr_sdk/Imagecore clients.
+	// Ideally, it would help to expose finer control over the file format support in
+	// XMPFiles but then the gains in terms of final cr_sdk/Imagecore library size
+	// is few hundred KBs which is interesting only for some of our mobile clients
+	// and cr_web.
+	// One of the workflows to test format specific metadata support through XMPFiles
+	// is in-place metadata updates in ACR e.g. open a PNG file, make a change, and then
+	// run 'Export Settings to XMP' from the three-dot menu.
+	// krishnas - Feb 20, 2023
+	
 	#ifndef XMPFilesForACR	// ACR should change this to define XMPFilesForACR as 1.
 		#define XMPFilesForACR 0
 	#endif

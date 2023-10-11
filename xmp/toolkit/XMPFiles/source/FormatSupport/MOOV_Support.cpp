@@ -209,7 +209,14 @@ void MOOV_Manager::ParseNestedBoxes ( BoxNode * parentNode, const std::string & 
 		} else { 
 #endif
 		if (parentPath == "moov/meta/ilst") {
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				sprintf(buffer, "/%d", isoInfo.boxType);
+				#else
+				sprintf_safe(buffer, sizeof(buffer), "/%d", isoInfo.boxType);
+				#endif
+				////////////////////////////////////////////////////////////////
 				pathSuffix = buffer;
 			}
 #endif

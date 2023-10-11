@@ -67,7 +67,7 @@
     #endif
 #elif XMP_UNIXBuild
 	 #ifndef kBigEndianHost	// Typically in the makefile for generic UNIX.
-		#if __GNUC__ && (__i386__ || __x86_64__)
+		#if __GNUC__ && (__i386__ || __x86_64__ || __aarch64__)
 			#define kBigEndianHost 0
 		#elif __GNUC__ && (__sparc__)
 			#define kBigEndianHost 1
