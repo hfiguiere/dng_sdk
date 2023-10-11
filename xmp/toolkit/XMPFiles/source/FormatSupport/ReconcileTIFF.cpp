@@ -1802,7 +1802,11 @@ ImportTIFF_DSDTable ( const TIFF_Manager & tiff, const TIFF_Manager::TagInfo & t
 // =================================================================================================
 // ImportTIFF_GPSCoordinate
 // ========================
-
+#if qAndroid
+#if !defined(__arm64__) && !defined(__x86_64__)
+__attribute__ ((optnone))
+#endif
+#endif
 static void
 ImportTIFF_GPSCoordinate ( const TIFF_Manager & tiff, const TIFF_Manager::TagInfo & posInfo,
 						   SXMPMeta * xmp, const char * xmpNS, const char * xmpProp )
@@ -1921,7 +1925,11 @@ ImportTIFF_GPSCoordinate ( const TIFF_Manager & tiff, const TIFF_Manager::TagInf
 // =================================================================================================
 // ImportTIFF_GPSTimeStamp
 // =======================
-
+#if qAndroid
+#if !defined(__arm64__) && !defined(__x86_64__)
+__attribute__ ((optnone))
+#endif
+#endif
 static void
 ImportTIFF_GPSTimeStamp ( const TIFF_Manager & tiff, const TIFF_Manager::TagInfo & timeInfo,
 						  SXMPMeta * xmp, const char * xmpNS, const char * xmpProp )

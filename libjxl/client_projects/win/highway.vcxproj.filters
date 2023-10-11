@@ -1,0 +1,198 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\aligned_allocator.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\image\image.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\print_network.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_128a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_128d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_f32a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_f32d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_f64a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_f64d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_i16a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_i16d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_i32a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_i32d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_i64a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_i64d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u16a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u16d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u32a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u32d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u64a.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u64d.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\targets.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\per_target.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\print.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\aligned_allocator.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\base.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\cache_control.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\dot\dot-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\image\image.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\math\math-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\algo-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\disabled_targets.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\result-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\shared-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\sorting_networks-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\traits-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\traits128-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\detect_compiler_arch.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\detect_targets.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\foreach_target.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\highway.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\highway_export.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\nanobenchmark.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\arm_neon-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\arm_sve-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\generic_ops-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\rvv-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\scalar-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\set_macros-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\shared-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\wasm_128-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\wasm_256-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\x86_128-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\x86_256-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\x86_512-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\targets.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -347,6 +347,10 @@ static bool ReadIDXFile ( const std::string& idxPath,
 			idxFile.ReadAll ( &hdvFileBlock.mTotalFrame, 4 );
 
 			// Compose file name we expect from file contents and break out on match.
+
+			////////////////////////////////////////////////////////////////
+			// ACR: replaced sprintf with sprintf_safe
+			#if 0
 			sprintf ( filenameBuffer, "%02d-%02d-%02d_%02d%02d%02d",
 					  hdvFileBlock.mFileNameYear + 2000,
 					  hdvFileBlock.mFileNameMonth,
@@ -354,6 +358,16 @@ static bool ReadIDXFile ( const std::string& idxPath,
 					  hdvFileBlock.mFileNameHour,
 					  hdvFileBlock.mFileNameMinute,
 					  hdvFileBlock.mFileNameSecond );
+			#else
+			sprintf_safe ( filenameBuffer, sizeof (filenameBuffer), "%02d-%02d-%02d_%02d%02d%02d",
+					  hdvFileBlock.mFileNameYear + 2000,
+					  hdvFileBlock.mFileNameMonth,
+					  hdvFileBlock.mFileNameDay,
+					  hdvFileBlock.mFileNameHour,
+					  hdvFileBlock.mFileNameMinute,
+					  hdvFileBlock.mFileNameSecond );
+			#endif
+			////////////////////////////////////////////////////////////////
 
 			foundFileBlock = (fileDateAndTime==filenameBuffer);
 
@@ -437,13 +451,27 @@ static bool ReadIDXFile ( const std::string& idxPath,
 			char buffer[255];
 
 			if ( digestFound || (! xmpObj->DoesPropertyExist ( kXMP_NS_DM, "startTimeScale" )) ) {
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				sprintf(buffer, "%d", clipSampleScale);
+				#else
+				sprintf_safe(buffer, sizeof (buffer), "%d", clipSampleScale);
+				#endif
+				////////////////////////////////////////////////////////////////
 				xmpValue = buffer;
 				xmpObj->SetProperty ( kXMP_NS_DM, "startTimeScale", xmpValue, kXMP_DeleteExisting );
 			}
 
 			if ( digestFound || (! xmpObj->DoesPropertyExist ( kXMP_NS_DM, "startTimeSampleSize" )) ) {
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				sprintf(buffer, "%d", clipSampleSize);
+				#else
+				sprintf_safe(buffer, sizeof (buffer), "%d", clipSampleSize);
+				#endif
+				////////////////////////////////////////////////////////////////
 				xmpValue = buffer;
 				xmpObj->SetProperty ( kXMP_NS_DM, "startTimeSampleSize", xmpValue, kXMP_DeleteExisting );
 			}
@@ -453,11 +481,25 @@ static bool ReadIDXFile ( const std::string& idxPath,
 				const int frameCount = (hdvFileBlock.mTotalFrame[0] << 24) + (hdvFileBlock.mTotalFrame[1] << 16) +
 									   (hdvFileBlock.mTotalFrame[2] << 8) + hdvFileBlock.mTotalFrame[3];
 
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				sprintf ( buffer, "%d", frameCount );
+				#else
+				sprintf_safe ( buffer, sizeof (buffer), "%d", frameCount );
+				#endif
+				////////////////////////////////////////////////////////////////
 				xmpValue = buffer;
 				xmpObj->SetStructField ( kXMP_NS_DM, "duration", kXMP_NS_DM, "value", xmpValue, 0 );
 
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				sprintf ( buffer, "%d/%d", clipSampleSize, clipSampleScale );
+				#else
+				sprintf_safe ( buffer, sizeof (buffer), "%d/%d", clipSampleSize, clipSampleScale );
+				#endif
+				////////////////////////////////////////////////////////////////
 				xmpValue = buffer;
 				xmpObj->SetStructField ( kXMP_NS_DM, "duration", kXMP_NS_DM, "scale", xmpValue, 0 );
 
@@ -479,7 +521,14 @@ static bool ReadIDXFile ( const std::string& idxPath,
 
 				// HH:MM:SS:FF or HH;MM;SS;FF
 				char timecode[256];
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				sprintf ( timecode, "%02d%c%02d%c%02d%c%02d", tcHours, chDF, tcMinutes, chDF, tcSeconds, chDF, tcFrames );
+				#else
+				sprintf_safe ( timecode, sizeof (timecode), "%02d%c%02d%c%02d%c%02d", tcHours, chDF, tcMinutes, chDF, tcSeconds, chDF, tcFrames );
+				#endif
+				////////////////////////////////////////////////////////////////
 				std::string sonyTimeString = timecode;
 
 				xmpObj->GetStructField ( kXMP_NS_DM, "startTimecode", kXMP_NS_DM, "timeValue", &xmpString, 0 );
@@ -533,6 +582,9 @@ static bool ReadIDXFile ( const std::string& idxPath,
 
 				// YYYY-MM-DDThh:mm:ssZ
 				char date[256];
+				////////////////////////////////////////////////////////////////
+				// ACR: replaced sprintf with sprintf_safe
+				#if 0
 				sprintf ( date, "%4d-%02d-%02dT%02d:%02d:%02dZ",
 						  hdvFileBlock.mFileNameYear + 2000,
 						  hdvFileBlock.mFileNameMonth,
@@ -540,6 +592,16 @@ static bool ReadIDXFile ( const std::string& idxPath,
 						  hdvFileBlock.mFileNameHour,
 						  hdvFileBlock.mFileNameMinute,
 						  hdvFileBlock.mFileNameSecond );
+				#else
+				sprintf_safe ( date, sizeof(date), "%4d-%02d-%02dT%02d:%02d:%02dZ",
+						  hdvFileBlock.mFileNameYear + 2000,
+						  hdvFileBlock.mFileNameMonth,
+						  hdvFileBlock.mFileNameDay,
+						  hdvFileBlock.mFileNameHour,
+						  hdvFileBlock.mFileNameMinute,
+						  hdvFileBlock.mFileNameSecond );
+				#endif
+				////////////////////////////////////////////////////////////////
 
 				XMP_StringPtr xmpDate = date;
 				xmpObj->SetProperty ( kXMP_NS_XMP, "CreateDate", xmpDate, kXMP_DeleteExisting );

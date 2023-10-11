@@ -1092,13 +1092,29 @@ std::string PostScript_Support::ConvertToDate(const char* inString)
 			{
 				if ( date.containsOffset )
 				{
+					////////////////////////////////////////////////////////////////
+					// ACR: replaced sprintf with sprintf_safe
+					#if 0
 					sprintf(dtstr,"%04d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d",date.year,date.month,date.day,
 							date.hours,date.minutes,date.seconds,date.offsetSign,date.offsetHour,date.offsetMin);
+					#else
+					sprintf_safe(dtstr,sizeof(dtstr),"%04d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d",date.year,date.month,date.day,
+							date.hours,date.minutes,date.seconds,date.offsetSign,date.offsetHour,date.offsetMin);
+					#endif
+					////////////////////////////////////////////////////////////////
 				}
 				else
 				{
+					////////////////////////////////////////////////////////////////
+					// ACR: replaced sprintf with sprintf_safe
+					#if 0
 					sprintf(dtstr,"%04d-%02d-%02dT%02d:%02d:%02dZ",date.year,date.month,date.day,
 							date.hours,date.minutes,date.seconds);
+					#else
+					sprintf_safe(dtstr,sizeof(dtstr),"%04d-%02d-%02dT%02d:%02d:%02dZ",date.year,date.month,date.day,
+							date.hours,date.minutes,date.seconds);
+					#endif
+					////////////////////////////////////////////////////////////////
 				}
 				try
 				{

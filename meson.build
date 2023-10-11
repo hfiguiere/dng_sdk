@@ -6,6 +6,8 @@ project('dng_sdk', 'cpp')
 
 zlib = dependency('zlib')
 expat = dependency('expat')
+jpegxl = dependency('libjxl')
+jpegxl_threads = dependency('libjxl_threads')
 
 subdir('xmp/toolkit')
 subdir('dng_sdk')

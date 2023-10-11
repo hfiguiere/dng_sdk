@@ -32,6 +32,7 @@ dng_sdk = static_library(
   'dng_iptc.cpp',
   'dng_jpeg_image.cpp',
   'dng_jpeg_memory_source.cpp',
+  'dng_jxl.cpp',
   'dng_lens_correction.cpp',
   'dng_linearization_info.cpp',
   'dng_local_string.cpp',
@@ -101,6 +102,6 @@ dng_validate = executable(
     '..' / 'projects' / 'meson',
   ],
 
-  dependencies: [ zlib, expat ],
+  dependencies: [ zlib, expat, jpegxl, jpegxl_threads ],
   link_with: [ dng_sdk, xmp_sdk ]
 )

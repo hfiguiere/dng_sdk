@@ -931,7 +931,14 @@ void P2_MetaHandler::SetGPSPropertyFromLegacyXML  ( XML_NodePtr legacyLocationCo
 					const double minutes = fractionalDegrees * 60.0;
 					char xmpValue [128];
 
+					////////////////////////////////////////////////////////////////
+					// ACR: replaced sprintf with sprintf_safe
+					#if 0
 					sprintf ( xmpValue, "%d,%.5lf%c", static_cast<int>(wholeDegrees), minutes, direction );
+					#else
+					sprintf_safe ( xmpValue, sizeof (xmpValue), "%d,%.5lf%c", static_cast<int>(wholeDegrees), minutes, direction );
+					#endif
+					////////////////////////////////////////////////////////////////
 					this->xmpObj.SetProperty ( kXMP_NS_EXIF, propName, xmpValue );
 					this->containsXMP = true;
 
@@ -981,7 +988,14 @@ void P2_MetaHandler::SetAltitudeFromLegacyXML  ( XML_NodePtr legacyLocationConte
 
 					char xmpValue [128];
 
+					////////////////////////////////////////////////////////////////
+					// ACR: replaced sprintf with sprintf_safe
+					#if 0
 					sprintf ( xmpValue, "%d/1", altitude );
+					#else
+					sprintf_safe ( xmpValue, sizeof (xmpValue), "%d/1", altitude );
+					#endif
+					////////////////////////////////////////////////////////////////
 					this->xmpObj.SetProperty ( kXMP_NS_EXIF, "GPSAltitude", xmpValue );
 					this->containsXMP = true;
 

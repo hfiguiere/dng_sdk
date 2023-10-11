@@ -1,5 +1,5 @@
 # ==============================================================================
-cmake_minimum_required(VERSION 2.8.6)
+cmake_minimum_required(VERSION 3.3)
 
 # Enable folder grouping of projects in IDEs
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -231,6 +231,16 @@ else ()
 endif()
 
 AddLibraryAndDependencies(${TARGET_NAME} ${XMP_BUILD_STATIC} YES "SHARED" SOURCE_FILES DEPENDENCY_LIST)
+
+if(XMPWASM)
+
+	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fwasm-exceptions" )
+
+	if (NOT USING_SINGLE_THREAD)
+		set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread" )
+	endif()
+
+endif()
 
 #set the output name
 set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME  ${XMPCORE_LIB})
