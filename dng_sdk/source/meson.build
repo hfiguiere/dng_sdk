@@ -85,6 +85,8 @@ dng_sdk = static_library(
   cpp_args: [
     '-DUNIX_ENV=1',
     '-DXMP_ClientBuild=1',
+    '-DqDNGSupportJXL=1',
+    '-DqDNGUseLibJPEG=1',
     '-DAdobePrivate=0'
   ],
   dependencies: [ zlib, expat ],
@@ -96,12 +98,15 @@ dng_validate = executable(
   'dng_validate',
   'dng_validate.cpp',
   cpp_args: [
+    '-DqDNGSupportJXL=1',
+    '-DqDNGUseLibJPEG=1',
+    '-DqDNGUseXMP=1',
     '-DqDNGValidateTarget=1'
   ],
   include_directories: [
     '..' / 'projects' / 'meson',
   ],
 
-  dependencies: [ zlib, expat, jpegxl, jpegxl_threads ],
+  dependencies: [ zlib, expat, libjpeg, jpegxl, jpegxl_threads ],
   link_with: [ dng_sdk, xmp_sdk ]
 )

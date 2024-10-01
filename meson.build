@@ -6,6 +6,7 @@ project('dng_sdk', 'cpp', version: '1.7')
 
 zlib = dependency('zlib')
 expat = dependency('expat')
+libjpeg = dependency('libjpeg')
 jpegxl = dependency('libjxl')
 jpegxl_threads = dependency('libjxl_threads')
 
