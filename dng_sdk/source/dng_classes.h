@@ -36,6 +36,7 @@ class dng_big_table_dictionary;
 class dng_big_table_storage;
 class dng_camera_profile;
 class dng_camera_profile_dynamic_range;
+class dng_camera_profile_group_selector;
 class dng_camera_profile_id;
 class dng_camera_profile_info;
 class dng_camera_profile_metadata;
@@ -52,11 +53,15 @@ class dng_hue_sat_map;
 class dng_ifd;
 class dng_image;
 class dng_image_preview;
+class dng_image_table;
+class dng_image_table_compression_info;
+class dng_image_table_jxl_compression_info;
 class dng_image_writer;
 class dng_info;
 class dng_iptc;
 class dng_jpeg_image;
 class dng_jpeg_preview;
+class dng_jxl_color_space_info;
 class dng_jxl_encode_settings;
 class dng_linearization_info;
 class dng_local_string;
@@ -122,6 +127,9 @@ class dng_xmp_sdk;
 class dng_xy_coord;
 
 class tiff_tag;
+
+class tag_string;
+class tag_uint32_ptr;
 
 /*****************************************************************************/
 

@@ -32,6 +32,67 @@ const char * kAdobeCalibrationSignature = "com.adobe";
 
 /*****************************************************************************/
 
+const char * kProfileName_GroupPrefix = "Group: ";
+
+/*****************************************************************************/
+
+bool HasProfileGroupPrefix (const dng_string &name)
+	{
+	
+	return name.StartsWith (kProfileName_GroupPrefix, true) &&
+		   name.Length () > strlen (kProfileName_GroupPrefix);
+	
+	}
+
+/*****************************************************************************/
+
+dng_string StripProfileGroupPrefix (const dng_string &name)
+	{
+	
+	if (HasProfileGroupPrefix (name))
+		{
+		
+		dng_string result (name.Get () + strlen (kProfileName_GroupPrefix));
+		
+		return result;
+		
+		}
+	
+	return name;
+	
+	}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+
+void dng_camera_profile_id::AddDigest (dng_md5_printer &printer) const
+	{
+	
+	printer.Process ("DCPI", 4);
+
+	if (Name ().NotEmpty ())
+		{
+		
+		printer.Process (Name ().Get (),
+						 Name ().Length ());
+		
+		}
+
+	if (Fingerprint ().IsValid ())
+		{
+		
+		printer.Process (fFingerprint.data,
+						 uint32 (sizeof (fFingerprint.data)));
+		
+		}
+	
+	}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+
 dng_camera_profile::dng_camera_profile ()
 
 	:	fName ()
@@ -2154,6 +2215,10 @@ dng_camera_profile_metadata::dng_camera_profile_metadata
 							  int32 index)
 
 	:	fProfileID (profile.ProfileID ())
+	
+	,	fGroupName (profile.GroupName ())
+	
+	,	fHDR (profile.DynamicRangeInfo ().IsHDR ())
 
 	,	fRenderDataFingerprint (profile.RenderDataFingerprint ())
 	
@@ -2187,6 +2252,8 @@ bool dng_camera_profile_metadata::operator==
 	{
 	
 	return fProfileID			  == metadata.fProfileID			 &&
+		   fGroupName			  == metadata.fGroupName			 &&
+		   fHDR					  == metadata.fHDR					 &&
 		   fRenderDataFingerprint == metadata.fRenderDataFingerprint &&
 		   fIsLegalToEmbed		  == metadata.fIsLegalToEmbed		 &&
 		   fWasReadFromDNG		  == metadata.fWasReadFromDNG		 &&
