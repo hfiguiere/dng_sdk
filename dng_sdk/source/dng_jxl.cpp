@@ -10,10 +10,6 @@
 
 /*****************************************************************************/
 
-#if qDNGSupportJXL
-
-/*****************************************************************************/
-
 // libjxl headers.
 
 #include "jxl/encode_cxx.h"
@@ -2282,7 +2278,7 @@ void dng_jxl_decoder::Decode (dng_host &host,
 			// TODO(erichan): Does the choice of this format unduly affect the
 			// result of JxlDecoderGetColorAsEncodedProfile?
 			
-			JxlPixelFormat format = { 3, JXL_TYPE_FLOAT, JXL_NATIVE_ENDIAN, 0 };
+			// JxlPixelFormat format = { 3, JXL_TYPE_FLOAT, JXL_NATIVE_ENDIAN, 0 };
 
 			#if qDNGValidate
 			if (gVerbose)
@@ -2293,7 +2289,6 @@ void dng_jxl_decoder::Decode (dng_host &host,
 			
 			if (JXL_DEC_SUCCESS ==
 				JxlDecoderGetColorAsEncodedProfile (dec,
-													&format,
 													JXL_COLOR_PROFILE_TARGET_ORIGINAL,
 													&color_encoding))
 				{
@@ -2442,7 +2437,6 @@ void dng_jxl_decoder::Decode (dng_host &host,
 
 				CheckResult (JxlDecoderGetICCProfileSize
 							 (dec,
-							  &format,
 							  JXL_COLOR_PROFILE_TARGET_ORIGINAL,
 							  &profile_size),
 							 "JxlDecoderGetICCProfileSize",
@@ -2469,7 +2463,6 @@ void dng_jxl_decoder::Decode (dng_host &host,
 				
 				CheckResult (JxlDecoderGetColorAsICCProfile
 							 (dec,
-							  &format,
 							  JXL_COLOR_PROFILE_TARGET_ORIGINAL,
 							  profile,
 							  profile_size),
@@ -3527,9 +3520,5 @@ bool SupportsJXL (const dng_image &image)
 			 pixelType == ttFloat));
 	
 	}
-
-/*****************************************************************************/
-
-#endif	// qDNGSupportJXL
 
 /*****************************************************************************/

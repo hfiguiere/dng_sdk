@@ -974,10 +974,8 @@ uint32 MinBackwardVersionForCompression (uint32 compression)
 	if (compression == ccLossyJPEG)
 		return dngVersion_1_4_0_0;
 
-	#if qDNGSupportJXL
 	if (compression == ccJXL)
 		return dngVersion_1_7_0_0;
-	#endif
 
 	return dngVersion_1_1_0_0;
 	

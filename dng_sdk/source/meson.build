@@ -85,7 +85,6 @@ dng_sdk = static_library(
   cpp_args: [
     '-DUNIX_ENV=1',
     '-DXMP_ClientBuild=1',
-    '-DqDNGSupportJXL=1',
     '-DqDNGUseLibJPEG=1',
     '-DAdobePrivate=0'
   ],
@@ -98,7 +97,6 @@ dng_validate = executable(
   'dng_validate',
   'dng_validate.cpp',
   cpp_args: [
-    '-DqDNGSupportJXL=1',
     '-DqDNGUseLibJPEG=1',
     '-DqDNGUseXMP=1',
     '-DqDNGValidateTarget=1'

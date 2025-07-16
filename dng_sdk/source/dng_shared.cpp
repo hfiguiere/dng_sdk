@@ -3531,6 +3531,72 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 				
 			}
 
+		case tcBigTableGroupIndex:
+			{
+			
+			if (!CheckTagType (parentCode, tagCode, tagType, ttByte))
+				return false;
+
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 32, 0xFFFFFFF0))
+				return false;
+
+			// Pairs of digests:
+			// group_digest, dng_fingerprint, 16 bytes
+			// instance_digest, dng_fingerprint, 16 bytes
+			// Each pair is 32 bytes.
+			
+			const uint32 count = tagCount >> 5;
+
+			fBigTableGroupIndex.clear ();
+			
+			for (uint32 index = 0; index < count; index++)
+				{
+				
+				dng_fingerprint groupDigest;
+				dng_fingerprint instanceDigest;
+				
+				stream.Get (groupDigest	  .data, 16);
+				stream.Get (instanceDigest.data, 16);
+
+				fBigTableGroupIndex.insert (std::make_pair (groupDigest,
+															instanceDigest));
+								
+				}
+			
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+				
+				printf ("BigTableGroupIndex:\n");
+
+				uint32 index = 0;
+
+				for (const auto &entry : fBigTableGroupIndex)
+					{
+					
+					printf ("\t[%u] = ", index);
+					
+					DumpFingerprint (entry.first);
+
+					printf (" -> ");
+					
+					DumpFingerprint (entry.second);
+
+					printf ("\n");
+
+					index++;
+					
+					}
+				
+				}
+				
+			#endif	// qDNGValidate
+				
+			break;
+			
+			}
+			
 		case tcImageSequenceInfo:
 			{
 

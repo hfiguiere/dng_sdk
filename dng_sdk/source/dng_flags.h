@@ -464,33 +464,6 @@
 
 /*****************************************************************************/
 
-// Support ProfileGainTableMap2 tag?
-
-#ifndef qDNGProfileGainTableMap2
-#define qDNGProfileGainTableMap2 (1)
-#endif
-
-/*****************************************************************************/
-
-// Support JPEG XL as an image codec for DNG images?
-
-// When this flag is enabled, it enables the dng_jxl module as well as the DNG
-// read & write code that uses JPEG XL as the codec.
-
-#ifndef qDNGSupportJXL
-#define qDNGSupportJXL (1)
-#endif
-
-/*****************************************************************************/
-
-// Support ColumnInterleaveFactor tag? Introduced in DNG 1.7.
-
-#ifndef qDNGSupportColumnInterleaveFactor
-#define qDNGSupportColumnInterleaveFactor (1)
-#endif
-
-/*****************************************************************************/
-
 // Place deprecated flags into this file.
 
 #include "dng_deprecated_flags.h"

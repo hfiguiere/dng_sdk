@@ -88,7 +88,9 @@ const char *XMP_NS_REGIONS	  = "http://www.metadataworkinggroup.com/schemas/regi
 
 const char *XMP_NS_HDRGM	  = "http://ns.adobe.com/hdr-gain-map/1.0/";
 const char *XMP_NS_HDR_META	  = "http://ns.adobe.com/hdr-metadata/1.0/";
-const char *XMP_NS_APPLE_HDRGM = "http://ns.apple.com/HDRGainMap/1.0/";
+
+const char *XMP_NS_APPLE_HDRGM	   = "http://ns.apple.com/HDRGainMap/1.0/";
+const char *XMP_NS_APPLE_PIXELDATA = "http://ns.apple.com/pixeldatainfo/1.0/";
 
 /******************************************************************************/
 
@@ -391,6 +393,18 @@ void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces,
 				
 				SXMPMeta::RegisterNamespace (XMP_NS_APPLE_HDRGM,
 											 "HDRGainMap",
+											 &ss);
+				
+				}
+			
+			// Register Apple Pixel Data namespace
+			
+				{
+				
+				TXMP_STRING_TYPE ss ("");
+				
+				SXMPMeta::RegisterNamespace (XMP_NS_APPLE_PIXELDATA,
+											 "apdi",
 											 &ss);
 				
 				}

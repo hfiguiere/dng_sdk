@@ -546,6 +546,34 @@ class tag_srational_ptr: public tag_data_ptr
 
 /******************************************************************************/
 
+class tag_real32: public tag_data_ptr
+	{
+	
+	private:
+	
+		real32 fValue;
+		
+	public:
+	
+		tag_real32 (uint16 code,
+					real32 value = 0.0f)
+			
+			:	tag_data_ptr (code, ttFloat, 1, &fValue)
+			
+			,	fValue (value)
+			
+			{
+			}
+			
+		void Set (real32 value)
+			{
+			fValue = value;
+			}
+		
+	};
+
+/******************************************************************************/
+
 class tag_real64: public tag_data_ptr
 	{
 	
@@ -781,13 +809,15 @@ class dng_basic_tag_set: private dng_uncopyable
 		tag_uint16_ptr fSampleFormat;
 		
 		tag_uint16 fRowInterleaveFactor;
-		#if qDNGSupportColumnInterleaveFactor
 		tag_uint16 fColumnInterleaveFactor;
-		#endif
 		
 		uint16 fSubTileBlockSizeData [2];
 		
 		tag_uint16_ptr fSubTileBlockSize;
+		
+		tag_real32 fJXLDistance;
+		tag_uint32 fJXLEffort;
+		tag_uint32 fJXLDecodeSpeed;
 
 	public:
 	
@@ -1233,8 +1263,7 @@ enum
 class dng_image_writer
 	{
 	
-	friend class dng_jpeg_image;
-	friend class dng_lossy_image_encode_task;
+	friend class dng_compressed_image_encode_task;
 	friend class dng_write_tiles_task;
 	
 	protected:
@@ -1296,7 +1325,8 @@ class dng_image_writer
 						dng_metadata_subset metadataSubset = kMetadataSubset_All,
 						bool hasTransparency = false,
 						bool allowBigTIFF = true,
-						const dng_image *gainMapImage = nullptr);
+						const dng_image *gainMapImage = nullptr,
+						bool useHalfFloat = false);
 								
 		/// Write a dng_image to a dng_stream in TIFF format.
 		/// \param host Host interface used for progress updates, abort testing, buffer allocation, etc.
@@ -1329,7 +1359,8 @@ class dng_image_writer
 										   dng_metadata_subset metadataSubset = kMetadataSubset_All,
 										   bool hasTransparency = false,
 										   bool allowBigTIFF = true,
-										   const dng_image *gainMapImage = nullptr);
+										   const dng_image *gainMapImage = nullptr,
+										   bool useHalfFloat = false);
 								
 		/// Write a dng_image to a dng_stream in DNG format.
 		/// \param host Host interface used for progress updates, abort testing, buffer allocation, etc.

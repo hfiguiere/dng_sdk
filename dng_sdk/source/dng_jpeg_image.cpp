@@ -1,5 +1,5 @@
 /*****************************************************************************/
-// Copyright 2011-2022 Adobe Systems Incorporated
+// Copyright 2011-2023 Adobe Systems Incorporated
 // All Rights Reserved.
 //
 // NOTICE:	Adobe permits you to use, modify, and distribute this file in
@@ -24,8 +24,8 @@
 
 /*****************************************************************************/
 
-class dng_lossy_image_encode_task : public dng_area_task,
-									private dng_uncopyable
+class dng_compressed_image_encode_task : public dng_area_task,
+										 private dng_uncopyable
 	{
 	
 	private:
@@ -36,7 +36,7 @@ class dng_lossy_image_encode_task : public dng_area_task,
 		
 		const dng_image &fImage;
 	
-		dng_lossy_compressed_image &fLossyImage;
+		dng_compressed_image_tiles &fCompressedImage;
 		
 		uint32 fTileCount;
 		
@@ -46,19 +46,19 @@ class dng_lossy_image_encode_task : public dng_area_task,
 		
 	public:
 	
-		dng_lossy_image_encode_task (dng_host &host,
-									 dng_image_writer &writer,
-									 const dng_image &image,
-									 dng_lossy_compressed_image &lossyImage,
-									 uint32 tileCount,
-									 const dng_ifd &ifd)
+		dng_compressed_image_encode_task (dng_host &host,
+										  dng_image_writer &writer,
+										  const dng_image &image,
+										  dng_compressed_image_tiles &compressedImage,
+										  uint32 tileCount,
+										  const dng_ifd &ifd)
 
-			:	dng_area_task ("dng_lossy_image_encode_task")
+			:	dng_area_task ("dng_compressed_image_encode_task")
 		
 			,	fHost			  (host)
 			,	fWriter			  (writer)
 			,	fImage			  (image)
-			,	fLossyImage		  (lossyImage)
+			,	fCompressedImage  (compressedImage)
 			,	fTileCount		  (tileCount)
 			,	fIFD			  (ifd)
 			,	fNextTileIndex	  (0)
@@ -87,6 +87,13 @@ class dng_lossy_image_encode_task : public dng_area_task,
 													  fImage.PixelSize ());
 			
 			uncompressedBuffer.Reset (fHost.Allocate (uncompressedSize));
+			
+			uint32 compressedSize = fWriter.CompressedBufferSize (fIFD, uncompressedSize);
+			
+			if (compressedSize)
+				{
+				compressedBuffer.Reset (fHost.Allocate (compressedSize));
+				}
 			
 			uint32 tilesAcross = fIFD.TilesAcross ();
 	
@@ -123,7 +130,7 @@ class dng_lossy_image_encode_task : public dng_area_task,
 								   tempBuffer,
 								   true);
 								  
-				fLossyImage.fData [tileIndex].reset
+				fCompressedImage.fData [tileIndex].reset
 					(stream.AsMemoryBlock (fHost.Allocator ()));
 					
 				}
@@ -133,154 +140,102 @@ class dng_lossy_image_encode_task : public dng_area_task,
 	};
 
 /*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
 
-static void CommonConfigureIFD (dng_ifd &ifd,
-								const dng_negative &negative,
-								const dng_image &image,
-								const uint32 compressionCode,
-								const dng_point &tileSize,
-								dng_point &outTileSize,
-								dng_point &outImageSize)
-	{
-	
-	DNG_REQUIRE (image.PixelType () == ttByte  ||
-				 image.PixelType () == ttShort ||
-				 image.PixelType () == ttFloat,
-				 "Unsupported pixel type");
-
-	uint32 bitDepth = 8;
-
-	if (image.PixelType () == ttShort)
-		bitDepth = 16;
-
-	else if (image.PixelType () == ttFloat)
-		bitDepth = (negative.RawFloatBitDepth () == 16) ? 16 : 32;
-
-	dng_point imageSize = image.Bounds ().Size ();
-	
-	ifd.fImageWidth				   = imageSize.h;
-	ifd.fImageLength			   = imageSize.v;
-	
-	ifd.fSamplesPerPixel		   = image.Planes ();
-	
-	ifd.fBitsPerSample [0]		   = bitDepth;
-	ifd.fBitsPerSample [1]		   = bitDepth;
-	ifd.fBitsPerSample [2]		   = bitDepth;
-	ifd.fBitsPerSample [3]		   = bitDepth;
-	
-	ifd.fPhotometricInterpretation = piLinearRaw;
-	
-	ifd.fCompression			   = compressionCode;
-
-	ifd.FindTileSize (SafeUint32Mult (uint32 (tileSize.h),
-									  uint32 (tileSize.v),
-									  ifd.fSamplesPerPixel));
-
-	outTileSize.h = ifd.fTileWidth;
-	outTileSize.v = ifd.fTileLength;
-
-	outImageSize  = imageSize;
-	
-	}
-
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-
-dng_jpeg_image::dng_jpeg_image ()
-	{
-	
-	fCompressionCode = ccLossyJPEG;
-	
-	}
-
-/*****************************************************************************/
-
-void dng_jpeg_image::Encode (dng_host &host,
-							 const dng_negative &negative,
-							 dng_image_writer &writer,
-							 const dng_image &image)
+void dng_compressed_image_tiles::EncodeTiles (dng_host &host,
+											  dng_image_writer &writer,
+											  const dng_image &image,
+											  const dng_ifd &ifd)
 	{
 	
 	#if qDNGValidate
-	dng_timer timer ("Encode JPEG Proxy time");
+	
+	char message [256];
+	
+	dng_timer timer (message);
+	
 	#endif
 	
-	DNG_REQUIRE (image.PixelType () == ttByte,
-				 "Cannot JPEG encode non-byte image");
+	uint32 tilesAcross = ifd.TilesAcross ();
+	uint32 tilesDown   = ifd.TilesDown	 ();
 	
-	dng_ifd ifd;
-
-	CommonConfigureIFD (ifd,
-						negative,
-						image,
-						ccLossyJPEG,
-						dng_point (512, 512),
-						fTileSize,
-						fImageSize);
-
-	// Choose JPEG encode quality. Need a higher quality for raw proxies than
-	// non-raw proxies, since users often perform much greater color changes.
-	// Also, if we are targeting a "large" size proxy (larger than 5 MP), or
-	// this is a full size proxy, then use a higher quality.
+	uint32 tileCount = tilesAcross * tilesDown;
 	
-	bool useHigherQuality = (uint64) ifd.fImageWidth *
-							(uint64) ifd.fImageLength > 5000000 ||
-							image.Bounds ().Size () == negative.OriginalDefaultFinalSize ();
+	fData.resize (tileCount);
 	
-	if (negative.IsSceneReferred ())
+	uint32 threadCount = Min_uint32 (tileCount,
+									 host.PerformAreaTaskThreads ());
+										 
+	dng_compressed_image_encode_task task (host,
+										   writer,
+										   image,
+										   *this,
+										   tileCount,
+										   ifd);
+									  
+	host.PerformAreaTask (task,
+						  dng_rect (0, 0, 16, 16 * threadCount));
+		
+	#if qDNGValidate
+	
+	if (ifd.fCompression == ccJXL)
 		{
-		ifd.fCompressionQuality = useHigherQuality ? 11 : 10;
+		
+		snprintf (message,
+				  sizeof (message),
+				  "JXL encode %u by %u pixels, distance = %.2f, effort = %d, size = %llu",
+				  image.Width (),
+				  image.Height (),
+				  ifd.fJXLEncodeSettings->Distance (),
+				  ifd.fJXLEncodeSettings->Effort (),
+				  NonHeaderSize ());
+
 		}
-	
+		
+	else if (ifd.fCompression == ccLossyJPEG)
+		{
+		
+		snprintf (message,
+				  sizeof (message),
+				  "Lossy JPEG encode %u by %u pixels, quality = %d, size = %llu",
+				  image.Width (),
+				  image.Height (),
+				  ifd.fCompressionQuality,
+				  NonHeaderSize ());
+
+		}
+		
+	else if (ifd.fCompression == ccDeflate)
+		{
+		
+		snprintf (message,
+				  sizeof (message),
+				  "Deflate encode %u by %u pixels, quality = %d, size = %llu",
+				  image.Width (),
+				  image.Height (),
+				  ifd.fCompressionQuality,
+				  NonHeaderSize ());
+
+		}
+		
 	else
 		{
-		ifd.fCompressionQuality = useHigherQuality ? 10 : 8;
+		
+		snprintf (message,
+				  sizeof (message),
+				  "EncodeTiles %u by %u pixels, size = %llu",
+				  image.Width (),
+				  image.Height (),
+				  NonHeaderSize ());
+
 		}
-
-	EncodeTiles (host,
-				 writer,
-				 image,
-				 ifd);
-	
-	}
-			
-/*****************************************************************************/
-
-void dng_jpeg_image::DoFindDigest (dng_host & /* host */,
-								   std::vector<dng_fingerprint> &digests) const
-	{
-	
-	// Compute digest of JPEG tables, if any, and add to the given list.
+				  
+	#endif
 		
-	if (fJPEGTables.Get ())
-		{
-		
-		dng_md5_printer printer;
-		
-		printer.Process (fJPEGTables->Buffer	  (),
-						 fJPEGTables->LogicalSize ());
-						 
-		digests.push_back (printer.Result ());
-		
-		}
-	
-	}
-			
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-
-dng_lossy_compressed_image::~dng_lossy_compressed_image ()
-	{
-	
 	}
 
 /*****************************************************************************/
 
-uint64 dng_lossy_compressed_image::NonHeaderSize () const
+uint64 dng_compressed_image_tiles::NonHeaderSize () const
 	{
 	
 	uint64 size = 0;
@@ -294,6 +249,82 @@ uint64 dng_lossy_compressed_image::NonHeaderSize () const
 		
 	return size;
 	
+	}
+
+/*****************************************************************************/
+
+void dng_compressed_image_tiles::WriteData (dng_stream &stream,
+											dng_basic_tag_set &basic) const
+	{
+
+	uint32 tileCount = (uint32) fData.size ();
+					
+	for (uint32 tileIndex = 0; tileIndex < tileCount; tileIndex++)
+		{
+	
+		// Remember this offset.
+		
+		uint64 tileOffset = stream.Position ();
+	
+		basic.SetTileOffset (tileIndex, tileOffset);
+		
+		// Write compressed data.
+		
+		stream.Put (fData [tileIndex]->Buffer	   (),
+					fData [tileIndex]->LogicalSize ());
+						
+		// Update tile byte count.
+			
+		uint64 tileByteCount = stream.Position () - tileOffset;
+			
+		basic.SetTileByteCount (tileIndex, tileByteCount);
+		
+		// Keep the tiles on even byte offsets.
+											 
+		if (tileByteCount & 1)
+			{
+			stream.Put_uint8 (0);
+			}
+
+		}
+		
+	}
+
+/*****************************************************************************/
+
+void dng_lossy_compressed_image::EncodeTiles (dng_host &host,
+											  dng_image_writer &writer,
+											  const dng_image &image,
+											  const dng_ifd &ifd)
+	{
+	
+	dng_compressed_image_tiles::EncodeTiles (host,
+											 writer,
+											 image,
+											 ifd);
+											 
+	fImageSize.h = ifd.fImageWidth;
+	fImageSize.v = ifd.fImageLength;
+	
+	fTileSize.h = ifd.fTileWidth;
+	fTileSize.v = ifd.fTileLength;
+	
+	fUsesStrips = !ifd.fUsesTiles;
+	
+	fCompressionCode = ifd.fCompression;
+	
+	fBitsPerSample = ifd.fBitsPerSample [0];
+	
+	fRowInterleaveFactor    = ifd.fRowInterleaveFactor;
+	fColumnInterleaveFactor = ifd.fColumnInterleaveFactor;
+	
+	if (fCompressionCode == ccJXL && ifd.fJXLEncodeSettings.get ())
+		{
+		fJXLDistance    = ifd.fJXLEncodeSettings->Distance    ();
+		fJXLEffort      = ifd.fJXLEncodeSettings->Effort      ();
+		fJXLDecodeSpeed = ifd.fJXLEncodeSettings->DecodeSpeed ();
+		}
+
 	}
 
 /*****************************************************************************/
@@ -351,40 +382,120 @@ dng_fingerprint dng_lossy_compressed_image::FindDigest (dng_host &host) const
 
 /*****************************************************************************/
 
-void dng_lossy_compressed_image::EncodeTiles (dng_host &host,
-											  dng_image_writer &writer,
-											  const dng_image &image,
-											  const dng_ifd &ifd)
+static void CommonConfigureIFD (dng_ifd &ifd,
+								const dng_image &image,
+								const uint32 compressionCode,
+								const dng_point &tileSize,
+								const uint32 bitDepth)
 	{
 	
-	uint32 tilesAcross = ifd.TilesAcross ();
-	uint32 tilesDown   = ifd.TilesDown	 ();
+	DNG_REQUIRE (image.PixelType () == ttByte  ||
+				 image.PixelType () == ttShort ||
+				 image.PixelType () == ttFloat,
+				 "Unsupported pixel type");
+
+	dng_point imageSize = image.Bounds ().Size ();
 	
-	uint32 tileCount = tilesAcross * tilesDown;
+	ifd.fImageWidth				   = imageSize.h;
+	ifd.fImageLength			   = imageSize.v;
 	
-	fData.resize (tileCount);
+	ifd.fSamplesPerPixel		   = image.Planes ();
 	
-	uint32 threadCount = Min_uint32 (tileCount,
-									 host.PerformAreaTaskThreads ());
-										 
-	dng_lossy_image_encode_task task (host,
-									  writer,
-									  image,
-									  *this,
-									  tileCount,
-									  ifd);
-									  
-	host.PerformAreaTask (task,
-						  dng_rect (0, 0, 16, 16 * threadCount));
-		
+	ifd.fBitsPerSample [0]		   = bitDepth;
+	ifd.fBitsPerSample [1]		   = bitDepth;
+	ifd.fBitsPerSample [2]		   = bitDepth;
+	ifd.fBitsPerSample [3]		   = bitDepth;
+	
+	ifd.fPhotometricInterpretation = piLinearRaw;
+	
+	ifd.fCompression			   = compressionCode;
+
+	ifd.FindTileSize (SafeUint32Mult (uint32 (tileSize.h),
+									  uint32 (tileSize.v),
+									  ifd.fSamplesPerPixel));
+
 	}
 
 /*****************************************************************************/
-/*****************************************************************************/
+
+dng_jpeg_image::dng_jpeg_image ()
+	{
+	
+	fCompressionCode = ccLossyJPEG;
+	
+	}
+
 /*****************************************************************************/
 
-#if qDNGSupportJXL
+void dng_jpeg_image::Encode (dng_host &host,
+							 const dng_negative &negative,
+							 dng_image_writer &writer,
+							 const dng_image &image)
+	{
+	
+	#if qDNGValidate
+	dng_timer timer ("Encode JPEG Proxy time");
+	#endif
+	
+	DNG_REQUIRE (image.PixelType () == ttByte,
+				 "Cannot JPEG encode non-byte image");
+	
+	dng_ifd ifd;
 
+	CommonConfigureIFD (ifd,
+						image,
+						ccLossyJPEG,
+						dng_point (512, 512),
+						8);
+
+	// Choose JPEG encode quality. Need a higher quality for raw proxies than
+	// non-raw proxies, since users often perform much greater color changes.
+	// Also, if we are targeting a "large" size proxy (larger than 5 MP), or
+	// this is a full size proxy, then use a higher quality.
+	
+	bool useHigherQuality = (uint64) image.Width  () *
+							(uint64) image.Height () > 5000000 ||
+							image.Bounds ().Size () == negative.OriginalDefaultFinalSize ();
+	
+	if (negative.IsSceneReferred ())
+		{
+		ifd.fCompressionQuality = useHigherQuality ? 11 : 10;
+		}
+	
+	else
+		{
+		ifd.fCompressionQuality = useHigherQuality ? 10 : 8;
+		}
+
+	EncodeTiles (host,
+				 writer,
+				 image,
+				 ifd);
+	
+	}
+			
+/*****************************************************************************/
+
+void dng_jpeg_image::DoFindDigest (dng_host & /* host */,
+								   std::vector<dng_fingerprint> &digests) const
+	{
+	
+	// Compute digest of JPEG tables, if any, and add to the given list.
+		
+	if (fJPEGTables.Get ())
+		{
+		
+		dng_md5_printer printer;
+		
+		printer.Process (fJPEGTables->Buffer	  (),
+						 fJPEGTables->LogicalSize ());
+						 
+		digests.push_back (printer.Result ());
+		
+		}
+	
+	}
+			
 /*****************************************************************************/
 
 dng_jxl_image::dng_jxl_image ()
@@ -397,42 +508,70 @@ dng_jxl_image::dng_jxl_image ()
 /*****************************************************************************/
 
 void dng_jxl_image::Encode (dng_host &host,
-							const dng_negative &negative,
 							dng_image_writer &writer,
 							const dng_image &image,
-							uint32 newSubFileType,
-							bool isProxy)
+							const dng_jxl_encode_settings &encodeSettings,
+							const JxlColorEncoding *colorEncoding)
 	{
 	
-	#if qDNGValidate
-	dng_timer timer ("Encode JXL time");
-	#endif
+	DNG_REQUIRE (SupportsJXL (image),
+				 "Unsupported image");
 
+	DNG_REQUIRE (image.PixelType () == ttByte  ||
+				 image.PixelType () == ttShort ||
+				 image.PixelType () == ttFloat,
+				 "Unsupported pixel type");
+				 
 	dng_ifd ifd;
-
-	CommonConfigureIFD (ifd,
-						negative,
-						image,
-						ccJXL,
-						dng_point (1024, 1024),
-						fTileSize,
-						fImageSize);
-
-	// Choose JXL encode settings.
-
-	AutoPtr<dng_jxl_encode_settings> settings
-		(host.MakeJXLEncodeSettings (negative,
-									 image,
-									 newSubFileType,
-									 isProxy));
 	
-	#if qDNGValidate
-	printf ("JXL using distance: %.2f and effort %d\n",
-			float (settings->Distance ()),
-			int (settings->Effort ()));
-	#endif
-
-	ifd.fJXLEncodeSettings.reset (settings.Release ());
+	ifd.fImageWidth  = image.Width  ();
+	ifd.fImageLength = image.Height ();
+	
+	ifd.fSamplesPerPixel = image.Planes ();
+	
+	for (uint32 plane = 0; plane < ifd.fSamplesPerPixel; plane++)
+		{
+		
+		if (image.PixelType () == ttFloat)
+			{
+			ifd.fBitsPerSample [plane] = 16;
+			ifd.fSampleFormat  [plane] = sfFloatingPoint;
+			}
+			
+		else
+			{
+			ifd.fBitsPerSample [plane] = image.PixelSize () * 8;
+			}
+			
+		}
+			
+	ifd.fCompression = ccJXL;
+	
+	// This will cause the color encoding to use linear gamma with
+	// no color transform, unless we override it.
+	
+	ifd.fPhotometricInterpretation = piLinearRaw;
+	
+	// Attach JXL encode settings to IFD.
+	
+	AutoPtr<dng_jxl_encode_settings> encodeSettingsHolder
+		(new dng_jxl_encode_settings (encodeSettings));
+	
+	ifd.fJXLEncodeSettings.reset (encodeSettingsHolder.Release ());
+	
+	// Attach JXL color encoding to IFD, if any.
+	
+	if (colorEncoding)
+		{
+		
+		AutoPtr<JxlColorEncoding> colorEncodingHolder
+			(new JxlColorEncoding (*colorEncoding));
+			
+		ifd.fJXLColorEncoding.reset (colorEncodingHolder.Release ());
+		
+		}
+	
+	ifd.FindTileSize (1024 * 1024);
 	
 	EncodeTiles (host,
 				 writer,
@@ -443,7 +582,47 @@ void dng_jxl_image::Encode (dng_host &host,
 
 /*****************************************************************************/
 
-#endif	// qDNGSupportJXL
+void dng_jxl_image::Encode (dng_host &host,
+							dng_image_writer &writer,
+							const dng_image &image,
+							dng_host::use_case_enum useCase,
+							const dng_negative *negative)
+	{
+	
+	AutoPtr<dng_jxl_encode_settings> encodeSettings
+		(host.MakeJXLEncodeSettings (useCase,
+									 image,
+									 negative));
+									 
+	AutoPtr<JxlColorEncoding> colorEncoding;
+
+	if ((useCase == dng_host::use_case_EncodedMainImage ||
+		 useCase == dng_host::use_case_ProxyImage) &&
+		image.PixelType () == ttShort)
+		{
+	
+		colorEncoding.Reset (new JxlColorEncoding);
+
+		memset (colorEncoding.Get (), 0, sizeof (JxlColorEncoding));
+		
+		// EncodeImageForCompression leaves the image far from linear gamma,
+		// so let's pretend it is sRGB gamma.
+
+		colorEncoding->color_space       = image.Planes () == 1 ? JXL_COLOR_SPACE_GRAY
+																: JXL_COLOR_SPACE_RGB;
+		colorEncoding->white_point       = JXL_WHITE_POINT_D65;
+		colorEncoding->primaries         = JXL_PRIMARIES_2100;
+		colorEncoding->transfer_function = JXL_TRANSFER_FUNCTION_SRGB;
+		
+		}
+	
+	Encode (host,
+			writer,
+			image,
+			*encodeSettings,
+			colorEncoding.Get ());
+	
+	}
 
 /*****************************************************************************/
 
@@ -458,6 +637,14 @@ dng_lossy_compressed_image * KeepLossyCompressedImage (dng_host &host,
 	   !host.ForPreview     ())
 		{
 		
+		// Non-default ColumnInterleaveFactor requires DNG 1.7.1.
+		
+		if (ifd.fColumnInterleaveFactor != 1 &&
+			host.SaveDNGVersion () < dngVersion_1_7_1_0)
+			{
+			return nullptr;
+			}
+		
 		// See if we should grab the compressed JPEG data.
 		
 		if (host.SaveDNGVersion () >= MinBackwardVersionForCompression (ccLossyJPEG) &&
@@ -468,8 +655,6 @@ dng_lossy_compressed_image * KeepLossyCompressedImage (dng_host &host,
 			
 			}
 		
-		#if qDNGSupportJXL
-
 		if (host.SaveDNGVersion () >= MinBackwardVersionForCompression (ccJXL) &&
 			ifd.fCompression == ccJXL)
 			{
@@ -478,8 +663,6 @@ dng_lossy_compressed_image * KeepLossyCompressedImage (dng_host &host,
 			
 			}
 			
-		#endif
-
 		}
 		
 	if (lossyImage.Get ())
@@ -487,8 +670,14 @@ dng_lossy_compressed_image * KeepLossyCompressedImage (dng_host &host,
 		
 		lossyImage->fCompressionCode = ifd.fCompression;
 		
+		lossyImage->fBitsPerSample = ifd.fBitsPerSample [0];
+		
 		lossyImage->fRowInterleaveFactor    = ifd.fRowInterleaveFactor;
 		lossyImage->fColumnInterleaveFactor = ifd.fColumnInterleaveFactor;
+		
+		lossyImage->fJXLDistance    = ifd.fJXLDistance;
+		lossyImage->fJXLEffort      = ifd.fJXLEffort;
+		lossyImage->fJXLDecodeSpeed = ifd.fJXLDecodeSpeed;
 		
 		}
 		
