@@ -3,10 +3,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
-// This file conatins the C API of the decoder part of the libjpegli library,
+// This file contains the C API of the decoder part of the libjpegli library,
 // which is based on the C API of libjpeg, with the function names changed from
-// jpeg_* to jpegli_*, while dempressor object definitions are included directly
-// from jpeglib.h
+// jpeg_* to jpegli_*, while decompressor object definitions are included
+// directly from jpeglib.h
 //
 // Applications can use the libjpegli library in one of the following ways:
 //
@@ -20,14 +20,10 @@
 #ifndef LIB_JPEGLI_DECODE_H_
 #define LIB_JPEGLI_DECODE_H_
 
-/* clang-format off */
-#include <stdio.h>
-#include <jpeglib.h>
-/* clang-format on */
-
 #include "lib/jpegli/common.h"
+#include "lib/jpegli/types.h"
 
-#if defined(__cplusplus) || defined(c_plusplus)
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -41,7 +37,7 @@ void jpegli_CreateDecompress(j_decompress_ptr cinfo, int version,
 void jpegli_stdio_src(j_decompress_ptr cinfo, FILE *infile);
 
 void jpegli_mem_src(j_decompress_ptr cinfo, const unsigned char *inbuffer,
-                    unsigned long insize);
+                    unsigned long insize /* NOLINT */);
 
 int jpegli_read_header(j_decompress_ptr cinfo, boolean require_image);
 
@@ -60,6 +56,8 @@ boolean jpegli_finish_decompress(j_decompress_ptr cinfo);
 JDIMENSION jpegli_read_raw_data(j_decompress_ptr cinfo, JSAMPIMAGE data,
                                 JDIMENSION max_lines);
 
+jvirt_barray_ptr *jpegli_read_coefficients(j_decompress_ptr cinfo);
+
 boolean jpegli_has_multiple_scans(j_decompress_ptr cinfo);
 
 boolean jpegli_start_output(j_decompress_ptr cinfo, int scan_number);
@@ -70,6 +68,9 @@ boolean jpegli_input_complete(j_decompress_ptr cinfo);
 
 int jpegli_consume_input(j_decompress_ptr cinfo);
 
+#if JPEG_LIB_VERSION >= 80
+void jpegli_core_output_dimensions(j_decompress_ptr cinfo);
+#endif
 void jpegli_calc_output_dimensions(j_decompress_ptr cinfo);
 
 void jpegli_save_markers(j_decompress_ptr cinfo, int marker_code,
@@ -87,7 +88,19 @@ void jpegli_abort_decompress(j_decompress_ptr cinfo);
 
 void jpegli_destroy_decompress(j_decompress_ptr cinfo);
 
-#if defined(__cplusplus) || defined(c_plusplus)
+void jpegli_new_colormap(j_decompress_ptr cinfo);
+
+//
+// New API functions that are not available in libjpeg
+//
+// NOTE: This part of the API is still experimental and will probably change in
+// the future.
+//
+
+void jpegli_set_output_format(j_decompress_ptr cinfo, JpegliDataType data_type,
+                              JpegliEndianness endianness);
+
+#ifdef __cplusplus
 }  // extern "C"
 #endif
 

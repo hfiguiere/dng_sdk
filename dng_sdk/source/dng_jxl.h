@@ -37,6 +37,10 @@
 
 /*****************************************************************************/
 
+#define qLogJXL (qDNGValidate && 0)
+
+/*****************************************************************************/
+
 // jxl requires exif data be prepended with a 4-byte TIFF offset which can be
 // all zero as long as the exif data comes immediately after.
 

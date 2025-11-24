@@ -2899,10 +2899,10 @@ void dng_read_tiles_task::ProcessTask (uint32 tileIndex,
 	if (fLossyTileDigest)
 		{
 
-		dng_md5_printer printer;
+		dng_md5_direct_printer printer;
 
-		printer.Process (compressedBuffer->Buffer (),
-						 byteCount);
+		printer.ProcessPtr (compressedBuffer->Buffer (),
+							byteCount);
 
 		fLossyTileDigest [tileIndex] = printer.Result ();
 
@@ -3715,10 +3715,10 @@ void dng_read_image::Read (dng_host &host,
 							if (lossyDigest)
 								{
 								
-								dng_md5_printer printer;
+								dng_md5_direct_printer printer;
 								
-								printer.Process (compressedBuffer->Buffer (),
-												 subByteCount);
+								printer.ProcessPtr (compressedBuffer->Buffer (),
+													subByteCount);
 												 
 								lossyTileDigests [tileIndex] = printer.Result ();
 								
@@ -3759,20 +3759,19 @@ void dng_read_image::Read (dng_host &host,
 		if (fJPEGTables.Get ())
 			{
 			
-			dng_md5_printer printer;
+			dng_md5_direct_printer printer;
 			
-			printer.Process (fJPEGTables->Buffer	  (),
-							 fJPEGTables->LogicalSize ());
+			printer.ProcessPtr (fJPEGTables->Buffer		 (),
+								fJPEGTables->LogicalSize ());
 							 
 			lossyTileDigests.push_back (printer.Result ());
 			
 			}
 			
-		dng_md5_printer printer2;
+		dng_md5_direct_printer printer2;
 
 		for (const auto &digest : lossyTileDigests)
-			printer2.Process (digest.data,
-							  uint32 (sizeof (digest.data)));
+			printer2.Process (digest);
 							  
 		*lossyDigest = printer2.Result ();
 		

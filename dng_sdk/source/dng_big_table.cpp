@@ -943,9 +943,7 @@ const dng_fingerprint & dng_big_table::Fingerprint () const
 dng_fingerprint dng_big_table::ComputeFingerprint () const
 	{
 	
-	dng_md5_printer_stream stream;
-
-	stream.SetLittleEndian ();
+	dng_md5_printer_le_stream stream;
 
 	PutStream (stream, true);
 
@@ -2695,6 +2693,7 @@ void dng_image_table_jxl_compression_info::Compress (dng_host &host,
 								 false,		 // has transparency
 								 true,		 // allow big tiff
 								 nullptr,	 // gain map,
+								 nullptr,	 // gain map metadata block
 								 fPreferHalfFloat);
 	
 	#else
@@ -2866,15 +2865,15 @@ dng_fingerprint dng_image_table::ComputeFingerprint () const
 		
 		dng_memory_stream tempStream (host->Allocator ());
 
+		tempStream.SetLittleEndian ();
+		
 		PutStream (tempStream, true);
 
 		tempStream.Flush ();
 
 		tempStream.SetReadPosition (0);
 		
-		dng_md5_printer_stream stream;
-
-		stream.SetLittleEndian ();
+		dng_md5_printer_le_stream stream;
 
 		tempStream.CopyToStream (stream,
 								 tempStream.Length ());
@@ -2892,9 +2891,7 @@ dng_fingerprint dng_image_table::ComputeFingerprint () const
 		
 		AutoPtr<dng_host> host (MakeHost (nullptr));
 		
-		dng_md5_printer_stream stream;
-
-		stream.SetLittleEndian ();
+		dng_md5_printer_le_stream stream;
 
 		stream.Put_uint32 (btt_ImageTable);
 
@@ -2914,7 +2911,7 @@ dng_fingerprint dng_image_table::ComputeFingerprint () const
 													 *fImage,
 													 fImage->PixelType ());
 													 
-		stream.Put (imageDigest.data, 16);
+		stream.Put (imageDigest);
 
 		return stream.Result ();
 
@@ -3150,6 +3147,8 @@ void dng_image_table::PutCompressedStream (dng_stream &stream,
 
 		dng_memory_stream tempStream (host->Allocator ());
 
+		tempStream.SetLittleEndian ();
+		
 		info.Compress (*host,
 					   tempStream,
 					   *tiffImage);
@@ -3195,6 +3194,8 @@ void dng_image_table::CompressImage (const dng_image_table_compression_info &inf
 	AutoPtr<dng_host> host (MakeHost (sniffer));
 
 	dng_memory_stream tempStream (host->Allocator ());
+
+	tempStream.SetLittleEndian ();
 
 	tempStream.SetSniffer (sniffer);
 
@@ -3522,7 +3523,7 @@ bool dng_packed_image_table::GetStream (dng_stream &stream)
 
 	// Read digest.
 
-	stream.Get (fTableDigest.data, 16);
+	stream.Get (fTableDigest);
 
 	// Read size.
 
@@ -3585,7 +3586,7 @@ void dng_packed_image_table::PutStream (dng_stream &stream,
 
 	// Write digest.
 
-	stream.Put (fTableDigest.data, 16);
+	stream.Put (fTableDigest);
 
 	// Write properties.
 
@@ -4304,38 +4305,35 @@ void dng_masked_rgb_table::PutStream (dng_stream &stream) const
 
 /*****************************************************************************/
 
-void dng_masked_rgb_table::AddDigest (dng_md5_printer &printer) const
+void dng_masked_rgb_table::AddDigest (dng_md5_printer_stream &printer) const
 	{
 
 	// Header.
 
-	printer.Process ("dng_masked_rgb_table", 20);
+	printer.ProcessPtr ("dng_masked_rgb_table", 20);
 
 	// Name.
 
 	uint32 nameLen = SemanticName ().Length ();
 	
-	printer.Process (&nameLen,
-					 (uint32) sizeof (nameLen));
+	printer.Put_uint32 (nameLen);
 
 	if (nameLen > 0)
 		{
 		
-		printer.Process (SemanticName ().Get (), nameLen);
+		printer.ProcessPtr (SemanticName ().Get (), nameLen);
 		
 		}
 
 	// Pixel type.
 
-	printer.Process (&fPixelType,
-					 (uint32) sizeof (fPixelType));
+	printer.Put_uint32 (fPixelType);
 
 	// Table digest.
 	
 	dng_fingerprint tableDigest = fTable.Fingerprint ();
 
-	printer.Process (tableDigest.data,
-					 sizeof (tableDigest.data));
+	printer.Process (tableDigest);
 	
 	}
 
@@ -4358,6 +4356,8 @@ void dng_masked_rgb_table_render_data::Initialize (const dng_negative &negative,
 		return;
 
 	fUseSequentialMethod = tables.UseSequentialMethod ();
+
+	fInputDigest.Clear (); // Null fingerprint for profile case
 
 	// Find correspondence between RGBTables and SemanticMasks tags. It is
 	// still possible that we have a NOP situation if every table uses a mask
@@ -4815,19 +4815,18 @@ void dng_masked_rgb_tables::Validate () const
 
 /*****************************************************************************/
 
-void dng_masked_rgb_tables::AddDigest (dng_md5_printer &printer) const
+void dng_masked_rgb_tables::AddDigest (dng_md5_printer_stream &printer) const
 	{
 
 	// Header.
 	
-	printer.Process ("dng_masked_rgb_tables", 21);
+	printer.ProcessPtr ("dng_masked_rgb_tables", 21);
 
 	// Number of tables.
 
-	uint32 numTables = (uint32) fTables.size ();
+	const uint32 numTables = (uint32) fTables.size ();
 
-	printer.Process (&numTables,
-					 (uint32) sizeof (numTables));
+	printer.Put_uint32 (numTables);
 
 	// Process each table.
 
@@ -4838,8 +4837,7 @@ void dng_masked_rgb_tables::AddDigest (dng_md5_printer &printer) const
 
 	// Composite method.
 
-	printer.Process (&fCompositeMethod,
-					 (uint32) sizeof (fCompositeMethod));
+	printer.Put_uint32 (uint32 (fCompositeMethod));
 
 	}
 
@@ -5280,15 +5278,14 @@ void dng_rgb_to_rgb_table_data::Process_32 (dng_pixel_buffer &buffer,
 
 /*****************************************************************************/
 
-void dng_rgb_to_rgb_table_data::AddDigest (dng_md5_printer &printer) const
+void dng_rgb_to_rgb_table_data::AddDigest (dng_md5_printer_stream &printer) const
 	{
 
 		{
 
 		const dng_fingerprint tableFingerPrint = fTable.Fingerprint ();
 
-		printer.Process (tableFingerPrint.data,
-						 dng_fingerprint::kDNGFingerprintSize);
+		printer.Process (tableFingerPrint);
 
 		}
 
@@ -5298,8 +5295,19 @@ void dng_rgb_to_rgb_table_data::AddDigest (dng_md5_printer &printer) const
 		for (uint32 i = 0; i < 3; i++)
 			{
 
+			#if 1
+
+			static_assert (sizeof (fEncodeMatrix [i] [0]) == 8, "matrix coeffs not 8 bytes");
+
+			printer.Put_swap8 (fEncodeMatrix [i], uint32 (3 * sizeof (fEncodeMatrix [i] [0])));
+			printer.Put_swap8 (fDecodeMatrix [i], uint32 (3 * sizeof (fEncodeMatrix [i] [0])));
+
+			#else
+
 			printer.Process (fEncodeMatrix [i], 3 * sizeof (fEncodeMatrix [i] [0]));
 			printer.Process (fDecodeMatrix [i], 3 * sizeof (fEncodeMatrix [i] [0]));
+
+			#endif
 
 			}
 
@@ -5308,12 +5316,26 @@ void dng_rgb_to_rgb_table_data::AddDigest (dng_md5_printer &printer) const
 	if (fEncodeTable.Get () && fDecodeTable.Get ())
 		{
 
+		#if 1
+
+		static_assert (sizeof (fEncodeTable->Table () [0]) == 4, "table data not 4 bytes");
+
+		printer.Put_swap4 (fEncodeTable->Table (),
+						   uint32 ((2 + fEncodeTable->Count ()) * sizeof (fEncodeTable->Table () [0])));
+
+		printer.Put_swap4 (fDecodeTable->Table (),
+						   uint32 ((2 + fEncodeTable->Count ()) * sizeof (fEncodeTable->Table () [0])));
+
+		#else
+
 		printer.Process (fEncodeTable->Table (),
 						 (2 + fEncodeTable->Count ()) * sizeof (fEncodeTable->Table () [0]));
 
 		printer.Process (fDecodeTable->Table (),
 						 (2 + fEncodeTable->Count ()) * sizeof (fEncodeTable->Table () [0]));
 
+		#endif
+		
 		}
 
 	if (fTable.Dimensions () != 3)
@@ -5322,9 +5344,20 @@ void dng_rgb_to_rgb_table_data::AddDigest (dng_md5_printer &printer) const
 		for (uint32 i = 0; i < 3; i++)
 			{
 
+			static_assert (sizeof (fTable1D [i]->Table () [0]) == 4, "table data not 4 bytes");
+
+			#if 1
+
+			printer.Put_swap4 (fTable1D [i]->Table (),
+							   uint32 ((2 + fTable1D [i]->Count ()) * sizeof (fTable1D [i]->Table () [0])));
+
+			#else
+
 			printer.Process (fTable1D [i]->Table (),
 							 (2 + fTable1D [i]->Count ()) * sizeof (fTable1D [i]->Table () [0]));
 
+			#endif
+			
 			}
 
 		}

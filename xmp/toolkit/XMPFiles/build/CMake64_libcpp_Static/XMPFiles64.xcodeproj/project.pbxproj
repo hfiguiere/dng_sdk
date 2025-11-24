@@ -420,6 +420,7 @@
 		0F5704E4380944848733D4CA /* SWF_Handler.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = SWF_Handler.hpp; path = ../source/FileHandlers/SWF_Handler.hpp; sourceTree = SOURCE_ROOT; };
 		0FD79832A7D64D02B39BF552 /* XDCAM_Handler.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = XDCAM_Handler.cpp; path = ../source/FileHandlers/XDCAM_Handler.cpp; sourceTree = SOURCE_ROOT; };
 		10D3BE5B5B36473E8788B9C8 /* TimeConversionUtils.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = TimeConversionUtils.cpp; path = ../source/FormatSupport/TimeConversionUtils.cpp; sourceTree = SOURCE_ROOT; };
+		10DD37452D1F608D0079194D /* EndianUtils.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = EndianUtils.hpp; path = ../../source/EndianUtils.hpp; sourceTree = "<group>"; };
 		1192F468285A410FA654E71A /* PostScript_Handler.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = PostScript_Handler.hpp; path = ../source/FileHandlers/PostScript_Handler.hpp; sourceTree = SOURCE_ROOT; };
 		11EA7E4878C9467EA1CDDA7F /* WAVE_Handler.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = WAVE_Handler.hpp; path = ../source/FileHandlers/WAVE_Handler.hpp; sourceTree = SOURCE_ROOT; };
 		1364A24C24584C5B8CE43ED9 /* ID3_Support.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = ID3_Support.cpp; path = ../source/FormatSupport/ID3_Support.cpp; sourceTree = SOURCE_ROOT; };
@@ -433,6 +434,9 @@
 		1DEA8723D87E45E8BB4A2F7A /* WebPBehavior.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = WebPBehavior.h; path = ../source/FormatSupport/WebP/WebPBehavior.h; sourceTree = SOURCE_ROOT; };
 		1F2A535DB6BC4735A382F038 /* xmlparse.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = xmlparse.c; path = "../../XMPCore/third-party/expat/public/lib/xmlparse.c"; sourceTree = SOURCE_ROOT; };
 		1F3B74DC3AE04A55A8632E09 /* TimeConversionUtils.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = TimeConversionUtils.hpp; path = ../source/FormatSupport/TimeConversionUtils.hpp; sourceTree = SOURCE_ROOT; };
+		234953392DC97FF400EE6DCB /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Common.xcconfig; path = ../Common.xcconfig; sourceTree = "<group>"; };
+		2349533A2DC97FF400EE6DCB /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = ../Debug.xcconfig; sourceTree = "<group>"; };
+		2349533C2DC97FF400EE6DCB /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = ../Release.xcconfig; sourceTree = "<group>"; };
 		259F3E6AFEC54EA1A7A7261E /* HEIF_Handler.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = HEIF_Handler.hpp; path = ../source/FileHandlers/HEIF_Handler.hpp; sourceTree = SOURCE_ROOT; };
 		25E11271395640F0BED1B612 /* Chunk.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = Chunk.h; path = ../source/FormatSupport/IFF/Chunk.h; sourceTree = SOURCE_ROOT; };
 		266949F97F3B4F6E8E63BA8F /* PackageFormat_Support.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = PackageFormat_Support.hpp; path = ../source/FormatSupport/PackageFormat_Support.hpp; sourceTree = SOURCE_ROOT; };
@@ -771,6 +775,16 @@
 			name = "File Handlers";
 			sourceTree = "<group>";
 		};
+		2349533E2DC9805C00EE6DCB /* Configs */ = {
+			isa = PBXGroup;
+			children = (
+				234953392DC97FF400EE6DCB /* Common.xcconfig */,
+				2349533A2DC97FF400EE6DCB /* Debug.xcconfig */,
+				2349533C2DC97FF400EE6DCB /* Release.xcconfig */,
+			);
+			path = Configs;
+			sourceTree = "<group>";
+		};
 		2488C150CED5474BAD4B7F33 /* WAVE */ = {
 			isa = PBXGroup;
 			children = (
@@ -1066,6 +1080,7 @@
 		E4809B1F34D04A1D96CB82DC = {
 			isa = PBXGroup;
 			children = (
+				2349533E2DC9805C00EE6DCB /* Configs */,
 				65497960B6FA40599F0D4CCE /* XMPFilesStatic */,
 				C9B801A143A94B839930AEB7 /* ALL_BUILD */,
 				9A8F6628B22C4E369102812B /* Products */,
@@ -1120,6 +1135,7 @@
 				95781D9FB12F43428632F650 /* XMPFiles_Impl.hpp */,
 				78BF53A8CFD64E93AD5F048D /* XMP_BuildInfo.h */,
 				C4BDF8EBC7EC479E9F97089F /* Endian.h */,
+				10DD37452D1F608D0079194D /* EndianUtils.hpp */,
 				CA1E01BF3D214374AAB09B81 /* SafeStringAPIs.h */,
 				A86CD512B92340F587FE1E6B /* SafeTypes.h */,
 				BE0954DDA6A04495922AAA5A /* SuppressSAL.h */,
@@ -1690,6 +1706,7 @@
 		};
 		34D48D3928E737AB000B5261 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2349533C2DC97FF400EE6DCB /* Debug.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1769,6 +1786,7 @@
 		};
 		34D48D3A28E737AB000B5261 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2349533C2DC97FF400EE6DCB /* Release.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -2006,6 +2024,7 @@
 		};
 		34D48DB628E738FC000B5261 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2349533A2DC97FF400EE6DCB /* Debug.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -2086,6 +2105,7 @@
 		};
 		34D48DB728E738FC000B5261 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2349533A2DC97FF400EE6DCB /* Release.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -2473,6 +2493,7 @@
 		};
 		763CE60401F64DDA9D056A9B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2349533C2DC97FF400EE6DCB /* Release.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -2782,6 +2803,7 @@
 		};
 		FD54AE5C73424372A0D1474B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2349533A2DC97FF400EE6DCB /* Debug.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				COMBINE_HIDPI_IMAGES = YES;

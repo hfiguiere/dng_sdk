@@ -7,7 +7,7 @@
 LIB_BASE = ../../libjxl
 HEADER_SEARCH_PATHS = $(LIB_BASE) $(LIB_BASE)/../client_projects/include $(LIB_BASE)/lib/include $(LIB_BASE)/build/lib/include $(LIB_BASE)/third_party/brotli/c/include $(LIB_BASE)/third_party/highway $(LIB_BASE)/third_party/skcms
 
-GCC_PREPROCESSOR_DEFINITIONS = JXL_INTERNAL_LIBRARY_BUILD TEST_DATA_PATH="\"foo\"" JPEGXL_ENABLE_SKCMS=1 JPEGXL_BUNDLE_SKCMS=0
+GCC_PREPROCESSOR_DEFINITIONS = DO_NOT_PREDEFINE__JXL_IS_DEBUG_BUILD JXL_INTERNAL_LIBRARY_BUILD TEST_DATA_PATH="\"foo\"" JPEGXL_ENABLE_SKCMS=1 JPEGXL_BUNDLE_SKCMS=0
 
 // Following is largely copied from crsdkBuild.xcconfig
 

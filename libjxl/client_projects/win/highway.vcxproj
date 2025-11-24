@@ -35,6 +35,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\abort.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\aligned_allocator.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\image\image.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\print_network.cc" />
@@ -57,17 +58,22 @@
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u32d.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u64a.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_u64d.cc" />
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\thread_pool\topology.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\per_target.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\print.cc" />
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\stats.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\targets.cc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\abort.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\aligned_allocator.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\base.h" />
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\bit_set.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\cache_control.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\dot\dot-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\image\image.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\math\math-inl.h" />
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\random\random-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\algo-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\disabled_targets.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\result-inl.h" />
@@ -86,6 +92,7 @@
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\arm_neon-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\arm_sve-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\generic_ops-inl.h" />
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\inside-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\rvv-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\scalar-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\set_macros-inl.h" />
@@ -96,6 +103,11 @@
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\x86_256-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\x86_512-inl.h" />
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\targets.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="settings\hwyDebug.props" />
+    <None Include="settings\hwyFlags.props" />
+    <None Include="settings\hwyRelease.props" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

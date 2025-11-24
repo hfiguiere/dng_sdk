@@ -27,6 +27,27 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\simd_util.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\simd_util-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\splines.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\testing.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\toc.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\transpose-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\xorshift128plus-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\ac_context.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -42,73 +63,10 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\ans_params.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\aux_out.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\aux_out_fwd.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\arch_macros.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\bits.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\byte_order.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\cache_aligned.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\compiler_specific.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\data_parallel.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\file_io.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\iaca.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\os_macros.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\override.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\padded_bytes.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\printf_macros.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\profiler.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\random.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\scope_guard.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\span.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\status.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\base\thread_pool_internal.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\blending.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\box_content_decoder.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\butteraugli\butteraugli.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\chroma_from_luma.h">
@@ -126,22 +84,16 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\color_encoding_internal.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\color_management.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\common.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\compressed_dc.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\convolve-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\convolve.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\dct-inl.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\convolve-inl.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\dct_block-inl.h">
@@ -156,7 +108,7 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\dct_util.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\decode_to_jpeg.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\dct-inl.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\dec_ans.h">
@@ -192,25 +144,22 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\dec_noise.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\dec_params.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\dec_patch_dictionary.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\dec_transforms-inl.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\dec_transforms_testonly.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\dec_xyb-inl.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\dec_transforms-inl.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\dec_xyb.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\encode_internal.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\dec_xyb-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\decode_to_jpeg.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_ac_strategy.h">
@@ -225,16 +174,13 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_ans_params.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\enc_ar_control_field.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_aux_out.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_bit_writer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_butteraugli_comparator.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\enc_butteraugli_pnorm.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_cache.h">
@@ -249,13 +195,13 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_coeff_order.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\enc_color_management.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_comparator.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_context_map.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_debug_image.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_detect_dots.h">
@@ -273,10 +219,13 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_fast_lossless.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\enc_file.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_fields.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_frame.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_gaborish.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_gamma_correct.h">
@@ -291,19 +240,25 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_huffman.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_huffman_tree.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_icc_codec.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_image_bundle.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\enc_jxl_skcms.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_linalg.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_modular.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_noise.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_optimize.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_params.h">
@@ -315,6 +270,9 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_photon_noise.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_progressive_split.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_quant_weights.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -324,13 +282,16 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_toc.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\enc_transforms-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_transforms.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\enc_transforms-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\enc_xyb.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\encode_internal.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\entropy_coder.h">
@@ -342,58 +303,22 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\fake_parallel_runner_testonly.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_dct-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_dct.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_dct128-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_dct16-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_dct256-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_dct32-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_dct64-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_dct8-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\fast_math-inl.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\field_encodings.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\fields.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\field_encodings.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\filters_internal.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\frame_dimensions.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\frame_header.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\gaborish.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\gauss_blur.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\headers.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\huffman_table.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\huffman_tree.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\icc_codec.h">
@@ -415,6 +340,72 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\image_test_utils.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\inverse_mtf-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\lehmer_code.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\loop_filter.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\luminance.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\memory_manager_internal.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\noise.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\opsin_params.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\pack_signed.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\padded_bytes.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\passes_state.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\patch_dictionary_internal.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\quant_weights.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\quantizer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\quantizer-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\butteraugli\butteraugli.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\cms\color_encoding_cms.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\cms\jxl_cms_internal.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\cms\opsin_params.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\cms\tone_mapping.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\cms\tone_mapping-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\cms\transfer_functions.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\cms\transfer_functions-inl.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\jpeg\dec_jpeg_data.h">
@@ -441,31 +432,10 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\jpeg\jpeg_data.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\jxl_inspection.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\lehmer_code.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\linalg.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\loop_filter.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\luminance.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\memory_manager_internal.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\modular\encoding\context_predict.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\modular\encoding\dec_ma.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\modular\encoding\encoding.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\modular\encoding\enc_debug_tree.h">
@@ -477,13 +447,10 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\modular\encoding\enc_ma.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\modular\encoding\encoding.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\modular\encoding\ma_common.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\modular\modular_image.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\modular\options.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\modular\transform\enc_palette.h">
@@ -510,34 +477,10 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\modular\transform\transform.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\noise.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\modular\modular_image.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\opsin_params.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\optimize.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\passes_state.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\patch_dictionary_internal.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\progressive_split.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\quantizer-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\quantizer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\quant_weights.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\rational_polynomial-inl.h">
+    <ClInclude Include="..\..\libjxl\lib\jxl\modular\options.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\low_memory_render_pipeline.h">
@@ -558,7 +501,13 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_chroma_upsampling.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_cms.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_epf.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_from_linear.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_gaborish.h">
@@ -576,6 +525,12 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_spot.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_to_linear.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_tone_mapping.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\stage_upsampling.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -591,47 +546,26 @@
     <ClInclude Include="..\..\libjxl\lib\jxl\render_pipeline\test_render_pipeline_stages.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\sanitizers.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\simd_util-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\size_constraints.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\splines.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\testdata.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\test_utils.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\toc.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\transfer_functions-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\transpose-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\jxl\xorshift128plus-inl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\profiler\profiler.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libjxl\lib\profiler\tsc_timer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libjxl\lib\threads\thread_parallel_runner_internal.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\libjxl\third_party\skcms\skcms.cc">
+      <Filter>skcms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\simd_util.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\splines.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\toc.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\extras\gain_map.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\ac_strategy.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -641,31 +575,10 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\ans_common.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\aux_out.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\base\cache_aligned.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\base\data_parallel.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\base\padded_bytes.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\base\random.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\blending.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\box_content_decoder.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\butteraugli\butteraugli.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\butteraugli_wrapper.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\chroma_from_luma.cc">
@@ -677,19 +590,13 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\color_encoding_internal.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\color_management.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\compressed_dc.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\convolve_slow.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\convolve_separable5.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\convolve_separable7.cc">
+    <ClCompile Include="..\..\libjxl\lib\jxl\convolve_slow.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\convolve_symmetric3.cc">
@@ -699,12 +606,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\dct_scales.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\decode.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\decode_to_jpeg.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\dec_ans.cc">
@@ -746,7 +647,10 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\dec_xyb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\encode.cc">
+    <ClCompile Include="..\..\libjxl\lib\jxl\decode.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\decode_to_jpeg.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_ac_strategy.cc">
@@ -758,16 +662,13 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_ans.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\enc_ar_control_field.cc">
+    <ClCompile Include="..\..\libjxl\lib\jxl\enc_aux_out.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_bit_writer.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_butteraugli_comparator.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\enc_butteraugli_pnorm.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_cache.cc">
@@ -782,13 +683,13 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_coeff_order.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\enc_color_management.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_comparator.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_context_map.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\enc_debug_image.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_detect_dots.cc">
@@ -806,10 +707,13 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_fast_lossless.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\enc_file.cc">
+    <ClCompile Include="..\..\libjxl\lib\jxl\enc_fields.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_frame.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\enc_gaborish.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_group.cc">
@@ -821,10 +725,16 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_huffman.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\enc_huffman_tree.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_icc_codec.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_image_bundle.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\enc_linalg.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_modular.cc">
@@ -837,6 +747,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_photon_noise.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\enc_progressive_split.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_quant_weights.cc">
@@ -854,13 +767,13 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\enc_xyb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\encode.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\entropy_coder.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\epf.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\fast_dct.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\fields.cc">
@@ -869,19 +782,10 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\frame_header.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\gaborish.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\gauss_blur.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\headers.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\huffman_table.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\huffman_tree.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\icc_codec.cc">
@@ -897,6 +801,36 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\image_metadata.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\image_ops.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\loop_filter.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\luminance.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\memory_manager_internal.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\opsin_params.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\passes_state.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\quant_weights.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\quantizer.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\butteraugli\butteraugli.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\cms\jxl_cms.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\jpeg\dec_jpeg_data.cc">
@@ -917,22 +851,7 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\jpeg\jpeg_data.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\linalg.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\loop_filter.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\luminance.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\memory_manager_internal.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\modular\encoding\dec_ma.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\modular\encoding\encoding.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\modular\encoding\enc_debug_tree.cc">
@@ -944,7 +863,7 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\modular\encoding\enc_ma.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\modular\modular_image.cc">
+    <ClCompile Include="..\..\libjxl\lib\jxl\modular\encoding\encoding.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\modular\transform\enc_palette.cc">
@@ -959,6 +878,9 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\modular\transform\enc_transform.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\modular\transform\palette.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\modular\transform\rct.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -968,22 +890,7 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\modular\transform\transform.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\opsin_params.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\optimize.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\passes_state.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\progressive_split.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\quantizer.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\quant_weights.cc">
+    <ClCompile Include="..\..\libjxl\lib\jxl\modular\modular_image.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\low_memory_render_pipeline.cc">
@@ -1001,7 +908,13 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_chroma_upsampling.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_cms.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_epf.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_from_linear.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_gaborish.cc">
@@ -1019,6 +932,12 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_spot.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_to_linear.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_tone_mapping.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_upsampling.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1031,15 +950,6 @@
     <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_ycbcr.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\splines.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\toc.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\profiler\profiler.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\threads\resizable_parallel_runner.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1047,18 +957,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\threads\thread_parallel_runner_internal.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\third_party\skcms\skcms.cc">
-      <Filter>skcms</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_from_linear.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_to_linear.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libjxl\lib\jxl\render_pipeline\stage_tone_mapping.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1071,6 +969,21 @@
     </None>
     <None Include="settings\jxlRelease.props">
       <Filter>settings</Filter>
+    </None>
+    <None Include="..\..\libjxl\lib\jxl\jxl.syms">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\..\libjxl\lib\jxl\jxl.version">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\..\libjxl\lib\jxl\jxl_osx.syms">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\..\libjxl\lib\jxl\libjxl.pc.in">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\..\libjxl\lib\jxl\libjxl_cms.pc.in">
+      <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
 </Project>

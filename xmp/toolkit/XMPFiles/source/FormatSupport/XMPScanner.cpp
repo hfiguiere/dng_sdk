@@ -403,12 +403,26 @@ XMPScanner::PacketMachine::CaptureAttrValue ( PacketMachine * ths, const char * 
 			ths->fPosition = 1;
 			// fall through OK because MatchOpenQuote will check the buffer limit and nulls ...
 
+			/////////////////////////////////////////////////////////////////////////////////////
+			// Added by ACR team.
+			#if __cplusplus >= 201703L // if C++17 or later
+			[[fallthrough]]; // Use new C++ attribute to tell compiler fallthrough is intended.
+			#endif
+			/////////////////////////////////////////////////////////////////////////////////////
+
 		case 1 :	// Look for the open quote.
 
 			result = MatchOpenQuote ( ths, NULL );
 			if ( result != eTriYes ) return result;
 			ths->fPosition = 2;
 			// fall through OK because the buffer limit and nulls are checked below ...
+
+			/////////////////////////////////////////////////////////////////////////////////////
+			// Added by ACR team.
+			#if __cplusplus >= 201703L // if C++17 or later
+			[[fallthrough]]; // Use new C++ attribute to tell compiler fallthrough is intended.
+			#endif
+			/////////////////////////////////////////////////////////////////////////////////////
 
 		default :	// Look for the close quote, capturing the value along the way.
 
@@ -462,6 +476,13 @@ XMPScanner::PacketMachine::RecordStart ( PacketMachine * ths, const char * /* un
 				ths->fPacketLength = 0;
 				ths->fPosition = 1;
 				// ! OK to fall through here, we didn't consume a byte in this step.
+
+				/////////////////////////////////////////////////////////////////////////////////////
+				// Added by ACR team.
+				#if __cplusplus >= 201703L // if C++17 or later
+				[[fallthrough]]; // Use new C++ attribute to tell compiler fallthrough is intended.
+				#endif
+				/////////////////////////////////////////////////////////////////////////////////////
 
 			case 1 :	// Look for the first null byte.
 				if ( currByte != 0 ) return eTriYes;	// No nulls found.

@@ -1,10 +1,10 @@
+load("@io_bazel_rules_closure//closure:defs.bzl", "closure_js_library", "closure_js_test")
+
 package(
     default_visibility = ["//visibility:public"],
 )
 
 licenses(["notice"])  # MIT
-
-load("@io_bazel_rules_closure//closure:defs.bzl", "closure_js_library")
 
 # Not a real polyfill. Do NOT use for anything, but tests.
 closure_js_library(
@@ -23,18 +23,15 @@ closure_js_library(
 closure_js_library(
     name = "decode",
     srcs = ["decode.js"],
-    suppress = [
-        "JSC_DUP_VAR_DECLARATION",
-        "JSC_USELESS_BLOCK",
-    ],
+    suppress = ["JSC_USELESS_BLOCK"],
     deps = [":polyfill"],
 )
-
-load("@io_bazel_rules_closure//closure:defs.bzl", "closure_js_test")
 
 closure_js_test(
     name = "all_tests",
     srcs = ["decode_test.js"],
+    entry_points = ["decode_test.js"],
+    suppress = ["moduleLoad"],
     deps = [
         ":decode",
         ":polyfill",

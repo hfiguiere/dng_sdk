@@ -25,6 +25,12 @@
 
 /*****************************************************************************/
 
+// TODO(erichan): rename this
+
+#define qDebugMaskedRGBTableRender (qDNGValidate && 0)
+
+/*****************************************************************************/
+
 void dng_big_table_cache_flush ();
 
 void dng_big_table_cache_clear ();
@@ -109,8 +115,7 @@ class dng_big_table
 		
 		dng_memory_block * EncodeAsString (dng_memory_allocator &allocator) const;
 
-		bool ExtractFromCache (const dng_fingerprint &fingerprint);
-
+		virtual bool ExtractFromCache (const dng_fingerprint &fingerprint);
 		
 		#if qDNGUseXMP
 		
@@ -146,6 +151,14 @@ class dng_big_table
 		virtual dng_fingerprint ComputeFingerprint () const;
 
 		void RecomputeFingerprint ();
+
+		// Use this only in very specific cases (e.g., for custom cache
+		// extraction).
+
+		void SetFingerprintDirect (const dng_fingerprint &digest)
+			{
+			fFingerprint = digest;
+			}
 		
 		virtual bool UseCompression () const
 			{
@@ -1170,6 +1183,11 @@ class dng_packed_image_table : public dng_big_table
 
 	public:
 
+		const dng_fingerprint & TableDigest () const
+			{
+			return fTableDigest;
+			}
+
 		const dng_image_table & Table () const;
 
 		const dng_image & Image () const
@@ -1349,7 +1367,7 @@ class dng_masked_rgb_table: private dng_uncopyable
 		
 		void PutStream (dng_stream &stream) const;
 
-		void AddDigest (dng_md5_printer &printer) const;
+		void AddDigest (dng_md5_printer_stream &printer) const;
 
 		const dng_string & SemanticName () const
 			{
@@ -1424,7 +1442,7 @@ class dng_masked_rgb_tables: private dng_uncopyable
 
 		void Validate () const;
 
-		void AddDigest (dng_md5_printer &printer) const;
+		void AddDigest (dng_md5_printer_stream &printer) const;
 
 		void PutStream (dng_stream &stream) const;
 
@@ -1491,7 +1509,7 @@ class dng_rgb_to_rgb_table_data
 								 uint32 bufferStartPlane,
 								 bool needOverrange);
 
-		void AddDigest (dng_md5_printer &printer) const;
+		void AddDigest (dng_md5_printer_stream &printer) const;
 
 	};
 
@@ -1529,6 +1547,14 @@ class dng_masked_rgb_table_render_data
 		// background table.
 
 		uint32 fBackgroundTableIndex = 0;
+
+		// Digest representing the inputs used to compute the masks and tables.
+		// In cases where the masks and tables are loaded from the negative,
+		// this fingerprint can be set to null. It is intended for cases where
+		// the tables and/or masks are computed dynamically based on other settings.
+		// This digest represents those other settings.
+
+		dng_fingerprint fInputDigest;
 
 	public:
 

@@ -562,7 +562,7 @@ bool dng_tag_updater::GetArray_Fingerprint (dng_file_updater &updater,
 			
 			dng_fingerprint fingerprint;
 		
-			updater.Stream ().Get (fingerprint.data, 16);
+			updater.Stream ().Get (fingerprint);
 			
 			values.push_back (fingerprint);
 			
@@ -1976,7 +1976,7 @@ void dng_ifd_updater::UpdateAdobeData (dng_file_updater &updater,
 				
 				dng_fingerprint oldDigest;
 				
-				stream.Get (oldDigest.data, 16);
+				stream.Get (oldDigest);
 				
 				if (iptcDigest != oldDigest)
 					{
@@ -1990,7 +1990,7 @@ void dng_ifd_updater::UpdateAdobeData (dng_file_updater &updater,
 						
 					#endif
  
-					stream.Put (iptcDigest.data, 16);
+					stream.Put (iptcDigest);
 					
 					}
 				
@@ -2966,7 +2966,7 @@ void DNGUpdateMetadata (dng_host &host,
 									   tcRawDataUniqueID,
 									   ttByte,
 									   16,
-									   rawDataUniqueID.data);
+									   rawDataUniqueID.Data ());
 																					 
 			}
 		

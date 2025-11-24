@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="PropertySheets">
+      <UniqueIdentifier>{f2c5771d-75cf-4cf8-8f96-bdddb694dfef}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\aligned_allocator.cc">
@@ -88,6 +91,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\print.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\abort.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\thread_pool\topology.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\stats.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -194,5 +206,28 @@
     <ClInclude Include="..\..\libjxl\third_party\highway\hwy\targets.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\abort.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\bit_set.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\contrib\random\random-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libjxl\third_party\highway\hwy\ops\inside-inl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="settings\hwyDebug.props">
+      <Filter>PropertySheets</Filter>
+    </None>
+    <None Include="settings\hwyFlags.props">
+      <Filter>PropertySheets</Filter>
+    </None>
+    <None Include="settings\hwyRelease.props">
+      <Filter>PropertySheets</Filter>
+    </None>
   </ItemGroup>
 </Project>

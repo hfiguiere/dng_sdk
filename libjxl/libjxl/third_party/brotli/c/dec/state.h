@@ -9,13 +9,15 @@
 #ifndef BROTLI_DEC_STATE_H_
 #define BROTLI_DEC_STATE_H_
 
+#include <brotli/shared_dictionary.h>
+#include <brotli/types.h>
+
 #include "../common/constants.h"
 #include "../common/dictionary.h"
 #include "../common/platform.h"
 #include "../common/transform.h"
-#include <brotli/types.h>
-#include "./bit_reader.h"
-#include "./huffman.h"
+#include "bit_reader.h"
+#include "huffman.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -189,6 +191,20 @@ typedef enum {
   BROTLI_STATE_READ_BLOCK_LENGTH_SUFFIX
 } BrotliRunningReadBlockLengthState;
 
+/* BrotliDecoderState addon, used for Compound Dictionary functionality. */
+typedef struct BrotliDecoderCompoundDictionary {
+  int num_chunks;
+  int total_size;
+  int br_index;
+  int br_offset;
+  int br_length;
+  int br_copied;
+  const uint8_t* chunks[16];
+  int chunk_offsets[16];
+  int block_bits;
+  uint8_t block_map[256];
+} BrotliDecoderCompoundDictionary;
+
 typedef struct BrotliMetablockHeaderArena {
   BrotliRunningTreeGroupState substate_tree_group;
   BrotliRunningContextMapState substate_context_map;
@@ -306,6 +322,9 @@ struct BrotliDecoderStateStruct {
 
   /* Less used attributes are at the end of this struct. */
 
+  /* For reporting. */
+  uint64_t used_input;  /* how many bytes of input are consumed */
+
   /* States inside function calls. */
   BrotliRunningMetablockHeaderState substate_metablock_header;
   BrotliRunningUncompressedState substate_uncompressed;
@@ -327,8 +346,8 @@ struct BrotliDecoderStateStruct {
   uint8_t* context_map;
   uint8_t* context_modes;
 
-  const BrotliDictionary* dictionary;
-  const BrotliTransforms* transforms;
+  BrotliSharedDictionary* dictionary;
+  BrotliDecoderCompoundDictionary* compound_dictionary;
 
   uint32_t trivial_literal_contexts[8];  /* 256 bits */
 

@@ -526,6 +526,7 @@ enum {
 #define kXMP_NS_iXML       "http://ns.adobe.com/ixml/1.0/"
 #define kXMP_NS_XMP_Note   "http://ns.adobe.com/xmp/note/"
 
+#define kXMP_NS_VideoFoundation "http://ns.adobe.com/video-foundation-settings/1.0/"
 #define kXMP_NS_AdobeStockPhoto "http://ns.adobe.com/StockPhoto/1.0/"
 #define kXMP_NS_CreatorAtom "http://ns.adobe.com/creatorAtom/1.0/"
 

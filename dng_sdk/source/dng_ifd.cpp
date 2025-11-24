@@ -2218,7 +2218,7 @@ bool dng_ifd::ParseTag (dng_host &host,
 			if (!CheckTagCount (parentCode, tagCode, tagCount, 16))
 				return false;
 				
-			stream.Get (fPreviewInfo.fSettingsDigest.data, 16);
+			stream.Get (fPreviewInfo.fSettingsDigest);
 				
 			#if qDNGValidate
 
@@ -2790,7 +2790,7 @@ bool dng_ifd::ParseTag (dng_host &host,
 			if (pgtm && gVerbose)
 				{
 
-				dng_md5_printer printer;
+				dng_md5_printer_le_stream printer;
 				
 				pgtm->AddDigest (printer);
 
@@ -3144,6 +3144,38 @@ bool dng_ifd::ParseTag (dng_host &host,
 			
 			}
 
+		case tcGainMapMetadata_ISO_21496_1:
+			{
+			
+			if (!CheckTagType (parentCode, tagCode, tagType, ttUndefined))
+				return false;
+
+			constexpr uint32 kMaxTagCount = 4 * 1024 * 1024;
+
+			if (tagCount > kMaxTagCount)
+				ThrowBadFormat ("Gain map metadata block too large");
+
+			AutoPtr<dng_memory_block> block (host.Allocate (tagCount));
+			
+			stream.Get (block->Buffer (),
+						tagCount);
+
+			fGainMapMetadata.reset (block.Release ());
+			
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+				printf ("GainMapMetadata: %u bytes\n",
+						tagCount);
+				}
+				
+			#endif
+
+			break;
+			
+			}
+
 		default:
 			{
 			
@@ -3456,7 +3488,8 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 
 	bool isMainOrEnhancedIFD = isMainIFD || isEnhancedIFD;
 
-	bool isGainMapIFD = (fNewSubFileType == sfGainMap);
+	bool isGainMapIFD = (fNewSubFileType == sfGainMap ||
+						 fNewSubFileType == sfPreviewGainMap);
 	
 	// Check NewSubFileType.
 	
@@ -3483,6 +3516,7 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 		fNewSubFileType != sfEnhancedImage	  &&
 		fNewSubFileType != sfAltPreviewImage  &&
 		fNewSubFileType != sfGainMap		  &&
+		fNewSubFileType != sfPreviewGainMap	  &&
 		fNewSubFileType != sfSemanticMask)
 		{
 		
@@ -3630,7 +3664,8 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 		
 		}
 
-	else if (fNewSubFileType == sfGainMap)
+	else if (fNewSubFileType == sfGainMap ||
+			 fNewSubFileType == sfPreviewGainMap)
 		{
 		
 		if (fPhotometricInterpretation != piGainMap)
@@ -3800,7 +3835,8 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 	// Check ColorimetricReference.
 
 	if (isGainMapIFD &&
-		(shared.fColorimetricReference == crSceneReferred))
+		(shared.fColorimetricReference == crSceneReferred) &&
+		(fNewSubFileType != sfPreviewGainMap))
 		{
 		
 		#if qDNGValidate
@@ -5304,6 +5340,17 @@ bool dng_ifd::IsBaselineJPEG () const
 		default:
 			break;
 			
+		}
+
+	// Some scanned TIFF files have JPEG + alpha channel. Treat these as
+	// baseline for purposes of reading. See CR-4205789.
+
+	if ((fCompression == ccJPEG) &&
+		(fPhotometricInterpretation == piRGB) &&
+		(fSamplesPerPixel == 3 ||
+		 fSamplesPerPixel == 4))
+		{
+		return true;
 		}
 		
 	return false;

@@ -1168,6 +1168,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = (
 					"-fstack-protector",
+					"-fno-define-target-os-macros",
 					"-D_FORTIFY_SOURCE=2",
 					"-DNDEBUG",
 					"$(inherited)",
@@ -1253,6 +1254,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = (
 					"-fstack-protector",
+					"-fno-define-target-os-macros",
 					"-D_FORTIFY_SOURCE=2",
 					"-DNDEBUG=1",
 					"-D_NDEBUG=1",
@@ -1375,6 +1377,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = (
 					"-fstack-protector",
+					"-fno-define-target-os-macros",
 					"-D_FORTIFY_SOURCE=2",
 					"-DNDEBUG",
 					"$(inherited)",
@@ -1494,6 +1497,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = (
 					"-fstack-protector",
+					"-fno-define-target-os-macros",
 					"-D_FORTIFY_SOURCE=2",
 					"-DDEBUG=1",
 					"-D_DEBUG=1",

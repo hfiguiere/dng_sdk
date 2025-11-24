@@ -574,6 +574,30 @@ void dng_pixel_buffer::SetConstant (const dng_rect &area,
 									uint32 value)
 	{
 	
+	if (planes == 0)
+		{
+		ReportWarning ("dng_pixel_buffer::SetConstant: planes = 0");
+		return;
+		}
+
+	DNG_REQUIRE ((area & Area ()) == area,
+				 "SetConstant: area OOB");
+
+		{
+
+		uint32 endPlane = plane + planes;
+
+		uint32 endFullPlane = fPlane + fPlanes;
+
+		DNG_REQUIRE (plane < endPlane,
+					 "SetConstant: planes overflow");
+
+		DNG_REQUIRE (fPlane   <= plane &&
+					 endPlane <= endFullPlane,
+					 "SetConstant: planes range");
+
+		}
+
 	uint32 rows = area.H ();
 	uint32 cols = area.W ();
 	
@@ -743,6 +767,42 @@ void dng_pixel_buffer::CopyArea (const dng_pixel_buffer &src,
 								 uint32 planes)
 	{
 	
+	if (planes == 0)
+		{
+		ReportWarning ("dng_pixel_buffer::CopyArea: planes = 0");
+		return;
+		}
+
+	DNG_REQUIRE ((area & src.Area ()) == area,
+				 "CopyArea: area OOB src");
+
+	DNG_REQUIRE ((area &     Area ()) == area,
+				 "CopyArea: area OOB dst");
+
+		{
+
+		uint32 endSrcPlane = srcPlane + planes;
+		uint32 endDstPlane = dstPlane + planes;
+
+		uint32 endFullSrcPlane = src.fPlane + src.fPlanes;
+		uint32 endFullDstPlane =     fPlane +     fPlanes;
+
+		DNG_REQUIRE (srcPlane < endSrcPlane,
+					 "CopyArea: src planes overflow");
+
+		DNG_REQUIRE (dstPlane < endDstPlane,
+					 "CopyArea: dst planes overflow");
+
+		DNG_REQUIRE (src.fPlane  <= srcPlane    &&
+					 endSrcPlane <= endFullSrcPlane,
+					 "CopyArea: src planes range");
+
+		DNG_REQUIRE (    fPlane  <= dstPlane    &&
+					 endDstPlane <= endFullDstPlane,
+					 "CopyArea: dst planes range");
+
+		}
+
 	uint32 rows = area.H ();
 	uint32 cols = area.W ();
 	

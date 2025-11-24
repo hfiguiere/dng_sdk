@@ -4,7 +4,8 @@
   <PropertyGroup Label="UserMacros">
     <JXL_LIB_BASE>../../libjxl</JXL_LIB_BASE>
     <JXL_HEADER_PATHS>$(JXL_LIB_BASE);$(JXL_LIB_BASE)/../client_projects/include;$(JXL_LIB_BASE)/lib/include;$(JXL_LIB_BASE)/build/lib/include;$(JXL_LIB_BASE)/third_party/brotli/c/include;$(JXL_LIB_BASE)/third_party/highway;$(JXL_LIB_BASE)/third_party/skcms</JXL_HEADER_PATHS>
-    <JXL_FLAGS>JXL_THREADS_STATIC_DEFINE;JXL_STATIC_DEFINE;JXL_INTERNAL_LIBRARY_BUILD;TEST_DATA_PATH="\"foo\"";JPEGXL_ENABLE_SKCMS=1;JPEGXL_BUNDLE_SKCMS=0</JXL_FLAGS>
+    <JXL_FLAGS>DO_NOT_PREDEFINE__JXL_IS_DEBUG_BUILD;JXL_THREADS_STATIC_DEFINE;JXL_STATIC_DEFINE;JXL_INTERNAL_LIBRARY_BUILD;TEST_DATA_PATH="\"foo\"";JPEGXL_ENABLE_SKCMS=1;JPEGXL_BUNDLE_SKCMS=0</JXL_FLAGS>
+    <OutDir>$(ProjectDir)$(Platform)_$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup>

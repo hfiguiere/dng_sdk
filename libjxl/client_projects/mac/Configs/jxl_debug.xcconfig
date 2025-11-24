@@ -1,2 +1,10 @@
-GCC_OPTIMIZATION_LEVEL = 0
+GCC_OPTIMIZATION_LEVEL = 2
+MTL_OPTIMIZATION_LEVEL = 2
+
+GCC_PREPROCESSOR_DEFINITIONS = $(GCC_PREPROCESSOR_DEFINITIONS) NDEBUG NDEBUG_CURRENTLY_DEFINED_FOR_DEBUG_JXL_INTENTIONALLY
+
+// Use optimization even for debug builds because otherwise JXL code is
+// really slow. If we find problems where we need to debug into JXL
+// code (not common), then developers can selectively turn off the
+// above code (set to 0 instead of 2) to make it easier to step thru.
 
