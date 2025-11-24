@@ -339,7 +339,6 @@ namespace PNG_Support
 			}
 
             packetStr.assign((char*)buffer , bufferLength);
-            xmpOffset = filePosition + ITXT_HEADER_LEN;
             filePosition += bufferLength;
             
             XMP_Uns32 remainingLength = chunkLength - static_cast<XMP_Uns32>(bufferLength);
@@ -356,6 +355,7 @@ namespace PNG_Support
         {
             outXMPPacket.clear();
             outXMPPacket = packetStr.substr(ITXT_HEADER_LEN);
+			xmpOffset = filePosition + ITXT_HEADER_LEN;
         }
         else
         {

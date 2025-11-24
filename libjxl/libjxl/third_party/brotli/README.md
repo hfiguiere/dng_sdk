@@ -1,5 +1,11 @@
 <p align="center"><img src="https://brotli.org/brotli.svg" alt="Brotli" width="64"></p>
 
+# SECURITY NOTE
+
+Please consider updating brotli to version 1.0.9 (latest).
+
+Version 1.0.9 contains a fix to "integer overflow" problem. This happens when "one-shot" decoding API is used (or input chunk for streaming API is not limited), input size (chunk size) is larger than 2GiB, and input contains uncompressed blocks. After the overflow happens, `memcpy` is invoked with a gigantic `num` value, that will likely cause the crash.
+
 ### Introduction
 
 Brotli is a generic-purpose lossless compression algorithm that compresses data
@@ -12,13 +18,30 @@ The specification of the Brotli Compressed Data Format is defined in [RFC 7932](
 
 Brotli is open-sourced under the MIT License, see the LICENSE file.
 
+> **Please note:** brotli is a "stream" format; it does not contain
+> meta-information, like checksums or uncompresssed data length. It is possible
+> to modify "raw" ranges of the compressed stream and the decoder will not
+> notice that.
+
 Brotli mailing list:
 https://groups.google.com/forum/#!forum/brotli
 
-[![TravisCI Build Status](https://travis-ci.org/google/brotli.svg?branch=master)](https://travis-ci.org/google/brotli)
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/google/brotli?branch=master&svg=true)](https://ci.appveyor.com/project/szabadka/brotli)
+![GitHub Actions Build Status](https://github.com/google/brotli/actions/workflows/build_test.yml/badge.svg)
+[![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/brotli.svg)](https://oss-fuzz-build-logs.storage.googleapis.com/index.html#brotli)
 
 ### Build instructions
+
+#### Vcpkg
+
+You can download and install brotli using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
+
+    git clone https://github.com/Microsoft/vcpkg.git
+    cd vcpkg
+    ./bootstrap-vcpkg.sh
+    ./vcpkg integrate install
+    ./vcpkg install brotli
+
+The brotli port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
 #### Autotools-style CMake
 
@@ -83,3 +106,5 @@ Hand ported [decoder / encoder](https://github.com/dominikhlbg/BrotliHaxe) in ha
 7Zip [plugin](https://github.com/mcmilk/7-Zip-Zstd)
 
 Dart [native bindings](https://github.com/thosakwe/brotli)
+
+Dart compression framework with [fast FFI-based Brotli implementation](https://pub.dev/documentation/es_compression/latest/brotli/brotli-library.html) with ready-to-use prebuilt binaries for Win/Linux/Mac

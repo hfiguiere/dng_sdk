@@ -1796,7 +1796,12 @@ void dng_render_task::ProcessArea (uint32 threadIndex,
 					
 				else
 					{
-					
+
+					// Expect 4 src planes here. This method expects and only
+					// supports fSrcPlanes being 1,3 or 4.
+
+					DNG_REQUIRE (fSrcPlanes == 4, "fSrcPlanes");
+
 					const real32 *sPtrD = sPtrC + srcBuffer.fPlaneStep;
 				
 					DoBaselineABCDtoRGB (sPtrA,

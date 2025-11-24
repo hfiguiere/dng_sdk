@@ -578,7 +578,7 @@ dng_fingerprint dng_metadata::IPTCDigest (bool includePadding) const
 	if (IPTCLength ())
 		{
 		
-		dng_md5_printer printer;
+		dng_md5_direct_printer printer;
 		
 		const uint8 *data = (const uint8 *) IPTCData ();
 		
@@ -604,7 +604,7 @@ dng_fingerprint dng_metadata::IPTCDigest (bool includePadding) const
 				
 			}
 		
-		printer.Process (data, count);
+		printer.ProcessPtr (data, count);
 						 
 		return printer.Result ();
 			
@@ -727,9 +727,9 @@ void dng_metadata::SetEmbeddedXMP (dng_host &host,
 	if (SetXMP (host, buffer, count))
 		{
 		
-		dng_md5_printer printer;
+		dng_md5_direct_printer printer;
 		
-		printer.Process (buffer, count);
+		printer.ProcessPtr (buffer, count);
 		
 		fEmbeddedXMPDigest = printer.Result ();
 		
@@ -1606,7 +1606,8 @@ bool dng_negative::GetProfileByIDFromList (const dng_profile_metadata_list &list
 
 bool dng_negative::GetProfileToEmbedFromList (const dng_profile_metadata_list &list,
 											  const dng_metadata & /* metadata */,
-											  dng_camera_profile &foundProfile) const
+											  dng_camera_profile &foundProfile,
+											  bool /* skipAdobeStandard = false */) const
 	{
 	
 	 // How many profiles in list?
@@ -1704,7 +1705,8 @@ bool dng_negative::GetProfileByID (const dng_camera_profile_id &id,
 /*****************************************************************************/
 
 bool dng_negative::GetProfileToEmbed (const dng_metadata &metadata,
-									  dng_camera_profile &foundProfile) const
+									  dng_camera_profile &foundProfile,
+									  bool skipAdobeStandard /* = false */) const
 	{
 	
 	// Monochrome negatives don't have profiles.
@@ -1724,7 +1726,8 @@ bool dng_negative::GetProfileToEmbed (const dng_metadata &metadata,
 	
 	return GetProfileToEmbedFromList (list,
 									  metadata,
-									  foundProfile);
+									  foundProfile,
+									  skipAdobeStandard);
 	
 	}
 							   
@@ -1757,7 +1760,7 @@ dng_fingerprint dng_negative::FindImageDigest (dng_host &host,
 											   const dng_image &image)
 	{
 	
-	dng_md5_printer printer;
+	dng_md5_direct_printer printer;
 	
 	dng_pixel_buffer buffer (image.Bounds (), 
 							 0, 
@@ -1844,8 +1847,8 @@ dng_fingerprint dng_negative::FindImageDigest (dng_host &host,
 		
 		#endif
 
-		printer.Process (buffer.fData,
-						 count);
+		printer.ProcessPtr (buffer.fData,
+							count);
 		
 		}
 			
@@ -2039,9 +2042,9 @@ class dng_find_new_raw_image_digest_task : public dng_area_task
 
 			#endif
 			
-			dng_md5_printer printer;
+			dng_md5_direct_printer printer;
 			
-			printer.Process (buffer.fData, count);
+			printer.ProcessPtr (buffer.fData, count);
 							 
 			fTileHash [tileIndex] = printer.Result ();
 			
@@ -2050,12 +2053,12 @@ class dng_find_new_raw_image_digest_task : public dng_area_task
 		dng_fingerprint Result ()
 			{
 			
-			dng_md5_printer printer;
+			dng_md5_direct_printer printer;
 			
 			for (uint32 tileIndex = 0; tileIndex < fTileCount; tileIndex++)
 				{
 				
-				printer.Process (fTileHash [tileIndex] . data, 16);
+				printer.Process (fTileHash [tileIndex]);
 				
 				}
 				
@@ -2163,11 +2166,11 @@ void dng_negative::FindNewRawImageDigest (dng_host &host) const
 				
 			// Combine the two digests into a single digest.
 			
-			dng_md5_printer printer;
+			dng_md5_direct_printer printer;
 			
-			printer.Process (fNewRawImageDigest.data, 16);
+			printer.Process (fNewRawImageDigest);
 			
-			printer.Process (maskDigest.data, 16);
+			printer.Process (maskDigest);
 			
 			fNewRawImageDigest = printer.Result ();
 			
@@ -2291,7 +2294,7 @@ void dng_negative::ValidateRawImageDigest (dng_host &host)
 						
 						for (uint32 j = 4; j < 16; j++)
 							{
-							matchLast12 = matchLast12 && (oldDigest.data [j] == fRawImageDigest.data [j]);
+							matchLast12 = matchLast12 && (oldDigest.Data () [j] == fRawImageDigest.Data () [j]);
 							}
 							
 						if (matchLast12)
@@ -2305,10 +2308,10 @@ void dng_negative::ValidateRawImageDigest (dng_host &host)
 					// bytes, but for all those files that I have seen so far the
 					// resulting first four bytes are 0x08 0x00 0x00 0x00.
 					
-					if (oldDigest.data [0] == 0x08 &&
-						oldDigest.data [1] == 0x00 &&
-						oldDigest.data [2] == 0x00 &&
-						oldDigest.data [3] == 0x00)
+					if (oldDigest.Data () [0] == 0x08 &&
+						oldDigest.Data () [1] == 0x00 &&
+						oldDigest.Data () [2] == 0x00 &&
+						oldDigest.Data () [3] == 0x00)
 						{
 						return;
 						}
@@ -2337,12 +2340,12 @@ dng_fingerprint dng_negative::RawDataUniqueID () const
 	if (fRawDataUniqueID.IsValid () && fEnhanceParams.NotEmpty ())
 		{
 		
-		dng_md5_printer printer;
+		dng_md5_direct_printer printer;
 		
-		printer.Process (fRawDataUniqueID.data, 16);
+		printer.Process (fRawDataUniqueID);
 		
-		printer.Process (fEnhanceParams.Get	   (),
-						 fEnhanceParams.Length ());
+		printer.ProcessPtr (fEnhanceParams.Get	  (),
+							fEnhanceParams.Length ());
 			
 		return printer.Result ();
 
@@ -2364,7 +2367,7 @@ void dng_negative::FindRawDataUniqueID (dng_host &host) const
 	if (RawDataUniqueID ().IsNull ())
 		{
 		
-		dng_md5_printer_stream printer;
+		dng_md5_printer_le_stream printer;
 		
 		// If we have a raw lossy image, it is much faster to use its digest as
 		// part of the unique ID since the data size is much smaller. We
@@ -2376,8 +2379,7 @@ void dng_negative::FindRawDataUniqueID (dng_host &host) const
 			
 			FindRawLossyCompressedImageDigest (host);
 			
-			printer.Put (fRawLossyCompressedImageDigest.data,
-						 uint32 (sizeof (fRawLossyCompressedImageDigest.data)));
+			printer.Put (fRawLossyCompressedImageDigest);
 			
 			}
 
@@ -2388,7 +2390,7 @@ void dng_negative::FindRawDataUniqueID (dng_host &host) const
 		
 			FindNewRawImageDigest (host);
 					
-			printer.Put (fNewRawImageDigest.data, 16);
+			printer.Put (fNewRawImageDigest);
 			
 			}
 		
@@ -2463,10 +2465,10 @@ void dng_negative::FindOriginalRawFileDigest () const
 	if (fOriginalRawFileDigest.IsNull () && fOriginalRawFileData.Get ())
 		{
 		
-		dng_md5_printer printer;
+		dng_md5_direct_printer printer;
 		
-		printer.Process (fOriginalRawFileData->Buffer	   (),
-						 fOriginalRawFileData->LogicalSize ());
+		printer.ProcessPtr (fOriginalRawFileData->Buffer	  (),
+							fOriginalRawFileData->LogicalSize ());
 					
 		fOriginalRawFileDigest = printer.Result ();
 	
@@ -3975,7 +3977,7 @@ void dng_negative::PostParse (dng_host &host,
 			
 			// If the MakerNote is safe, preserve it as a MakerNote.
 			
-			if (IsMakerNoteSafe ())
+			if (IsMakerNoteSafe () && info.fTIFFBlockOriginalOffset != kDNGStreamInvalidOffset)
 				{
 
 				AutoPtr<dng_memory_block> block (host.Allocate (shared.fMakerNoteCount));
@@ -4430,7 +4432,17 @@ void dng_negative::ReadStage1Image (dng_host &host,
 	if (fStage1Image->PixelType () == ttFloat)
 		{
 		
-		SetRawFloatBitDepth (rawIFD.fBitsPerSample [0]);
+		// If we are reading from a lossy JXL floating point image, and
+		// we are not keeping the lossy compressed data, we need to treat
+		// the raw floating point image as 32 bit, and ignore the bit
+		// depth that we fed into the JXL decoder.
+		
+		if (lossyImage.Get () || rawIFD.fCompression != ccJXL)
+			{
+			
+			SetRawFloatBitDepth (rawIFD.fBitsPerSample [0]);
+		
+			}
 		
 		}
 					  
@@ -7530,6 +7542,16 @@ void dng_negative::ResizeTransparencyToMatchStage3 (dng_host &host,
 			(TransparencyMask ()->PixelType () != ttByte && convertTo8Bit))
 			{
 			
+			if (host.SaveDNGVersion () != dngVersion_None && !convertTo8Bit)
+				{
+				
+				if (!fRawTransparencyMask.Get ())
+					{
+					fRawTransparencyMask.Reset (fTransparencyMask->Clone ());
+					}
+					
+				}
+			
 			AutoPtr<dng_image> newMask (host.Make_dng_image (fStage3Image->Bounds (),
 															 1,
 															 convertTo8Bit ?
@@ -7550,7 +7572,9 @@ void dng_negative::ResizeTransparencyToMatchStage3 (dng_host &host,
 				{
 				fRawTransparencyMaskBitDepth = 8;
 				}
-			
+
+			fRawLossyCompressedTransparencyMask.Reset ();
+
 			}
 			
 		}

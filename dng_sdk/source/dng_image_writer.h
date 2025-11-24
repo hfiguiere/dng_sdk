@@ -1326,7 +1326,10 @@ class dng_image_writer
 						bool hasTransparency = false,
 						bool allowBigTIFF = true,
 						const dng_image *gainMapImage = nullptr,
-						bool useHalfFloat = false);
+						const const_dng_memory_block_sptr gainMapMetadataBlock = nullptr,
+						bool useHalfFloat = false,
+						const void *gainMapAltProfileData = nullptr,
+						const uint32 gainMapAltProfileSize = 0);
 								
 		/// Write a dng_image to a dng_stream in TIFF format.
 		/// \param host Host interface used for progress updates, abort testing, buffer allocation, etc.
@@ -1360,7 +1363,10 @@ class dng_image_writer
 										   bool hasTransparency = false,
 										   bool allowBigTIFF = true,
 										   const dng_image *gainMapImage = nullptr,
-										   bool useHalfFloat = false);
+										   const const_dng_memory_block_sptr gainMapMetadataBlock = nullptr,
+										   bool useHalfFloat = false,
+										   const void *gainMapAltProfileData = nullptr,
+										   const uint32 gainMapAltProfileSize = 0);
 								
 		/// Write a dng_image to a dng_stream in DNG format.
 		/// \param host Host interface used for progress updates, abort testing, buffer allocation, etc.
@@ -1380,7 +1386,10 @@ class dng_image_writer
 					   bool uncompressed = false,
 					   bool allowBigTIFF = true,
 					   const dng_image *gainMapImage = nullptr,
-					   const dng_lossy_compressed_image *gainMapLossyCompressed = nullptr);
+					   const dng_lossy_compressed_image *gainMapLossyCompressed = nullptr,
+					   const const_dng_memory_block_sptr gainMapMetadataBlock = nullptr,
+					   const void *gainMapAltProfileData = nullptr,
+					   const uint32 gainMapAltProfileSize = 0);
 							   
 		/// Write a dng_image to a dng_stream in DNG format.
 		/// \param host Host interface used for progress updates, abort testing, buffer allocation, etc.
@@ -1402,7 +1411,10 @@ class dng_image_writer
 										   bool uncompressed = false,
 										   bool allowBigTIFF = true,
 										   const dng_image *gainMapImage = nullptr,
-										   const dng_lossy_compressed_image *gainMapLossyCompressed = nullptr);
+										   const dng_lossy_compressed_image *gainMapLossyCompressed = nullptr,
+										   const const_dng_memory_block_sptr gainMapMetadataBlock = nullptr,
+										   const void *gainMapAltProfileData = nullptr,
+										   const uint32 gainMapAltProfileSize = 0);
 
 		/// Resolve metadata conflicts and apply metadata policies in keeping
 		/// with Metadata Working Group (MWG) guidelines.
@@ -1510,7 +1522,7 @@ class dng_write_tiles_task : public dng_area_task,
 
 		const bool fNeedDigest;
 
-		mutable dng_md5_printer fOverallPrinter;
+		mutable dng_md5_direct_printer fOverallPrinter;
 		
 	public:
 	

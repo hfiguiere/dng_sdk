@@ -123,7 +123,11 @@ int64 SafeInt64MultSlow(int64 arg1, int64 arg2);
 #ifdef __ANDROID__
 // While clang says it supports __builtin_smull_overflow, the Android NDK
 // doesn't use the right runtime library per https://bugs.llvm.org/show_bug.cgi?id=28629
-#define __USE_BUILTIN_SMULL_OVERFLOW !defined(__NDK_MAJOR__) && __has_builtin(__builtin_smull_overflow)
+// Disable the __builtin_smull_overflow for now until we verify that it works fine for android.
+// Currently we use it on other platforms like macOS, iOS and Linux so we should be good. We will
+// revisit this when LrM android team has bandwidth to test it.
+// krishnas - 11/9/2025
+#define __USE_BUILTIN_SMULL_OVERFLOW (0 && __has_builtin(__builtin_smull_overflow))
 #else
 #define __USE_BUILTIN_SMULL_OVERFLOW __has_builtin(__builtin_smull_overflow)
 #endif // __ANDROID__

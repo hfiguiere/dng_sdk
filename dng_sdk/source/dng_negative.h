@@ -2128,7 +2128,8 @@ class dng_negative
 		// Returns the camera profile to embed when saving to DNG.
 		
 		bool GetProfileToEmbed (const dng_metadata &metadata,
-								dng_camera_profile &foundProfile) const;
+								dng_camera_profile &foundProfile,
+								bool skipAdobeStandard = false) const;
 		
 		// API for AsShotProfileName.
 			
@@ -2698,6 +2699,13 @@ class dng_negative
 		// Returns the raw image data.
 		
 		const dng_image & RawImage () const;
+		
+		// Clears any saved raw image.
+		
+		void ClearRawImage ()
+			{
+			fRawImage.Reset ();
+			}
   
 		// Returns the raw image black level in 16-bit space.
 		
@@ -3139,7 +3147,8 @@ class dng_negative
 		
 		virtual bool GetProfileToEmbedFromList (const dng_profile_metadata_list &list,
 												const dng_metadata &metadata,
-												dng_camera_profile &foundProfile) const;
+												dng_camera_profile &foundProfile,
+												bool skipAdobeStandard = false) const;
 
 		void CompressTransparencyMaskJXL (dng_host &host,
 										  dng_image_writer &writer,

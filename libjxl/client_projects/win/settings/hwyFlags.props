@@ -3,6 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
     <HWY_HEADER_PATHS>../../libjxl/third_party/highway</HWY_HEADER_PATHS>
+    <OutDir>$(ProjectDir)$(Platform)_$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup>

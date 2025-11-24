@@ -99,8 +99,8 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">..\..\..\..\..\xmp\toolkit\public\libraries\windows_x64\Debug\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">..\..\..\..\..\xmp\toolkit\public\libraries\windows_arm64\Debug\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug DLL|ARM64'">..\..\..\..\..\xmp\toolkit\public\libraries\windows_arm64\Debug\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">XMPFilesStatic.dir\Debug\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">XMPFilesStatic.dir\Debug\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">XMPFilesStatic.dir\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">XMPFilesStatic.dir\$(Configuration)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">XMPFilesStatic$(Configuration)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">XMPFilesStatic$(Configuration)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">XMPFilesStatic$(Configuration)</TargetName>
@@ -113,8 +113,8 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">..\..\..\..\..\xmp\toolkit\public\libraries\windows_x64\Release\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">..\..\..\..\..\xmp\toolkit\public\libraries\windows_arm64\Release\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release DLL|ARM64'">..\..\..\..\..\xmp\toolkit\public\libraries\windows_arm64\Release\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">XMPFilesStatic.dir\Release\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">XMPFilesStatic.dir\Release\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">XMPFilesStatic.dir\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">XMPFilesStatic.dir\$(Configuration)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">XMPFilesStatic$(Configuration)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">XMPFilesStatic$(Configuration)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">XMPFilesStatic$(Configuration)</TargetName>

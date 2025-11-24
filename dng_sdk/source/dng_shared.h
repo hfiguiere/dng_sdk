@@ -282,6 +282,9 @@ class dng_shared
 
 		dng_image_sequence_info fImageSequenceInfo;
 		
+		uint32 fC2PAManifestCount  = 0;
+		uint64 fC2PAManifestOffset = 0;
+		
 	public:
 	
 		dng_shared ();

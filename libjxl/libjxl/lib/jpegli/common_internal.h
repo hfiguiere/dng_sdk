@@ -6,12 +6,32 @@
 #ifndef LIB_JPEGLI_COMMON_INTERNAL_H_
 #define LIB_JPEGLI_COMMON_INTERNAL_H_
 
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+
+// Suppress any -Wdeprecated-declarations warning that might be emitted by
+// GCC or Clang by std::stable_sort in C++17 or later mode
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+#include <algorithm>
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC pop_options
+#endif
 
 #include <hwy/aligned_allocator.h>
 
+#include "lib/jpegli/memory_manager.h"
+#include "lib/jpegli/simd.h"
 #include "lib/jxl/base/compiler_specific.h"  // for ssize_t
 
 namespace jpegli {
@@ -33,6 +53,11 @@ enum State {
 template <typename T1, typename T2>
 constexpr inline T1 DivCeil(T1 a, T2 b) {
   return (a + b - 1) / b;
+}
+
+template <typename T1, typename T2>
+constexpr inline T1 RoundUpTo(T1 a, T2 b) {
+  return DivCeil(a, b) * b;
 }
 
 constexpr size_t kDCTBlockSize = 64;
@@ -83,19 +108,42 @@ constexpr uint32_t kJPEGZigZagOrder[64] = {
 template <typename T>
 class RowBuffer {
  public:
-  void Allocate(size_t num_rows, size_t stride) {
+  template <typename CInfoType>
+  void Allocate(CInfoType cinfo, size_t num_rows, size_t rowsize) {
+    static_assert(sizeof(T) == 4);
+    size_t vec_size = std::max(VectorSize(), sizeof(T));
+    size_t alignment = std::max<size_t>(HWY_ALIGNMENT, vec_size);
+    size_t min_memstride = alignment + rowsize * sizeof(T) + vec_size;
+    size_t memstride = RoundUpTo(min_memstride, alignment);
+    xsize_ = rowsize;
     ysize_ = num_rows;
-    stride_ = stride;
-    data_ = hwy::AllocateAligned<T>(ysize_ * stride_);
+    stride_ = memstride / sizeof(T);
+    offset_ = alignment / sizeof(T);
+    data_ = ::jpegli::Allocate<T>(cinfo, ysize_ * stride_, JPOOL_IMAGE_ALIGNED);
   }
 
-  T* Row(ssize_t y) { return &data_[((ysize_ + y) % ysize_) * stride_]; }
+  T* Row(ssize_t y) const {
+    return &data_[((ysize_ + y) % ysize_) * stride_ + offset_];
+  }
 
+  size_t xsize() const { return xsize_; };
+  size_t ysize() const { return ysize_; };
   size_t stride() const { return stride_; }
-  size_t memstride() const { return stride_ * sizeof(T); }
 
-  void CopyRow(ssize_t y, const T* src, size_t len) {
-    memcpy(Row(y), src, len * sizeof(T));
+  void PadRow(size_t y, size_t from, int border) {
+    float* row = Row(y);
+    for (int offset = -border; offset < 0; ++offset) {
+      row[offset] = row[0];
+    }
+    float last_val = row[from - 1];
+    for (size_t x = from; x < xsize_ + border; ++x) {
+      row[x] = last_val;
+    }
+  }
+
+  void CopyRow(ssize_t dst_row, ssize_t src_row, int border) {
+    memcpy(Row(dst_row) - border, Row(src_row) - border,
+           (xsize_ + 2 * border) * sizeof(T));
   }
 
   void FillRow(ssize_t y, T val, size_t len) {
@@ -106,9 +154,11 @@ class RowBuffer {
   }
 
  private:
-  size_t ysize_ = 0;
-  size_t stride_ = 0;
-  hwy::AlignedFreeUniquePtr<T[]> data_;
+  size_t xsize_;
+  size_t ysize_;
+  size_t stride_;
+  size_t offset_;
+  T* data_;
 };
 
 }  // namespace jpegli

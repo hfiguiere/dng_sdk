@@ -52,6 +52,10 @@ enum
 
 	sfGainMap					= 32,
 		
+	// Preview (reduced resolution) Gain Map.
+
+	sfPreviewGainMap			= sfPreviewImage + sfGainMap,
+		
 	// Preview image for non-primary settings.
 	
 	sfAltPreviewImage			= 0x10001,

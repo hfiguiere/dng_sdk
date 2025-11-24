@@ -65,13 +65,17 @@ void XIO::SplitLeafName ( std::string * path, std::string * leafName )
 {
 	size_t dirPos = path->size();
 	// Return if path is empty or just the slash
-	if ( dirPos == 0 || (dirPos == 1 && (*path)[dirPos-1] == kDirChar) ) 
+	if ( dirPos == 0 || (dirPos == 1 && (*path)[dirPos-1] == kDirChar) )
 	{
 		leafName->erase();
 		path->erase();
 		return;
 	}
-
+	else if ( dirPos == 1  )
+	{
+		leafName->erase();
+		return;
+	}
 	// Remove trailing slashes
 	--dirPos;
 #if XMP_WinBuild
@@ -81,7 +85,6 @@ void XIO::SplitLeafName ( std::string * path, std::string * leafName )
 	{
 		path->erase(dirPos);
 	}
-
 	// Search next slash
 	for ( --dirPos; dirPos > 0; --dirPos ) {
 		#if XMP_WinBuild
@@ -89,7 +92,6 @@ void XIO::SplitLeafName ( std::string * path, std::string * leafName )
 		#endif
 		if ( (*path)[dirPos] == kDirChar ) break;
 	}
-
 	if ( (*path)[dirPos] == kDirChar ) {
 		leafName->assign ( &(*path)[dirPos+1] );
 		path->erase ( dirPos );
@@ -97,7 +99,6 @@ void XIO::SplitLeafName ( std::string * path, std::string * leafName )
 		leafName->erase();
 		leafName->swap ( *path );
 	}
-
 }	// XIO::SplitLeafName
 
 // =================================================================================================

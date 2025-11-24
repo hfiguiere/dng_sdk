@@ -35,10 +35,44 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\common\constants.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\common\context.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\common\dictionary.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\common\platform.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\common\shared_dictionary.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\common\transform.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\dec\bit_reader.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\dec\decode.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\dec\huffman.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\dec\state.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\backward_references.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\backward_references_hq.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\bit_cost.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\block_splitter.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\brotli_bit_stream.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\cluster.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\command.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\compound_dictionary.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\compress_fragment.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\compress_fragment_two_pass.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\dictionary_hash.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\encode.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\encoder_dict.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\entropy_encode.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\fast_log.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\histogram.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\literal_cost.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\memory.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\metablock.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\static_dict.c" />
+    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\utf8_util.c" />
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\common\constants.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\common\context.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\common\dictionary.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\common\platform.h" />
+    <ClInclude Include="..\..\libjxl\third_party\brotli\c\common\shared_dictionary_internal.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\common\transform.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\common\version.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\dec\bit_reader.h" />
@@ -57,6 +91,7 @@
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\cluster.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\cluster_inc.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\command.h" />
+    <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\compound_dictionary.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\compress_fragment.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\compress_fragment_two_pass.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\dictionary_hash.h" />
@@ -83,6 +118,7 @@
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\prefix.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\quality.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\ringbuffer.h" />
+    <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\state.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\static_dict.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\static_dict_lut.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\enc\utf8_util.h" />
@@ -90,36 +126,13 @@
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\include\brotli\decode.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\include\brotli\encode.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\include\brotli\port.h" />
+    <ClInclude Include="..\..\libjxl\third_party\brotli\c\include\brotli\shared_dictionary.h" />
     <ClInclude Include="..\..\libjxl\third_party\brotli\c\include\brotli\types.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\libjxl\third_party\brotli\c\common\dictionary.bin" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\common\dictionary.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\common\transform.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\dec\bit_reader.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\dec\decode.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\dec\huffman.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\dec\state.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\backward_references.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\backward_references_hq.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\bit_cost.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\block_splitter.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\brotli_bit_stream.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\cluster.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\compress_fragment.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\compress_fragment_two_pass.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\dictionary_hash.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\encode.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\encoder_dict.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\entropy_encode.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\histogram.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\literal_cost.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\memory.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\metablock.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\static_dict.c" />
-    <ClCompile Include="..\..\libjxl\third_party\brotli\c\enc\utf8_util.c" />
+    <None Include="settings\brotliFlags.props" />
+    <None Include="settings\hwyDebug.props" />
+    <None Include="settings\hwyRelease.props" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -229,35 +242,27 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug DLL|ARM64'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release DLL|ARM64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />

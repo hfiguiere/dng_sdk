@@ -286,6 +286,13 @@ bool PostScript_Support::IsValidPSFile(XMP_IO*    fileRef,XMP_FileFormat &format
 			//return true if no "EPSF-" is found as it is a valid PS atleast
 			if ( ! CheckBytes ( ioBuf.ptr, Uns8Ptr("EPSF-"), 5 ) ) return true;
 
+			/////////////////////////////////////////////////////////////////////////////////////
+			// Added by ACR team.
+			#if __cplusplus >= 201703L // if C++17 or later
+			[[fallthrough]]; // Use new C++ attribute to tell compiler fallthrough is intended.
+			#endif
+			/////////////////////////////////////////////////////////////////////////////////////
+
 		}//intentional fall through for further checking of unknown files
 		case kXMP_EPSFile:
 		{

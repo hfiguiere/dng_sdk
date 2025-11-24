@@ -1081,7 +1081,8 @@ XMPMeta::Initialize ( XMP_AllocateProc AllocateProc,
 	(void) RegisterNamespace ( kXMP_NS_CameraRaw, "crs", &voidPtr, &voidLen );
 	(void) RegisterNamespace ( kXMP_NS_ASF, "asf", &voidPtr, &voidLen );
 	(void) RegisterNamespace ( kXMP_NS_WAV, "wav", &voidPtr, &voidLen );
-
+    
+    (void) RegisterNamespace ( kXMP_NS_VideoFoundation, "vfs", &voidPtr, &voidLen );
 	(void) RegisterNamespace ( kXMP_NS_AdobeStockPhoto, "bmsp", &voidPtr, &voidLen );
 	(void) RegisterNamespace ( kXMP_NS_CreatorAtom, "creatorAtom", &voidPtr, &voidLen );
 

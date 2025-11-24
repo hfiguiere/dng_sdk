@@ -435,6 +435,7 @@ const char * LookupTagCode (uint32 parentCode,
 		{	tcEnhanceParams,					"EnhanceParams"					},
 		{	tcProfileGainTableMap,				"ProfileGainTableMap"			},
 		{	tcProfileGainTableMap2,				"ProfileGainTableMap2"			},
+		{	tcC2PAManifest,						"C2PAManifest"					},
 		{	tcRGBTablesDraft,					"RGBTablesDraft"				},
 		{	tcRGBTables,						"RGBTables"						},
 		{	tcBigTableDigests,					"BigTableDigests"				},
@@ -2455,7 +2456,7 @@ void DumpFingerprint (const dng_fingerprint &p)
 	
 	for (uint32 j = 0; j < 16; j++)
 		{
-		printf ("%02x", p.data [j]);
+		printf ("%02x", p.Data () [j]);
 		}
 
 	printf (">");

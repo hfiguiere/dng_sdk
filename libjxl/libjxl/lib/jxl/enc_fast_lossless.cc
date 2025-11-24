@@ -3,13 +3,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+#include "lib/jxl/base/status.h"
 #ifndef FJXL_SELF_INCLUDE
-
-#include "lib/jxl/enc_fast_lossless.h"
 
 #include <assert.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 
 #include <algorithm>
@@ -18,36 +16,77 @@
 #include <memory>
 #include <vector>
 
+#include "lib/jxl/enc_fast_lossless.h"
+
+#if FJXL_STANDALONE
+#if defined(_MSC_VER)
+using ssize_t = intptr_t;
+#endif
+#else  // FJXL_STANDALONE
+#include "lib/jxl/encode_internal.h"
+#endif  // FJXL_STANDALONE
+
+#if defined(__x86_64__) || defined(_M_X64)
+#define FJXL_ARCH_IS_X86_64 1
+#else
+#define FJXL_ARCH_IS_X86_64 0
+#endif
+
+#if defined(__i386__) || defined(_M_IX86) || FJXL_ARCH_IS_X86_64
+#define FJXL_ARCH_IS_X86 1
+#else
+#define FJXL_ARCH_IS_X86 0
+#endif
+
+#if FJXL_ARCH_IS_X86
+#if defined(_MSC_VER)
+#include <intrin.h>
+#else  // _MSC_VER
+#include <cpuid.h>
+#endif  // _MSC_VER
+#endif  // FJXL_ARCH_IS_X86
+
 // Enable NEON and AVX2/AVX512 if not asked to do otherwise and the compilers
 // support it.
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) || defined(_M_ARM64)  // ARCH
 #include <arm_neon.h>
 
-#ifndef FJXL_ENABLE_NEON
+#if !defined(FJXL_ENABLE_NEON)
 #define FJXL_ENABLE_NEON 1
-#endif
+#endif  // !defined(FJXL_ENABLE_NEON)
 
-#elif (defined(__x86_64__) || defined(_M_X64)) && !defined(_MSC_VER)
+#elif FJXL_ARCH_IS_X86_64 && !defined(_MSC_VER)  // ARCH
 #include <immintrin.h>
 
-// TODO(veluca): MSVC support for dynamic dispatch.
-#if defined(__clang__) || defined(__GNUC__)
-
-#ifndef FJXL_ENABLE_AVX2
-#define FJXL_ENABLE_AVX2 1
+// manually add _mm512_cvtsi512_si32 definition if missing
+// (e.g. with Xcode on macOS Mojave)
+// copied from gcc 11.1.0 include/avx512fintrin.h line 14367-14373
+#if defined(__clang__) &&                                           \
+    ((!defined(__apple_build_version__) && __clang_major__ < 10) || \
+     (defined(__apple_build_version__) && __apple_build_version__ < 12000032))
+inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+_mm512_cvtsi512_si32(__m512i __A) {
+  __v16si __B = (__v16si)__A;
+  return __B[0];
+}
 #endif
 
-#ifndef FJXL_ENABLE_AVX512
+#if !defined(FJXL_ENABLE_AVX2)
+#define FJXL_ENABLE_AVX2 1
+#endif  // !defined(FJXL_ENABLE_AVX2)
+
+#if !defined(FJXL_ENABLE_AVX512)
 // On clang-7 or earlier, and gcc-10 or earlier, AVX512 seems broken.
-#if (defined(__clang__) && __clang_major__ > 7) || \
+#if (defined(__clang__) &&                                             \
+         (!defined(__apple_build_version__) && __clang_major__ > 7) || \
+     (defined(__apple_build_version__) &&                              \
+      __apple_build_version__ > 10010046)) ||                          \
     (defined(__GNUC__) && __GNUC__ > 10)
 #define FJXL_ENABLE_AVX512 1
 #endif
-#endif
+#endif  // !defined(FJXL_ENABLE_AVX512)
 
-#endif
-
-#endif
+#endif  // ARCH
 
 #ifndef FJXL_ENABLE_NEON
 #define FJXL_ENABLE_NEON 0
@@ -62,6 +101,109 @@
 #endif
 
 namespace {
+
+enum class CpuFeature : uint32_t {
+  kAVX2 = 0,
+
+  kAVX512F,
+  kAVX512VL,
+  kAVX512CD,
+  kAVX512BW,
+
+  kVBMI,
+  kVBMI2
+};
+
+constexpr uint32_t CpuFeatureBit(CpuFeature feature) {
+  return 1u << static_cast<uint32_t>(feature);
+}
+
+#if FJXL_ARCH_IS_X86
+#if defined(_MSC_VER)
+void Cpuid(const uint32_t level, const uint32_t count,
+           std::array<uint32_t, 4>& abcd) {
+  int regs[4];
+  __cpuidex(regs, level, count);
+  for (int i = 0; i < 4; ++i) {
+    abcd[i] = regs[i];
+  }
+}
+uint32_t ReadXCR0() { return static_cast<uint32_t>(_xgetbv(0)); }
+#else   // _MSC_VER
+void Cpuid(const uint32_t level, const uint32_t count,
+           std::array<uint32_t, 4>& abcd) {
+  uint32_t a;
+  uint32_t b;
+  uint32_t c;
+  uint32_t d;
+  __cpuid_count(level, count, a, b, c, d);
+  abcd[0] = a;
+  abcd[1] = b;
+  abcd[2] = c;
+  abcd[3] = d;
+}
+uint32_t ReadXCR0() {
+  uint32_t xcr0;
+  uint32_t xcr0_high;
+  const uint32_t index = 0;
+  asm volatile(".byte 0x0F, 0x01, 0xD0"
+               : "=a"(xcr0), "=d"(xcr0_high)
+               : "c"(index));
+  return xcr0;
+}
+#endif  // _MSC_VER
+
+uint32_t DetectCpuFeatures() {
+  uint32_t flags = 0;  // return value
+  std::array<uint32_t, 4> abcd;
+  Cpuid(0, 0, abcd);
+  const uint32_t max_level = abcd[0];
+
+  const auto check_bit = [](uint32_t v, uint32_t idx) -> bool {
+    return (v & (1U << idx)) != 0;
+  };
+
+  // Extended features
+  if (max_level >= 7) {
+    Cpuid(7, 0, abcd);
+    flags |= check_bit(abcd[1], 5) ? CpuFeatureBit(CpuFeature::kAVX2) : 0;
+
+    flags |= check_bit(abcd[1], 16) ? CpuFeatureBit(CpuFeature::kAVX512F) : 0;
+    flags |= check_bit(abcd[1], 28) ? CpuFeatureBit(CpuFeature::kAVX512CD) : 0;
+    flags |= check_bit(abcd[1], 30) ? CpuFeatureBit(CpuFeature::kAVX512BW) : 0;
+    flags |= check_bit(abcd[1], 31) ? CpuFeatureBit(CpuFeature::kAVX512VL) : 0;
+
+    flags |= check_bit(abcd[2], 1) ? CpuFeatureBit(CpuFeature::kVBMI) : 0;
+    flags |= check_bit(abcd[2], 6) ? CpuFeatureBit(CpuFeature::kVBMI2) : 0;
+  }
+
+  Cpuid(1, 0, abcd);
+  const bool os_has_xsave = check_bit(abcd[2], 27);
+  if (os_has_xsave) {
+    const uint32_t xcr0 = ReadXCR0();
+    if (!check_bit(xcr0, 1) || !check_bit(xcr0, 2) || !check_bit(xcr0, 5) ||
+        !check_bit(xcr0, 6) || !check_bit(xcr0, 7)) {
+      flags = 0;  // TODO(eustas): be more selective?
+    }
+  }
+
+  return flags;
+}
+#else   // FJXL_ARCH_IS_X86
+uint32_t DetectCpuFeatures() { return 0; }
+#endif  // FJXL_ARCH_IS_X86
+
+#if defined(_MSC_VER)
+#define FJXL_UNUSED
+#else
+#define FJXL_UNUSED __attribute__((unused))
+#endif
+
+FJXL_UNUSED bool HasCpuFeature(CpuFeature feature) {
+  static uint32_t cpu_features = DetectCpuFeatures();
+  return (cpu_features & CpuFeatureBit(feature)) != 0;
+}
+
 #if defined(_MSC_VER) && !defined(__clang__)
 #define FJXL_INLINE __forceinline
 FJXL_INLINE uint32_t FloorLog2(uint32_t v) {
@@ -79,7 +221,9 @@ FJXL_INLINE uint32_t CtzNonZero(uint64_t v) {
 FJXL_INLINE uint32_t FloorLog2(uint32_t v) {
   return v ? 31 - __builtin_clz(v) : 0;
 }
-FJXL_INLINE uint32_t CtzNonZero(uint64_t v) { return __builtin_ctzll(v); }
+FJXL_UNUSED FJXL_INLINE uint32_t CtzNonZero(uint64_t v) {
+  return __builtin_ctzll(v);
+}
 #endif
 
 // Compiles to a memcpy on little-endian systems.
@@ -155,294 +299,81 @@ struct BitWriter {
   uint64_t buffer = 0;
 };
 
-}  // namespace
+size_t SectionSize(const std::array<BitWriter, 4>& group_data) {
+  size_t sz = 0;
+  for (size_t j = 0; j < 4; j++) {
+    const auto& writer = group_data[j];
+    sz += writer.bytes_written * 8 + writer.bits_in_buffer;
+  }
+  sz = (sz + 7) / 8;
+  return sz;
+}
 
-extern "C" {
+constexpr size_t kMaxFrameHeaderSize = 5;
 
-struct JxlFastLosslessFrameState {
-  size_t width;
-  size_t height;
-  size_t nb_chans;
-  size_t bitdepth;
-  BitWriter header;
-  std::vector<std::array<BitWriter, 4>> group_data;
-  size_t current_bit_writer = 0;
-  size_t bit_writer_byte_pos = 0;
-  size_t bits_in_buffer = 0;
-  uint64_t bit_buffer = 0;
+constexpr size_t kGroupSizeOffset[4] = {
+    static_cast<size_t>(0),
+    static_cast<size_t>(1024),
+    static_cast<size_t>(17408),
+    static_cast<size_t>(4211712),
 };
+constexpr size_t kTOCBits[4] = {12, 16, 24, 32};
 
-size_t JxlFastLosslessOutputSize(const JxlFastLosslessFrameState* frame) {
-  size_t total_size_groups = 0;
-  for (size_t i = 0; i < frame->group_data.size(); i++) {
-    size_t sz = 0;
-    for (size_t j = 0; j < frame->nb_chans; j++) {
-      const auto& writer = frame->group_data[i][j];
-      sz += writer.bytes_written * 8 + writer.bits_in_buffer;
-    }
-    sz = (sz + 7) / 8;
-    total_size_groups += sz;
-  }
-  return frame->header.bytes_written + total_size_groups;
+size_t TOCBucket(size_t group_size) {
+  size_t bucket = 0;
+  while (bucket < 3 && group_size >= kGroupSizeOffset[bucket + 1]) ++bucket;
+  return bucket;
 }
 
-size_t JxlFastLosslessMaxRequiredOutput(
-    const JxlFastLosslessFrameState* frame) {
-  return JxlFastLosslessOutputSize(frame) + 32;
+#if !FJXL_STANDALONE
+size_t TOCSize(const std::vector<size_t>& group_sizes) {
+  size_t toc_bits = 0;
+  for (size_t group_size : group_sizes) {
+    toc_bits += kTOCBits[TOCBucket(group_size)];
+  }
+  return (toc_bits + 7) / 8;
 }
 
-void JxlFastLosslessPrepareHeader(JxlFastLosslessFrameState* frame,
-                                  int add_image_header, int is_last) {
-  BitWriter* output = &frame->header;
-  output->Allocate(1000 + frame->group_data.size() * 32);
-
-  std::vector<size_t> group_sizes(frame->group_data.size());
-  for (size_t i = 0; i < frame->group_data.size(); i++) {
-    size_t sz = 0;
-    for (size_t j = 0; j < frame->nb_chans; j++) {
-      const auto& writer = frame->group_data[i][j];
-      sz += writer.bytes_written * 8 + writer.bits_in_buffer;
-    }
-    sz = (sz + 7) / 8;
-    group_sizes[i] = sz;
-  }
-
-  bool have_alpha = (frame->nb_chans == 2 || frame->nb_chans == 4);
-
-  if (add_image_header) {
-    // Signature
-    output->Write(16, 0x0AFF);
-
-    // Size header, hand-crafted.
-    // Not small
-    output->Write(1, 0);
-
-    auto wsz = [output](size_t size) {
-      if (size - 1 < (1 << 9)) {
-        output->Write(2, 0b00);
-        output->Write(9, size - 1);
-      } else if (size - 1 < (1 << 13)) {
-        output->Write(2, 0b01);
-        output->Write(13, size - 1);
-      } else if (size - 1 < (1 << 18)) {
-        output->Write(2, 0b10);
-        output->Write(18, size - 1);
-      } else {
-        output->Write(2, 0b11);
-        output->Write(30, size - 1);
-      }
-    };
-
-    wsz(frame->height);
-
-    // No special ratio.
-    output->Write(3, 0);
-
-    wsz(frame->width);
-
-    // Hand-crafted ImageMetadata.
-    output->Write(1, 0);  // all_default
-    output->Write(1, 0);  // extra_fields
-    output->Write(1, 0);  // bit_depth.floating_point_sample
-    if (frame->bitdepth == 8) {
-      output->Write(2, 0b00);  // bit_depth.bits_per_sample = 8
-    } else if (frame->bitdepth == 10) {
-      output->Write(2, 0b01);  // bit_depth.bits_per_sample = 10
-    } else if (frame->bitdepth == 12) {
-      output->Write(2, 0b10);  // bit_depth.bits_per_sample = 12
-    } else {
-      output->Write(2, 0b11);  // 1 + u(6)
-      output->Write(6, frame->bitdepth - 1);
-    }
-    if (frame->bitdepth <= 14) {
-      output->Write(1, 1);  // 16-bit-buffer sufficient
-    } else {
-      output->Write(1, 0);  // 16-bit-buffer NOT sufficient
-    }
-    if (have_alpha) {
-      output->Write(2, 0b01);  // One extra channel
-      output->Write(1, 1);     // ... all_default (ie. 8-bit alpha)
-    } else {
-      output->Write(2, 0b00);  // No extra channel
-    }
-    output->Write(1, 0);  // Not XYB
-    if (frame->nb_chans > 1) {
-      output->Write(1, 1);  // color_encoding.all_default (sRGB)
-    } else {
-      output->Write(1, 0);     // color_encoding.all_default false
-      output->Write(1, 0);     // color_encoding.want_icc false
-      output->Write(2, 1);     // grayscale
-      output->Write(2, 1);     // D65
-      output->Write(1, 0);     // no gamma transfer function
-      output->Write(2, 0b10);  // tf: 2 + u(4)
-      output->Write(4, 11);    // tf of sRGB
-      output->Write(2, 1);     // relative rendering intent
-    }
-    output->Write(2, 0b00);  // No extensions.
-
-    output->Write(1, 1);  // all_default transform data
-
-    // No ICC, no preview. Frame should start at byte boundery.
-    output->ZeroPadToByte();
-  }
-
-  // Handcrafted frame header.
-  output->Write(1, 0);     // all_default
-  output->Write(2, 0b00);  // regular frame
-  output->Write(1, 1);     // modular
-  output->Write(2, 0b00);  // default flags
-  output->Write(1, 0);     // not YCbCr
-  output->Write(2, 0b00);  // no upsampling
-  if (have_alpha) {
-    output->Write(2, 0b00);  // no alpha upsampling
-  }
-  output->Write(2, 0b01);  // default group size
-  output->Write(2, 0b00);  // exactly one pass
-  output->Write(1, 0);     // no custom size or origin
-  output->Write(2, 0b00);  // kReplace blending mode
-  if (have_alpha) {
-    output->Write(2, 0b00);  // kReplace blending mode for alpha channel
-  }
-  output->Write(1, is_last);  // is_last
-  output->Write(2, 0b00);     // a frame has no name
-  output->Write(1, 0);        // loop filter is not all_default
-  output->Write(1, 0);        // no gaborish
-  output->Write(2, 0);        // 0 EPF iters
-  output->Write(2, 0b00);     // No LF extensions
-  output->Write(2, 0b00);     // No FH extensions
-
-  output->Write(1, 0);      // No TOC permutation
-  output->ZeroPadToByte();  // TOC is byte-aligned.
-  for (size_t i = 0; i < frame->group_data.size(); i++) {
-    size_t sz = group_sizes[i];
-    if (sz < (1 << 10)) {
-      output->Write(2, 0b00);
-      output->Write(10, sz);
-    } else if (sz - 1024 < (1 << 14)) {
-      output->Write(2, 0b01);
-      output->Write(14, sz - 1024);
-    } else if (sz - 17408 < (1 << 22)) {
-      output->Write(2, 0b10);
-      output->Write(22, sz - 17408);
-    } else {
-      output->Write(2, 0b11);
-      output->Write(30, sz - 4211712);
-    }
-  }
-  output->ZeroPadToByte();  // Groups are byte-aligned.
-}
-
-#if FJXL_ENABLE_AVX512
-__attribute__((target("avx512vbmi2"))) static size_t AppendBytesWithBitOffset(
-    const uint8_t* data, size_t n, size_t bit_buffer_nbits,
-    unsigned char* output, uint64_t& bit_buffer) {
-  if (n < 128) {
-    return 0;
-  }
-
-  size_t i = 0;
-  __m512i shift = _mm512_set1_epi64(64 - bit_buffer_nbits);
-  __m512i carry = _mm512_set1_epi64(bit_buffer << (64 - bit_buffer_nbits));
-
-  for (; i + 64 <= n; i += 64) {
-    __m512i current = _mm512_loadu_si512(data + i);
-    __m512i previous_u64 = _mm512_alignr_epi64(current, carry, 7);
-    carry = current;
-    __m512i out = _mm512_shrdv_epi64(previous_u64, current, shift);
-    _mm512_storeu_si512(output + i, out);
-  }
-
-  bit_buffer = data[i - 1] >> (8 - bit_buffer_nbits);
-
-  return i;
+size_t FrameHeaderSize(bool have_alpha, bool is_last) {
+  size_t nbits = 28 + (have_alpha ? 4 : 0) + (is_last ? 0 : 2);
+  return (nbits + 7) / 8;
 }
 #endif
 
-size_t JxlFastLosslessWriteOutput(JxlFastLosslessFrameState* frame,
-                                  unsigned char* output, size_t output_size) {
-  assert(output_size >= 32);
-  unsigned char* initial_output = output;
-  size_t (*append_bytes_with_bit_offset)(const uint8_t*, size_t, size_t,
-                                         unsigned char*, uint64_t&) = nullptr;
-
-#if FJXL_ENABLE_AVX512
-  if (__builtin_cpu_supports("avx512vbmi2")) {
-    append_bytes_with_bit_offset = AppendBytesWithBitOffset;
+void ComputeAcGroupDataOffset(size_t dc_global_size, size_t num_dc_groups,
+                              size_t num_ac_groups, size_t& min_dc_global_size,
+                              size_t& ac_group_offset) {
+  // Max AC group size is 768 kB, so max AC group TOC bits is 24.
+  size_t ac_toc_max_bits = num_ac_groups * 24;
+  size_t ac_toc_min_bits = num_ac_groups * 12;
+  size_t max_padding = 1 + (ac_toc_max_bits - ac_toc_min_bits + 7) / 8;
+  min_dc_global_size = dc_global_size;
+  size_t dc_global_bucket = TOCBucket(min_dc_global_size);
+  while (TOCBucket(min_dc_global_size + max_padding) > dc_global_bucket) {
+    dc_global_bucket = TOCBucket(min_dc_global_size + max_padding);
+    min_dc_global_size = kGroupSizeOffset[dc_global_bucket];
   }
-#endif
-
-  while (true) {
-    size_t& cur = frame->current_bit_writer;
-    size_t& bw_pos = frame->bit_writer_byte_pos;
-    if (cur >= 1 + frame->group_data.size() * frame->nb_chans) {
-      return output - initial_output;
-    }
-    if (output_size <= 8) {
-      return output - initial_output;
-    }
-    size_t nbc = frame->nb_chans;
-    const BitWriter& writer =
-        cur == 0 ? frame->header
-                 : frame->group_data[(cur - 1) / nbc][(cur - 1) % nbc];
-    size_t full_byte_count =
-        std::min(output_size - 8, writer.bytes_written - bw_pos);
-    if (frame->bits_in_buffer == 0) {
-      memcpy(output, writer.data.get() + bw_pos, full_byte_count);
-    } else {
-      size_t i = 0;
-      if (append_bytes_with_bit_offset) {
-        i += append_bytes_with_bit_offset(
-            writer.data.get() + bw_pos, full_byte_count, frame->bits_in_buffer,
-            output, frame->bit_buffer);
-      }
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-      // Copy 8 bytes at a time until we reach the border.
-      for (; i + 8 < full_byte_count; i += 8) {
-        uint64_t chunk;
-        memcpy(&chunk, writer.data.get() + bw_pos + i, 8);
-        uint64_t out = frame->bit_buffer | (chunk << frame->bits_in_buffer);
-        memcpy(output + i, &out, 8);
-        frame->bit_buffer = chunk >> (64 - frame->bits_in_buffer);
-      }
-#endif
-      for (; i < full_byte_count; i++) {
-        AddBits(8, writer.data.get()[bw_pos + i], output + i,
-                frame->bits_in_buffer, frame->bit_buffer);
-      }
-    }
-    output += full_byte_count;
-    output_size -= full_byte_count;
-    bw_pos += full_byte_count;
-    if (bw_pos == writer.bytes_written) {
-      auto write = [&](size_t num, uint64_t bits) {
-        size_t n = AddBits(num, bits, output, frame->bits_in_buffer,
-                           frame->bit_buffer);
-        output += n;
-        output_size -= n;
-      };
-      if (writer.bits_in_buffer) {
-        write(writer.bits_in_buffer, writer.buffer);
-      }
-      bw_pos = 0;
-      cur++;
-      if ((cur - 1) % nbc == 0 && frame->bits_in_buffer != 0) {
-        write(8 - frame->bits_in_buffer, 0);
-      }
-    }
-  }
+  assert(TOCBucket(min_dc_global_size) == dc_global_bucket);
+  assert(TOCBucket(min_dc_global_size + max_padding) == dc_global_bucket);
+  size_t max_toc_bits =
+      kTOCBits[dc_global_bucket] + 12 * (1 + num_dc_groups) + ac_toc_max_bits;
+  size_t max_toc_size = (max_toc_bits + 7) / 8;
+  ac_group_offset = kMaxFrameHeaderSize + max_toc_size + min_dc_global_size;
 }
 
-void JxlFastLosslessFreeFrameState(JxlFastLosslessFrameState* frame) {
-  delete frame;
+#if !FJXL_STANDALONE
+size_t ComputeDcGlobalPadding(const std::vector<size_t>& group_sizes,
+                              size_t ac_group_data_offset,
+                              size_t min_dc_global_size, bool have_alpha,
+                              bool is_last) {
+  std::vector<size_t> new_group_sizes = group_sizes;
+  new_group_sizes[0] = min_dc_global_size;
+  size_t toc_size = TOCSize(new_group_sizes);
+  size_t actual_offset =
+      FrameHeaderSize(have_alpha, is_last) + toc_size + group_sizes[0];
+  return ac_group_data_offset - actual_offset;
 }
-
-}  // extern "C"
-
 #endif
-
-#ifdef FJXL_SELF_INCLUDE
-
-namespace {
 
 constexpr size_t kNumRawSymbols = 19;
 constexpr size_t kNumLZ77 = 33;
@@ -464,14 +395,13 @@ struct PrefixCode {
   uint8_t raw_nbits[kNumRawSymbols] = {};
   uint8_t raw_bits[kNumRawSymbols] = {};
 
-  alignas(64) uint8_t raw_nbits_simd[16] = {};
-  alignas(64) uint8_t raw_bits_simd[16] = {};
-
   uint8_t lz77_nbits[kNumLZ77] = {};
   uint16_t lz77_bits[kNumLZ77] = {};
 
   uint64_t lz77_cache_bits[kLZ77CacheSize] = {};
   uint8_t lz77_cache_nbits[kLZ77CacheSize] = {};
+
+  size_t numraw;
 
   static uint16_t BitReverse(size_t nbits, uint16_t bits) {
     constexpr uint16_t kNibbleLookup[16] = {
@@ -527,9 +457,11 @@ struct PrefixCode {
   template <typename T>
   static void ComputeCodeLengthsNonZeroImpl(const uint64_t* freqs, size_t n,
                                             size_t precision, T infty,
-                                            uint8_t* min_limit,
-                                            uint8_t* max_limit,
+                                            const uint8_t* min_limit,
+                                            const uint8_t* max_limit,
                                             uint8_t* nbits) {
+    assert(precision < 15);
+    assert(n <= kMaxNumSymbols);
     std::vector<T> dynp(((1U << precision) + 1) * (n + 1), infty);
     auto d = [&](size_t sym, size_t off) -> T& {
       return dynp[sym * ((1 << precision) + 1) + off];
@@ -627,15 +559,16 @@ struct PrefixCode {
   }
 
   // Invalid code, used to construct arrays.
-  PrefixCode() {}
+  PrefixCode() = default;
 
   template <typename BitDepth>
-  PrefixCode(BitDepth, uint64_t* raw_counts, uint64_t* lz77_counts) {
+  PrefixCode(BitDepth /* bitdepth */, uint64_t* raw_counts,
+             uint64_t* lz77_counts) {
     // "merge" together all the lz77 counts in a single symbol for the level 1
     // table (containing just the raw symbols, up to length 7).
     uint64_t level1_counts[kNumRawSymbols + 1];
     memcpy(level1_counts, raw_counts, kNumRawSymbols * sizeof(uint64_t));
-    size_t numraw = kNumRawSymbols;
+    numraw = kNumRawSymbols;
     while (numraw > 0 && level1_counts[numraw - 1] == 0) numraw--;
 
     level1_counts[numraw] = 0;
@@ -650,8 +583,8 @@ struct PrefixCode {
     uint8_t min_lengths[kNumLZ77] = {};
     uint8_t l = 15 - level1_nbits[numraw];
     uint8_t max_lengths[kNumLZ77];
-    for (size_t i = 0; i < kNumLZ77; i++) {
-      max_lengths[i] = l;
+    for (uint8_t& max_length : max_lengths) {
+      max_length = l;
     }
     size_t num_lz77 = kNumLZ77;
     while (num_lz77 > 0 && lz77_counts[num_lz77 - 1] == 0) num_lz77--;
@@ -667,8 +600,6 @@ struct PrefixCode {
 
     ComputeCanonicalCode(raw_nbits, raw_bits, numraw, lz77_nbits, lz77_bits,
                          kNumLZ77);
-    BitDepth::PrepareForSimd(raw_nbits, raw_bits, numraw, raw_nbits_simd,
-                             raw_bits_simd);
 
     // Prepare lz77 cache
     for (size_t count = 0; count < kLZ77CacheSize; count++) {
@@ -681,14 +612,15 @@ struct PrefixCode {
     }
   }
 
+  // Max bits written: 2 + 72 + 95 + 24 + 165 = 286
   void WriteTo(BitWriter* writer) const {
     uint64_t code_length_counts[18] = {};
     code_length_counts[17] = 3 + 2 * (kNumLZ77 - 1);
-    for (size_t i = 0; i < kNumRawSymbols; i++) {
-      code_length_counts[raw_nbits[i]]++;
+    for (uint8_t raw_nbit : raw_nbits) {
+      code_length_counts[raw_nbit]++;
     }
-    for (size_t i = 0; i < kNumLZ77; i++) {
-      code_length_counts[lz77_nbits[i]]++;
+    for (uint8_t lz77_nbit : lz77_nbits) {
+      code_length_counts[lz77_nbit]++;
     }
     uint8_t code_length_nbits[18] = {};
     uint8_t code_length_nbits_min[18] = {};
@@ -710,6 +642,7 @@ struct PrefixCode {
     while (code_length_nbits[code_length_order[num_code_lengths - 1]] == 0) {
       num_code_lengths--;
     }
+    // Max bits written in this loop: 18 * 4 = 72
     for (size_t i = 0; i < num_code_lengths; i++) {
       int symbol = code_length_nbits[code_length_order[i]];
       writer->Write(code_length_length_nbits[symbol],
@@ -722,9 +655,9 @@ struct PrefixCode {
     ComputeCanonicalCode(nullptr, nullptr, 0, code_length_nbits,
                          code_length_bits, 18);
     // Encode raw bit code lengths.
-    for (size_t i = 0; i < kNumRawSymbols; i++) {
-      writer->Write(code_length_nbits[raw_nbits[i]],
-                    code_length_bits[raw_nbits[i]]);
+    // Max bits written in this loop: 19 * 5 = 95
+    for (uint8_t raw_nbit : raw_nbits) {
+      writer->Write(code_length_nbits[raw_nbit], code_length_bits[raw_nbit]);
     }
     size_t num_lz77 = kNumLZ77;
     while (lz77_nbits[num_lz77 - 1] == 0) {
@@ -732,21 +665,337 @@ struct PrefixCode {
     }
     // Encode 0s until 224 (start of LZ77 symbols). This is in total 224-19 =
     // 205.
-    static_assert(kLZ77Offset == 224, "");
-    static_assert(kNumRawSymbols == 19, "");
-    writer->Write(code_length_nbits[17], code_length_bits[17]);
-    writer->Write(3, 0b010);  // 5
-    writer->Write(code_length_nbits[17], code_length_bits[17]);
-    writer->Write(3, 0b000);  // (5-2)*8 + 3 = 27
-    writer->Write(code_length_nbits[17], code_length_bits[17]);
-    writer->Write(3, 0b010);  // (27-2)*8 + 5 = 205
+    static_assert(kLZ77Offset == 224);
+    static_assert(kNumRawSymbols == 19);
+    {
+      // Max bits in this block: 24
+      writer->Write(code_length_nbits[17], code_length_bits[17]);
+      writer->Write(3, 0b010);  // 5
+      writer->Write(code_length_nbits[17], code_length_bits[17]);
+      writer->Write(3, 0b000);  // (5-2)*8 + 3 = 27
+      writer->Write(code_length_nbits[17], code_length_bits[17]);
+      writer->Write(3, 0b010);  // (27-2)*8 + 5 = 205
+    }
     // Encode LZ77 symbols, with values 224+i.
+    // Max bits written in this loop: 33 * 5 = 165
     for (size_t i = 0; i < num_lz77; i++) {
       writer->Write(code_length_nbits[lz77_nbits[i]],
                     code_length_bits[lz77_nbits[i]]);
     }
   }
 };
+
+}  // namespace
+
+extern "C" {
+
+struct JxlFastLosslessFrameState {
+  JxlChunkedFrameInputSource input;
+  size_t width;
+  size_t height;
+  size_t num_groups_x;
+  size_t num_groups_y;
+  size_t num_dc_groups_x;
+  size_t num_dc_groups_y;
+  size_t nb_chans;
+  size_t bitdepth;
+  int big_endian;
+  int effort;
+  bool collided;
+  PrefixCode hcode[4];
+  std::vector<int16_t> lookup;
+  BitWriter header;
+  std::vector<std::array<BitWriter, 4>> group_data;
+  std::vector<size_t> group_sizes;
+  size_t ac_group_data_offset = 0;
+  size_t min_dc_global_size = 0;
+  size_t current_bit_writer = 0;
+  size_t bit_writer_byte_pos = 0;
+  size_t bits_in_buffer = 0;
+  uint64_t bit_buffer = 0;
+  bool process_done = false;
+};
+
+size_t JxlFastLosslessOutputSize(const JxlFastLosslessFrameState* frame) {
+  size_t total_size_groups = 0;
+  for (const auto& section : frame->group_data) {
+    total_size_groups += SectionSize(section);
+  }
+  return frame->header.bytes_written + total_size_groups;
+}
+
+size_t JxlFastLosslessMaxRequiredOutput(
+    const JxlFastLosslessFrameState* frame) {
+  return JxlFastLosslessOutputSize(frame) + 32;
+}
+
+void JxlFastLosslessPrepareHeader(JxlFastLosslessFrameState* frame,
+                                  int add_image_header, int is_last) {
+  BitWriter* output = &frame->header;
+  output->Allocate(1000 + frame->group_sizes.size() * 32);
+
+  bool have_alpha = (frame->nb_chans == 2 || frame->nb_chans == 4);
+
+#if FJXL_STANDALONE
+  if (add_image_header) {
+    // Signature
+    output->Write(16, 0x0AFF);
+
+    // Size header, hand-crafted.
+    // Not small
+    output->Write(1, 0);
+
+    auto wsz = [output](size_t size) {
+      if (size - 1 < (1 << 9)) {
+        output->Write(2, 0b00);
+        output->Write(9, size - 1);
+      } else if (size - 1 < (1 << 13)) {
+        output->Write(2, 0b01);
+        output->Write(13, size - 1);
+      } else if (size - 1 < (1 << 18)) {
+        output->Write(2, 0b10);
+        output->Write(18, size - 1);
+      } else {
+        output->Write(2, 0b11);
+        output->Write(30, size - 1);
+      }
+    };
+
+    wsz(frame->height);
+
+    // No special ratio.
+    output->Write(3, 0);
+
+    wsz(frame->width);
+
+    // Hand-crafted ImageMetadata.
+    output->Write(1, 0);  // all_default
+    output->Write(1, 0);  // extra_fields
+    output->Write(1, 0);  // bit_depth.floating_point_sample
+    if (frame->bitdepth == 8) {
+      output->Write(2, 0b00);  // bit_depth.bits_per_sample = 8
+    } else if (frame->bitdepth == 10) {
+      output->Write(2, 0b01);  // bit_depth.bits_per_sample = 10
+    } else if (frame->bitdepth == 12) {
+      output->Write(2, 0b10);  // bit_depth.bits_per_sample = 12
+    } else {
+      output->Write(2, 0b11);  // 1 + u(6)
+      output->Write(6, frame->bitdepth - 1);
+    }
+    if (frame->bitdepth <= 14) {
+      output->Write(1, 1);  // 16-bit-buffer sufficient
+    } else {
+      output->Write(1, 0);  // 16-bit-buffer NOT sufficient
+    }
+    if (have_alpha) {
+      output->Write(2, 0b01);  // One extra channel
+      output->Write(1, 1);     // ... all_default (ie. 8-bit alpha)
+    } else {
+      output->Write(2, 0b00);  // No extra channel
+    }
+    output->Write(1, 0);  // Not XYB
+    if (frame->nb_chans > 2) {
+      output->Write(1, 1);  // color_encoding.all_default (sRGB)
+    } else {
+      output->Write(1, 0);     // color_encoding.all_default false
+      output->Write(1, 0);     // color_encoding.want_icc false
+      output->Write(2, 1);     // grayscale
+      output->Write(2, 1);     // D65
+      output->Write(1, 0);     // no gamma transfer function
+      output->Write(2, 0b10);  // tf: 2 + u(4)
+      output->Write(4, 11);    // tf of sRGB
+      output->Write(2, 1);     // relative rendering intent
+    }
+    output->Write(2, 0b00);  // No extensions.
+
+    output->Write(1, 1);  // all_default transform data
+
+    // No ICC, no preview. Frame should start at byte boundary.
+    output->ZeroPadToByte();
+  }
+#else
+  assert(!add_image_header);
+#endif
+  // Handcrafted frame header.
+  output->Write(1, 0);     // all_default
+  output->Write(2, 0b00);  // regular frame
+  output->Write(1, 1);     // modular
+  output->Write(2, 0b00);  // default flags
+  output->Write(1, 0);     // not YCbCr
+  output->Write(2, 0b00);  // no upsampling
+  if (have_alpha) {
+    output->Write(2, 0b00);  // no alpha upsampling
+  }
+  output->Write(2, 0b01);  // default group size
+  output->Write(2, 0b00);  // exactly one pass
+  output->Write(1, 0);     // no custom size or origin
+  output->Write(2, 0b00);  // kReplace blending mode
+  if (have_alpha) {
+    output->Write(2, 0b00);  // kReplace blending mode for alpha channel
+  }
+  output->Write(1, is_last);  // is_last
+  if (!is_last) {
+    output->Write(2, 0b00);  // can not be saved as reference
+  }
+  output->Write(2, 0b00);  // a frame has no name
+  output->Write(1, 0);     // loop filter is not all_default
+  output->Write(1, 0);     // no gaborish
+  output->Write(2, 0);     // 0 EPF iters
+  output->Write(2, 0b00);  // No LF extensions
+  output->Write(2, 0b00);  // No FH extensions
+
+  output->Write(1, 0);      // No TOC permutation
+  output->ZeroPadToByte();  // TOC is byte-aligned.
+  assert(add_image_header || output->bytes_written <= kMaxFrameHeaderSize);
+  for (size_t group_size : frame->group_sizes) {
+    size_t bucket = TOCBucket(group_size);
+    output->Write(2, bucket);
+    output->Write(kTOCBits[bucket] - 2, group_size - kGroupSizeOffset[bucket]);
+  }
+  output->ZeroPadToByte();  // Groups are byte-aligned.
+}
+
+#if !FJXL_STANDALONE
+bool JxlFastLosslessOutputAlignedSection(
+    const BitWriter& bw, JxlEncoderOutputProcessorWrapper* output_processor) {
+  assert(bw.bits_in_buffer == 0);
+  const uint8_t* data = bw.data.get();
+  size_t remaining_len = bw.bytes_written;
+  while (remaining_len > 0) {
+    JXL_ASSIGN_OR_RETURN(auto buffer,
+                         output_processor->GetBuffer(1, remaining_len));
+    size_t n = std::min(buffer.size(), remaining_len);
+    if (n == 0) break;
+    memcpy(buffer.data(), data, n);
+    JXL_RETURN_IF_ERROR(buffer.advance(n));
+    data += n;
+    remaining_len -= n;
+  };
+  return true;
+}
+
+bool JxlFastLosslessOutputHeaders(
+    JxlFastLosslessFrameState* frame_state,
+    JxlEncoderOutputProcessorWrapper* output_processor) {
+  JXL_RETURN_IF_ERROR(JxlFastLosslessOutputAlignedSection(frame_state->header,
+                                                          output_processor));
+  JXL_RETURN_IF_ERROR(JxlFastLosslessOutputAlignedSection(
+      frame_state->group_data[0][0], output_processor));
+  return true;
+}
+#endif
+
+#if FJXL_ENABLE_AVX512
+__attribute__((target("avx512vbmi2"))) static size_t AppendBytesWithBitOffset(
+    const uint8_t* data, size_t n, size_t bit_buffer_nbits,
+    unsigned char* output, uint64_t& bit_buffer) {
+  if (n < 128) {
+    return 0;
+  }
+
+  size_t i = 0;
+  __m512i shift = _mm512_set1_epi64(64 - bit_buffer_nbits);
+  __m512i carry = _mm512_set1_epi64(bit_buffer << (64 - bit_buffer_nbits));
+
+  for (; i + 64 <= n; i += 64) {
+    __m512i current = _mm512_loadu_si512(data + i);
+    __m512i previous_u64 = _mm512_alignr_epi64(current, carry, 7);
+    carry = current;
+    __m512i out = _mm512_shrdv_epi64(previous_u64, current, shift);
+    _mm512_storeu_si512(output + i, out);
+  }
+
+  bit_buffer = data[i - 1] >> (8 - bit_buffer_nbits);
+
+  return i;
+}
+#endif
+
+size_t JxlFastLosslessWriteOutput(JxlFastLosslessFrameState* frame,
+                                  unsigned char* output, size_t output_size) {
+  assert(output_size >= 32);
+  unsigned char* initial_output = output;
+  size_t (*append_bytes_with_bit_offset)(const uint8_t*, size_t, size_t,
+                                         unsigned char*, uint64_t&) = nullptr;
+
+#if FJXL_ENABLE_AVX512
+  if (HasCpuFeature(CpuFeature::kVBMI2)) {
+    append_bytes_with_bit_offset = AppendBytesWithBitOffset;
+  }
+#endif
+
+  while (true) {
+    size_t& cur = frame->current_bit_writer;
+    size_t& bw_pos = frame->bit_writer_byte_pos;
+    if (cur >= 1 + frame->group_data.size() * frame->nb_chans) {
+      return output - initial_output;
+    }
+    if (output_size <= 9) {
+      return output - initial_output;
+    }
+    size_t nbc = frame->nb_chans;
+    const BitWriter& writer =
+        cur == 0 ? frame->header
+                 : frame->group_data[(cur - 1) / nbc][(cur - 1) % nbc];
+    size_t full_byte_count =
+        std::min(output_size - 9, writer.bytes_written - bw_pos);
+    if (frame->bits_in_buffer == 0) {
+      memcpy(output, writer.data.get() + bw_pos, full_byte_count);
+    } else {
+      size_t i = 0;
+      if (append_bytes_with_bit_offset) {
+        i += append_bytes_with_bit_offset(
+            writer.data.get() + bw_pos, full_byte_count, frame->bits_in_buffer,
+            output, frame->bit_buffer);
+      }
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+      // Copy 8 bytes at a time until we reach the border.
+      for (; i + 8 < full_byte_count; i += 8) {
+        uint64_t chunk;
+        memcpy(&chunk, writer.data.get() + bw_pos + i, 8);
+        uint64_t out = frame->bit_buffer | (chunk << frame->bits_in_buffer);
+        memcpy(output + i, &out, 8);
+        frame->bit_buffer = chunk >> (64 - frame->bits_in_buffer);
+      }
+#endif
+      for (; i < full_byte_count; i++) {
+        AddBits(8, writer.data.get()[bw_pos + i], output + i,
+                frame->bits_in_buffer, frame->bit_buffer);
+      }
+    }
+    output += full_byte_count;
+    output_size -= full_byte_count;
+    bw_pos += full_byte_count;
+    if (bw_pos == writer.bytes_written) {
+      auto write = [&](size_t num, uint64_t bits) {
+        size_t n = AddBits(num, bits, output, frame->bits_in_buffer,
+                           frame->bit_buffer);
+        output += n;
+        output_size -= n;
+      };
+      if (writer.bits_in_buffer) {
+        write(writer.bits_in_buffer, writer.buffer);
+      }
+      bw_pos = 0;
+      cur++;
+      if ((cur - 1) % nbc == 0 && frame->bits_in_buffer != 0) {
+        write(8 - frame->bits_in_buffer, 0);
+      }
+    }
+  }
+}
+
+void JxlFastLosslessFreeFrameState(JxlFastLosslessFrameState* frame) {
+  delete frame;
+}
+
+}  // extern "C"
+
+#endif
+
+#ifdef FJXL_SELF_INCLUDE
+
+namespace {
 
 template <typename T>
 struct VecPair {
@@ -1012,13 +1261,13 @@ struct SIMDVec16 {
     __m512i rg = _mm512_permutexvar_epi64(
         permuteidx, _mm512_packus_epi32(_mm512_and_si512(bytes1, rg_mask),
                                         _mm512_and_si512(bytes2, rg_mask)));
-    __m512i ba = _mm512_permutexvar_epi64(
+    __m512i b_a = _mm512_permutexvar_epi64(
         permuteidx, _mm512_packus_epi32(_mm512_srli_epi32(bytes1, 16),
                                         _mm512_srli_epi32(bytes2, 16)));
     __m512i r = _mm512_and_si512(rg, _mm512_set1_epi16(0xFF));
     __m512i g = _mm512_srli_epi16(rg, 8);
-    __m512i b = _mm512_and_si512(ba, _mm512_set1_epi16(0xFF));
-    __m512i a = _mm512_srli_epi16(ba, 8);
+    __m512i b = _mm512_and_si512(b_a, _mm512_set1_epi16(0xFF));
+    __m512i a = _mm512_srli_epi16(b_a, 8);
     return {SIMDVec16{r}, SIMDVec16{g}, SIMDVec16{b}, SIMDVec16{a}};
   }
   static std::array<SIMDVec16, 4> LoadRGBA16(const unsigned char* data) {
@@ -1200,7 +1449,7 @@ struct Mask32 {
   SIMDVec32 IfThenElse(const SIMDVec32& if_true, const SIMDVec32& if_false);
   size_t CountPrefix() const {
     return CtzNonZero(~static_cast<uint64_t>(
-        (uint8_t)_mm256_movemask_ps(_mm256_castsi256_ps(mask))));
+        static_cast<uint8_t>(_mm256_movemask_ps(_mm256_castsi256_ps(mask)))));
   }
 };
 
@@ -1219,46 +1468,10 @@ struct SIMDVec32 {
     return SIMDVec32{_mm256_set1_epi32(v)};
   }
   FJXL_INLINE SIMDVec32 ValToToken() const {
-    // we know that each value has at most 20 bits, so we just need 5 nibbles
-    // and don't need to mask the fifth. However we do need to set the higher
-    // bytes to 0xFF, which will make table lookups return 0.
-    auto nibble0 =
-        _mm256_or_si256(_mm256_and_si256(vec, _mm256_set1_epi32(0xF)),
-                        _mm256_set1_epi32(0xFFFFFF00));
-    auto nibble1 = _mm256_or_si256(
-        _mm256_and_si256(_mm256_srli_epi32(vec, 4), _mm256_set1_epi32(0xF)),
-        _mm256_set1_epi32(0xFFFFFF00));
-    auto nibble2 = _mm256_or_si256(
-        _mm256_and_si256(_mm256_srli_epi32(vec, 8), _mm256_set1_epi32(0xF)),
-        _mm256_set1_epi32(0xFFFFFF00));
-    auto nibble3 = _mm256_or_si256(
-        _mm256_and_si256(_mm256_srli_epi32(vec, 12), _mm256_set1_epi32(0xF)),
-        _mm256_set1_epi32(0xFFFFFF00));
-    auto nibble4 = _mm256_or_si256(_mm256_srli_epi32(vec, 16),
-                                   _mm256_set1_epi32(0xFFFFFF00));
-
-    auto lut0 = _mm256_broadcastsi128_si256(
-        _mm_setr_epi8(0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4));
-    auto lut1 = _mm256_broadcastsi128_si256(
-        _mm_setr_epi8(0, 5, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8));
-    auto lut2 = _mm256_broadcastsi128_si256(_mm_setr_epi8(
-        0, 9, 10, 10, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12));
-    auto lut3 = _mm256_broadcastsi128_si256(_mm_setr_epi8(
-        0, 13, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16));
-    auto lut4 = _mm256_broadcastsi128_si256(_mm_setr_epi8(
-        0, 17, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 20));
-
-    auto token0 = _mm256_shuffle_epi8(lut0, nibble0);
-    auto token1 = _mm256_shuffle_epi8(lut1, nibble1);
-    auto token2 = _mm256_shuffle_epi8(lut2, nibble2);
-    auto token3 = _mm256_shuffle_epi8(lut3, nibble3);
-    auto token4 = _mm256_shuffle_epi8(lut4, nibble4);
-
-    auto token =
-        _mm256_max_epi32(_mm256_max_epi32(_mm256_max_epi32(token0, token1),
-                                          _mm256_max_epi32(token2, token3)),
-                         token4);
-    return SIMDVec32{token};
+    auto f32 = _mm256_castps_si256(_mm256_cvtepi32_ps(vec));
+    return SIMDVec32{_mm256_max_epi32(
+        _mm256_setzero_si256(),
+        _mm256_sub_epi32(_mm256_srli_epi32(f32, 23), _mm256_set1_epi32(126)))};
   }
   FJXL_INLINE SIMDVec32 SatSubU(const SIMDVec32& to_subtract) const {
     return SIMDVec32{_mm256_sub_epi32(_mm256_max_epu32(vec, to_subtract.vec),
@@ -1297,8 +1510,8 @@ struct Mask16 {
     return Mask16{_mm256_and_si256(mask, oth.mask)};
   }
   size_t CountPrefix() const {
-    return CtzNonZero(
-               ~static_cast<uint64_t>((uint32_t)_mm256_movemask_epi8(mask))) /
+    return CtzNonZero(~static_cast<uint64_t>(
+               static_cast<uint32_t>(_mm256_movemask_epi8(mask)))) /
            2;
   }
 };
@@ -1551,14 +1764,14 @@ struct SIMDVec16 {
         _mm256_packus_epi32(_mm256_and_si256(bytes1, rg_mask),
                             _mm256_and_si256(bytes2, rg_mask)),
         0b11011000);
-    __m256i ba = _mm256_permute4x64_epi64(
+    __m256i b_a = _mm256_permute4x64_epi64(
         _mm256_packus_epi32(_mm256_srli_epi32(bytes1, 16),
                             _mm256_srli_epi32(bytes2, 16)),
         0b11011000);
     __m256i r = _mm256_and_si256(rg, _mm256_set1_epi16(0xFF));
     __m256i g = _mm256_srli_epi16(rg, 8);
-    __m256i b = _mm256_and_si256(ba, _mm256_set1_epi16(0xFF));
-    __m256i a = _mm256_srli_epi16(ba, 8);
+    __m256i b = _mm256_and_si256(b_a, _mm256_set1_epi16(0xFF));
+    __m256i a = _mm256_srli_epi16(b_a, 8);
     return {SIMDVec16{r}, SIMDVec16{g}, SIMDVec16{b}, SIMDVec16{a}};
   }
   static std::array<SIMDVec16, 4> LoadRGBA16(const unsigned char* data) {
@@ -2087,19 +2300,22 @@ FJXL_INLINE void TokenizeSIMD(const uint32_t* residuals, uint16_t* token_out,
 }
 
 FJXL_INLINE void HuffmanSIMDUpTo13(const uint16_t* tokens,
-                                   const PrefixCode& code, uint16_t* nbits_out,
-                                   uint16_t* bits_out) {
+                                   const uint8_t* raw_nbits_simd,
+                                   const uint8_t* raw_bits_simd,
+                                   uint16_t* nbits_out, uint16_t* bits_out) {
   SIMDVec16 tok = SIMDVec16::Load(tokens).PrepareForU8Lookup();
-  tok.U8Lookup(code.raw_nbits_simd).Store(nbits_out);
-  tok.U8Lookup(code.raw_bits_simd).Store(bits_out);
+  tok.U8Lookup(raw_nbits_simd).Store(nbits_out);
+  tok.U8Lookup(raw_bits_simd).Store(bits_out);
 }
 
-FJXL_INLINE void HuffmanSIMD14(const uint16_t* tokens, const PrefixCode& code,
+FJXL_INLINE void HuffmanSIMD14(const uint16_t* tokens,
+                               const uint8_t* raw_nbits_simd,
+                               const uint8_t* raw_bits_simd,
                                uint16_t* nbits_out, uint16_t* bits_out) {
   SIMDVec16 token_cap = SIMDVec16::Val(15);
   SIMDVec16 tok = SIMDVec16::Load(tokens);
   SIMDVec16 tok_index = tok.Min(token_cap).PrepareForU8Lookup();
-  SIMDVec16 huff_bits_pre = tok_index.U8Lookup(code.raw_bits_simd);
+  SIMDVec16 huff_bits_pre = tok_index.U8Lookup(raw_bits_simd);
   // Set the highest bit when token == 16; the Huffman code is constructed in
   // such a way that the code for token 15 is the same as the code for 16,
   // except for the highest bit.
@@ -2107,12 +2323,13 @@ FJXL_INLINE void HuffmanSIMD14(const uint16_t* tokens, const PrefixCode& code,
   SIMDVec16 huff_bits = needs_high_bit.IfThenElse(
       huff_bits_pre.Or(SIMDVec16::Val(128)), huff_bits_pre);
   huff_bits.Store(bits_out);
-  tok_index.U8Lookup(code.raw_nbits_simd).Store(nbits_out);
+  tok_index.U8Lookup(raw_nbits_simd).Store(nbits_out);
 }
 
 FJXL_INLINE void HuffmanSIMDAbove14(const uint16_t* tokens,
-                                    const PrefixCode& code, uint16_t* nbits_out,
-                                    uint16_t* bits_out) {
+                                    const uint8_t* raw_nbits_simd,
+                                    const uint8_t* raw_bits_simd,
+                                    uint16_t* nbits_out, uint16_t* bits_out) {
   SIMDVec16 tok = SIMDVec16::Load(tokens);
   // We assume `tok` fits in a *signed* 16-bit integer.
   Mask16 above = tok.Gt(SIMDVec16::Val(12));
@@ -2121,13 +2338,13 @@ FJXL_INLINE void HuffmanSIMDAbove14(const uint16_t* tokens,
   // 17, 18 -> 15
   SIMDVec16 remap_tok = above.IfThenElse(tok.HAdd(SIMDVec16::Val(13)), tok);
   SIMDVec16 tok_index = remap_tok.PrepareForU8Lookup();
-  SIMDVec16 huff_bits_pre = tok_index.U8Lookup(code.raw_bits_simd);
+  SIMDVec16 huff_bits_pre = tok_index.U8Lookup(raw_bits_simd);
   // Set the highest bit when token == 14, 16, 18.
   Mask16 needs_high_bit = above.And(tok.Eq(tok.And(SIMDVec16::Val(0xFFFE))));
   SIMDVec16 huff_bits = needs_high_bit.IfThenElse(
       huff_bits_pre.Or(SIMDVec16::Val(128)), huff_bits_pre);
   huff_bits.Store(bits_out);
-  tok_index.U8Lookup(code.raw_nbits_simd).Store(nbits_out);
+  tok_index.U8Lookup(raw_nbits_simd).Store(nbits_out);
 }
 
 FJXL_INLINE void StoreSIMDUpTo8(const uint16_t* nbits_tok,
@@ -2223,9 +2440,10 @@ FJXL_INLINE void StoreToWriterAVX512(const Bits32& bits32, BitWriter& output) {
   auto sh4 = [zero](__m512i vec) { return _mm512_alignr_epi64(vec, zero, 4); };
 
   // Compute first-past-end-bit-position.
-  __m512i end_interm0 = _mm512_add_epi64(nbits, sh1(nbits));
-  __m512i end_interm1 = _mm512_add_epi64(end_interm0, sh2(end_interm0));
-  __m512i end = _mm512_add_epi64(end_interm1, sh4(end_interm1));
+  __m512i end_intermediate0 = _mm512_add_epi64(nbits, sh1(nbits));
+  __m512i end_intermediate1 =
+      _mm512_add_epi64(end_intermediate0, sh2(end_intermediate0));
+  __m512i end = _mm512_add_epi64(end_intermediate1, sh4(end_intermediate1));
 
   uint64_t simd_nbits = _mm512_cvtsi512_si32(_mm512_alignr_epi64(end, end, 7));
 
@@ -2457,9 +2675,10 @@ struct UpTo8Bits {
     memcpy(bits_simd, bits, 16);
   }
 
-  static void EncodeChunk(upixel_t* residuals, size_t n, size_t skip,
-                          const PrefixCode& code, BitWriter& output) {
 #ifdef FJXL_GENERIC_SIMD
+  static void EncodeChunkSimd(upixel_t* residuals, size_t n, size_t skip,
+                              const uint8_t* raw_nbits_simd,
+                              const uint8_t* raw_bits_simd, BitWriter& output) {
     Bits32 bits32[kChunkSize / SIMDVec16::kLanes];
     alignas(64) uint16_t bits[SIMDVec16::kLanes];
     alignas(64) uint16_t nbits[SIMDVec16::kLanes];
@@ -2468,20 +2687,19 @@ struct UpTo8Bits {
     alignas(64) uint16_t token[SIMDVec16::kLanes];
     for (size_t i = 0; i < kChunkSize; i += SIMDVec16::kLanes) {
       TokenizeSIMD(residuals + i, token, nbits, bits);
-      HuffmanSIMDUpTo13(token, code, nbits_huff, bits_huff);
+      HuffmanSIMDUpTo13(token, raw_nbits_simd, raw_bits_simd, nbits_huff,
+                        bits_huff);
       StoreSIMDUpTo8(nbits, bits, nbits_huff, bits_huff, std::max(n, i) - i,
                      std::max(skip, i) - i, bits32 + i / SIMDVec16::kLanes);
     }
     StoreToWriter<kChunkSize / SIMDVec16::kLanes>(bits32, output);
-    return;
-#endif
-    GenericEncodeChunk(residuals, n, skip, code, output);
   }
+#endif
 
-  size_t NumSymbols(bool doing_ycocg) const {
+  size_t NumSymbols(bool doing_ycocg_or_large_palette) const {
     // values gain 1 bit for YCoCg, 1 bit for prediction.
     // Maximum symbol is 1 + effective bit depth of residuals.
-    if (doing_ycocg) {
+    if (doing_ycocg_or_large_palette) {
       return bitdepth + 3;
     } else {
       return bitdepth + 2;
@@ -2519,9 +2737,10 @@ struct From9To13Bits {
     memcpy(bits_simd, bits, 16);
   }
 
-  static void EncodeChunk(upixel_t* residuals, size_t n, size_t skip,
-                          const PrefixCode& code, BitWriter& output) {
 #ifdef FJXL_GENERIC_SIMD
+  static void EncodeChunkSimd(upixel_t* residuals, size_t n, size_t skip,
+                              const uint8_t* raw_nbits_simd,
+                              const uint8_t* raw_bits_simd, BitWriter& output) {
     Bits32 bits32[2 * kChunkSize / SIMDVec16::kLanes];
     alignas(64) uint16_t bits[SIMDVec16::kLanes];
     alignas(64) uint16_t nbits[SIMDVec16::kLanes];
@@ -2530,21 +2749,20 @@ struct From9To13Bits {
     alignas(64) uint16_t token[SIMDVec16::kLanes];
     for (size_t i = 0; i < kChunkSize; i += SIMDVec16::kLanes) {
       TokenizeSIMD(residuals + i, token, nbits, bits);
-      HuffmanSIMDUpTo13(token, code, nbits_huff, bits_huff);
+      HuffmanSIMDUpTo13(token, raw_nbits_simd, raw_bits_simd, nbits_huff,
+                        bits_huff);
       StoreSIMDUpTo14(nbits, bits, nbits_huff, bits_huff, std::max(n, i) - i,
                       std::max(skip, i) - i,
                       bits32 + 2 * i / SIMDVec16::kLanes);
     }
     StoreToWriter<2 * kChunkSize / SIMDVec16::kLanes>(bits32, output);
-    return;
-#endif
-    GenericEncodeChunk(residuals, n, skip, code, output);
   }
+#endif
 
-  size_t NumSymbols(bool doing_ycocg) const {
+  size_t NumSymbols(bool doing_ycocg_or_large_palette) const {
     // values gain 1 bit for YCoCg, 1 bit for prediction.
     // Maximum symbol is 1 + effective bit depth of residuals.
-    if (doing_ycocg) {
+    if (doing_ycocg_or_large_palette) {
       return bitdepth + 3;
     } else {
       return bitdepth + 2;
@@ -2586,9 +2804,10 @@ struct Exactly14Bits {
     memcpy(bits_simd, bits, 16);
   }
 
-  static void EncodeChunk(upixel_t* residuals, size_t n, size_t skip,
-                          const PrefixCode& code, BitWriter& output) {
 #ifdef FJXL_GENERIC_SIMD
+  static void EncodeChunkSimd(upixel_t* residuals, size_t n, size_t skip,
+                              const uint8_t* raw_nbits_simd,
+                              const uint8_t* raw_bits_simd, BitWriter& output) {
     Bits32 bits32[2 * kChunkSize / SIMDVec16::kLanes];
     alignas(64) uint16_t bits[SIMDVec16::kLanes];
     alignas(64) uint16_t nbits[SIMDVec16::kLanes];
@@ -2597,16 +2816,15 @@ struct Exactly14Bits {
     alignas(64) uint16_t token[SIMDVec16::kLanes];
     for (size_t i = 0; i < kChunkSize; i += SIMDVec16::kLanes) {
       TokenizeSIMD(residuals + i, token, nbits, bits);
-      HuffmanSIMD14(token, code, nbits_huff, bits_huff);
+      HuffmanSIMD14(token, raw_nbits_simd, raw_bits_simd, nbits_huff,
+                    bits_huff);
       StoreSIMDUpTo14(nbits, bits, nbits_huff, bits_huff, std::max(n, i) - i,
                       std::max(skip, i) - i,
                       bits32 + 2 * i / SIMDVec16::kLanes);
     }
     StoreToWriter<2 * kChunkSize / SIMDVec16::kLanes>(bits32, output);
-    return;
-#endif
-    GenericEncodeChunk(residuals, n, skip, code, output);
   }
+#endif
 
   size_t NumSymbols(bool) const { return 17; }
 };
@@ -2651,9 +2869,10 @@ struct MoreThan14Bits {
     bits_simd[15] = bits[17];
   }
 
-  static void EncodeChunk(upixel_t* residuals, size_t n, size_t skip,
-                          const PrefixCode& code, BitWriter& output) {
 #ifdef FJXL_GENERIC_SIMD
+  static void EncodeChunkSimd(upixel_t* residuals, size_t n, size_t skip,
+                              const uint8_t* raw_nbits_simd,
+                              const uint8_t* raw_bits_simd, BitWriter& output) {
     Bits32 bits32[2 * kChunkSize / SIMDVec16::kLanes];
     alignas(64) uint32_t bits[SIMDVec16::kLanes];
     alignas(64) uint32_t nbits[SIMDVec16::kLanes];
@@ -2662,16 +2881,15 @@ struct MoreThan14Bits {
     alignas(64) uint16_t token[SIMDVec16::kLanes];
     for (size_t i = 0; i < kChunkSize; i += SIMDVec16::kLanes) {
       TokenizeSIMD(residuals + i, token, nbits, bits);
-      HuffmanSIMDAbove14(token, code, nbits_huff, bits_huff);
+      HuffmanSIMDAbove14(token, raw_nbits_simd, raw_bits_simd, nbits_huff,
+                         bits_huff);
       StoreSIMDAbove14(nbits, bits, nbits_huff, bits_huff, std::max(n, i) - i,
                        std::max(skip, i) - i,
                        bits32 + 2 * i / SIMDVec16::kLanes);
     }
     StoreToWriter<2 * kChunkSize / SIMDVec16::kLanes>(bits32, output);
-    return;
-#endif
-    GenericEncodeChunk(residuals, n, skip, code, output);
   }
+#endif
   size_t NumSymbols(bool) const { return 19; }
 };
 constexpr uint8_t MoreThan14Bits::kMinRawLength[];
@@ -2697,6 +2915,7 @@ void PrepareDCGlobalCommon(bool is_single_group, size_t width, size_t height,
   output->Write(2, 2);
   output->Write(2, 3);
   output->Write(1, 0);  // First tree encoding option
+
   // Huffman table + extra bits for the tree.
   uint8_t symbol_bits[6] = {0b00, 0b10, 0b001, 0b101, 0b0011, 0b0111};
   uint8_t symbol_nbits[6] = {2, 2, 3, 3, 4, 4};
@@ -2773,6 +2992,10 @@ void PrepareDCGlobal(bool is_single_group, size_t width, size_t height,
 
 template <typename BitDepth>
 struct ChunkEncoder {
+  void PrepareForSimd() {
+    BitDepth::PrepareForSimd(code->raw_nbits, code->raw_bits, code->numraw,
+                             raw_nbits_simd, raw_bits_simd);
+  }
   FJXL_INLINE static void EncodeRle(size_t count, const PrefixCode& code,
                                     BitWriter& output) {
     if (count == 0) return;
@@ -2792,13 +3015,20 @@ struct ChunkEncoder {
   FJXL_INLINE void Chunk(size_t run, typename BitDepth::upixel_t* residuals,
                          size_t skip, size_t n) {
     EncodeRle(run, *code, *output);
-    BitDepth::EncodeChunk(residuals, n, skip, *code, *output);
+#ifdef FJXL_GENERIC_SIMD
+    BitDepth::EncodeChunkSimd(residuals, n, skip, raw_nbits_simd, raw_bits_simd,
+                              *output);
+#else
+    GenericEncodeChunk(residuals, n, skip, *code, *output);
+#endif
   }
 
   inline void Finalize(size_t run) { EncodeRle(run, *code, *output); }
 
   const PrefixCode* code;
   BitWriter* output;
+  alignas(64) uint8_t raw_nbits_simd[16] = {};
+  alignas(64) uint8_t raw_bits_simd[16] = {};
 };
 
 template <typename BitDepth>
@@ -3018,9 +3248,9 @@ void StoreYCoCg(SIMDVec16 r, SIMDVec16 g, SIMDVec16 b, int16_t* y, int16_t* co,
   SIMDVec16 tmp = b.Add(co_v.SignedShiftRight<1>());
   SIMDVec16 cg_v = g.Sub(tmp);
   SIMDVec16 y_v = tmp.Add(cg_v.SignedShiftRight<1>());
-  y_v.Store((uint16_t*)y);
-  co_v.Store((uint16_t*)co);
-  cg_v.Store((uint16_t*)cg);
+  y_v.Store(reinterpret_cast<uint16_t*>(y));
+  co_v.Store(reinterpret_cast<uint16_t*>(co));
+  cg_v.Store(reinterpret_cast<uint16_t*>(cg));
 }
 
 void StoreYCoCg(SIMDVec16 r, SIMDVec16 g, SIMDVec16 b, int32_t* y, int32_t* co,
@@ -3036,12 +3266,12 @@ void StoreYCoCg(SIMDVec16 r, SIMDVec16 g, SIMDVec16 b, int32_t* y, int32_t* co,
   SIMDVec32 tmp_hi = b_up.hi.Add(co_hi_v.SignedShiftRight<1>());
   SIMDVec32 cg_hi_v = g_up.hi.Sub(tmp_hi);
   SIMDVec32 y_hi_v = tmp_hi.Add(cg_hi_v.SignedShiftRight<1>());
-  y_lo_v.Store((uint32_t*)y);
-  co_lo_v.Store((uint32_t*)co);
-  cg_lo_v.Store((uint32_t*)cg);
-  y_hi_v.Store((uint32_t*)y + SIMDVec32::kLanes);
-  co_hi_v.Store((uint32_t*)co + SIMDVec32::kLanes);
-  cg_hi_v.Store((uint32_t*)cg + SIMDVec32::kLanes);
+  y_lo_v.Store(reinterpret_cast<uint32_t*>(y));
+  co_lo_v.Store(reinterpret_cast<uint32_t*>(co));
+  cg_lo_v.Store(reinterpret_cast<uint32_t*>(cg));
+  y_hi_v.Store(reinterpret_cast<uint32_t*>(y) + SIMDVec32::kLanes);
+  co_hi_v.Store(reinterpret_cast<uint32_t*>(co) + SIMDVec32::kLanes);
+  cg_hi_v.Store(reinterpret_cast<uint32_t*>(cg) + SIMDVec32::kLanes);
 }
 #endif
 
@@ -3174,9 +3404,9 @@ void ProcessImageArea(const unsigned char* rgba, size_t x0, size_t y0,
   for (size_t y = 0; y < ys; y++) {
     const auto rgba_row =
         rgba + row_stride * (y0 + y) + x0 * nb_chans * BitDepth::kInputBytes;
-    pixel_t* crow[4];
-    pixel_t* prow[4];
-    for (size_t i = 0; i < 4; i++) {
+    pixel_t* crow[4] = {};
+    pixel_t* prow[4] = {};
+    for (size_t i = 0; i < nb_chans; i++) {
       crow[i] = align(&group_data[i][y & 1][kPadding]);
       prow[i] = align(&group_data[i][(y - 1) & 1][kPadding]);
     }
@@ -3266,6 +3496,7 @@ void WriteACSection(const unsigned char* rgba, size_t x0, size_t y0, size_t xs,
     row_encoders[c].t = &encoders[c];
     encoders[c].output = &output[c];
     encoders[c].code = &code[c];
+    encoders[c].PrepareForSimd();
   }
   ProcessImageArea<ChannelRowProcessor<ChunkEncoder<BitDepth>, BitDepth>>(
       rgba, x0, y0, xs, 0, ys, row_stride, bitdepth, nb_chans, big_endian,
@@ -3288,7 +3519,9 @@ void FillRowPalette(const unsigned char* inrow, size_t xs,
                     const int16_t* lookup, int16_t* out) {
   for (size_t x = 0; x < xs; x++) {
     uint32_t p = 0;
-    memcpy(&p, inrow + x * nb_chans, nb_chans);
+    for (size_t i = 0; i < nb_chans; ++i) {
+      p |= inrow[x * nb_chans + i] << (8 * i);
+    }
     out[x] = lookup[pixel_hash(p)];
   }
 }
@@ -3355,7 +3588,8 @@ void WriteACSectionPalette(const unsigned char* rgba, size_t x0, size_t y0,
 
   row_encoder.t = &encoder;
   encoder.output = &output;
-  encoder.code = &code[1];
+  encoder.code = &code[is_single_group ? 1 : 0];
+  encoder.PrepareForSimd();
   ProcessImageAreaPalette<
       ChannelRowProcessor<ChunkEncoder<UpTo8Bits>, UpTo8Bits>>(
       rgba, x0, y0, xs, 0, ys, row_stride, lookup, nb_chans, &row_encoder);
@@ -3365,17 +3599,17 @@ template <typename BitDepth>
 void CollectSamples(const unsigned char* rgba, size_t x0, size_t y0, size_t xs,
                     size_t row_stride, size_t row_count,
                     uint64_t raw_counts[4][kNumRawSymbols],
-                    uint64_t lz77_counts[4][kNumLZ77], bool palette,
-                    BitDepth bitdepth, size_t nb_chans, bool big_endian,
-                    const int16_t* lookup) {
+                    uint64_t lz77_counts[4][kNumLZ77], bool is_single_group,
+                    bool palette, BitDepth bitdepth, size_t nb_chans,
+                    bool big_endian, const int16_t* lookup) {
   if (palette) {
     ChunkSampleCollector<UpTo8Bits> sample_collectors[4];
     ChannelRowProcessor<ChunkSampleCollector<UpTo8Bits>, UpTo8Bits>
         row_sample_collectors[4];
     for (size_t c = 0; c < nb_chans; c++) {
       row_sample_collectors[c].t = &sample_collectors[c];
-      sample_collectors[c].raw_counts = raw_counts[1];
-      sample_collectors[c].lz77_counts = lz77_counts[1];
+      sample_collectors[c].raw_counts = raw_counts[is_single_group ? 1 : 0];
+      sample_collectors[c].lz77_counts = lz77_counts[is_single_group ? 1 : 0];
     }
     ProcessImageAreaPalette<
         ChannelRowProcessor<ChunkSampleCollector<UpTo8Bits>, UpTo8Bits>>(
@@ -3398,14 +3632,23 @@ void CollectSamples(const unsigned char* rgba, size_t x0, size_t y0, size_t xs,
 }
 
 void PrepareDCGlobalPalette(bool is_single_group, size_t width, size_t height,
-                            const PrefixCode code[4],
+                            size_t nb_chans, const PrefixCode code[4],
                             const std::vector<uint32_t>& palette,
                             size_t pcolors, BitWriter* output) {
   PrepareDCGlobalCommon(is_single_group, width, height, code, output);
   output->Write(2, 0b01);     // 1 transform
   output->Write(2, 0b01);     // Palette
   output->Write(5, 0b00000);  // Starting from ch 0
-  output->Write(2, 0b10);     // 4-channel palette (RGBA)
+  if (nb_chans == 1) {
+    output->Write(2, 0b00);  // 1-channel palette (Gray)
+  } else if (nb_chans == 3) {
+    output->Write(2, 0b01);  // 3-channel palette (RGB)
+  } else if (nb_chans == 4) {
+    output->Write(2, 0b10);  // 4-channel palette (RGBA)
+  } else {
+    output->Write(2, 0b11);
+    output->Write(13, nb_chans - 1);
+  }
   // pcolors <= kMaxColors + kChunkSize - 1
   static_assert(kMaxColors + kChunkSize < 1281,
                 "add code to signal larger palette sizes");
@@ -3425,29 +3668,33 @@ void PrepareDCGlobalPalette(bool is_single_group, size_t width, size_t height,
   row_encoder.t = &encoder;
   encoder.output = output;
   encoder.code = &code[0];
+  encoder.PrepareForSimd();
   int16_t p[4][32 + 1024] = {};
-  uint8_t prgba[4];
   size_t i = 0;
-  size_t have_zero = 0;
-  if (palette[pcolors - 1] == 0) have_zero = 1;
+  size_t have_zero = 1;
   for (; i < pcolors; i++) {
-    memcpy(prgba, &palette[i], 4);
-    p[0][16 + i + have_zero] = prgba[0];
-    p[1][16 + i + have_zero] = prgba[1];
-    p[2][16 + i + have_zero] = prgba[2];
-    p[3][16 + i + have_zero] = prgba[3];
+    p[0][16 + i + have_zero] = palette[i] & 0xFF;
+    p[1][16 + i + have_zero] = (palette[i] >> 8) & 0xFF;
+    p[2][16 + i + have_zero] = (palette[i] >> 16) & 0xFF;
+    p[3][16 + i + have_zero] = (palette[i] >> 24) & 0xFF;
   }
   p[0][15] = 0;
   row_encoder.ProcessRow(p[0] + 16, p[0] + 15, p[0] + 15, p[0] + 15, pcolors);
   p[1][15] = p[0][16];
   p[0][15] = p[0][16];
-  row_encoder.ProcessRow(p[1] + 16, p[1] + 15, p[0] + 16, p[0] + 15, pcolors);
+  if (nb_chans > 1) {
+    row_encoder.ProcessRow(p[1] + 16, p[1] + 15, p[0] + 16, p[0] + 15, pcolors);
+  }
   p[2][15] = p[1][16];
   p[1][15] = p[1][16];
-  row_encoder.ProcessRow(p[2] + 16, p[2] + 15, p[1] + 16, p[1] + 15, pcolors);
+  if (nb_chans > 2) {
+    row_encoder.ProcessRow(p[2] + 16, p[2] + 15, p[1] + 16, p[1] + 15, pcolors);
+  }
   p[3][15] = p[2][16];
   p[2][15] = p[2][16];
-  row_encoder.ProcessRow(p[3] + 16, p[3] + 15, p[2] + 16, p[2] + 15, pcolors);
+  if (nb_chans > 3) {
+    row_encoder.ProcessRow(p[3] + 16, p[3] + 15, p[2] + 16, p[2] + 15, pcolors);
+  }
   row_encoder.Finalize();
 
   if (!is_single_group) {
@@ -3455,76 +3702,83 @@ void PrepareDCGlobalPalette(bool is_single_group, size_t width, size_t height,
   }
 }
 
+template <size_t nb_chans>
+bool detect_palette(const unsigned char* r, size_t width,
+                    std::vector<uint32_t>& palette) {
+  size_t x = 0;
+  bool collided = false;
+  // this is just an unrolling of the next loop
+  size_t look_ahead = 7 + ((nb_chans == 1) ? 3 : ((nb_chans < 4) ? 1 : 0));
+  for (; x + look_ahead < width; x += 8) {
+    uint32_t p[8] = {}, index[8];
+    for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 4; ++j) {
+        p[i] |= r[(x + i) * nb_chans + j] << (8 * j);
+      }
+    }
+    for (int i = 0; i < 8; i++) p[i] &= ((1llu << (8 * nb_chans)) - 1);
+    for (int i = 0; i < 8; i++) index[i] = pixel_hash(p[i]);
+    for (int i = 0; i < 8; i++) {
+      collided |= (palette[index[i]] != 0 && p[i] != palette[index[i]]);
+    }
+    for (int i = 0; i < 8; i++) palette[index[i]] = p[i];
+  }
+  for (; x < width; x++) {
+    uint32_t p = 0;
+    for (size_t i = 0; i < nb_chans; ++i) {
+      p |= r[x * nb_chans + i] << (8 * i);
+    }
+    uint32_t index = pixel_hash(p);
+    collided |= (palette[index] != 0 && p != palette[index]);
+    palette[index] = p;
+  }
+  return collided;
+}
+
 template <typename BitDepth>
-JxlFastLosslessFrameState* LLEnc(const unsigned char* rgba, size_t width,
-                                 size_t stride, size_t height,
-                                 BitDepth bitdepth, size_t nb_chans,
-                                 bool big_endian, int effort,
-                                 void* runner_opaque,
-                                 FJxlParallelRunner runner) {
+JxlFastLosslessFrameState* LLPrepare(JxlChunkedFrameInputSource input,
+                                     size_t width, size_t height,
+                                     BitDepth bitdepth, size_t nb_chans,
+                                     bool big_endian, int effort, int oneshot) {
   assert(width != 0);
   assert(height != 0);
-  assert(stride >= nb_chans * BitDepth::kInputBytes * width);
 
   // Count colors to try palette
   std::vector<uint32_t> palette(kHashSize);
-  palette[0] = 1;
   std::vector<int16_t> lookup(kHashSize);
   lookup[0] = 0;
   int pcolors = 0;
-  bool collided = effort < 2 || bitdepth.bitdepth != 8 ||
-                  nb_chans < 4;  // todo: also do rgb palette
-  for (size_t y = 0; y < height && !collided; y++) {
-    const unsigned char* r = rgba + stride * y;
-    size_t x = 0;
-    if (nb_chans == 4) {
-      // this is just an unrolling of the next loop
-      for (; x + 7 < width; x += 8) {
-        uint32_t p[8], index[8];
-        memcpy(p, r + x * 4, 32);
-        for (int i = 0; i < 8; i++) index[i] = pixel_hash(p[i]);
-        for (int i = 0; i < 8; i++) {
-          uint32_t init_entry = index[i] ? 0 : 1;
-          if (init_entry != palette[index[i]] && p[i] != palette[index[i]]) {
-            collided = true;
-          }
-        }
-        for (int i = 0; i < 8; i++) palette[index[i]] = p[i];
+  bool collided = effort < 2 || bitdepth.bitdepth != 8 || !oneshot;
+  for (size_t y0 = 0; y0 < height && !collided; y0 += 256) {
+    size_t ys = std::min<size_t>(height - y0, 256);
+    for (size_t x0 = 0; x0 < width && !collided; x0 += 256) {
+      size_t xs = std::min<size_t>(width - x0, 256);
+      size_t stride;
+      // TODO(szabadka): Add RAII wrapper around this.
+      const void* buffer = input.get_color_channel_data_at(input.opaque, x0, y0,
+                                                           xs, ys, &stride);
+      auto rgba = reinterpret_cast<const unsigned char*>(buffer);
+      for (size_t y = 0; y < ys && !collided; y++) {
+        const unsigned char* r = rgba + stride * y;
+        if (nb_chans == 1) collided = detect_palette<1>(r, xs, palette);
+        if (nb_chans == 2) collided = detect_palette<2>(r, xs, palette);
+        if (nb_chans == 3) collided = detect_palette<3>(r, xs, palette);
+        if (nb_chans == 4) collided = detect_palette<4>(r, xs, palette);
       }
-      for (; x < width; x++) {
-        uint32_t p;
-        memcpy(&p, r + x * 4, 4);
-        uint32_t index = pixel_hash(p);
-        uint32_t init_entry = index ? 0 : 1;
-        if (init_entry != palette[index] && p != palette[index]) {
-          collided = true;
-        }
-        palette[index] = p;
-      }
-    } else {
-      for (; x < width; x++) {
-        uint32_t p = 0;
-        memcpy(&p, r + x * nb_chans, nb_chans);
-        uint32_t index = pixel_hash(p);
-        uint32_t init_entry = index ? 0 : 1;
-        if (init_entry != palette[index] && p != palette[index]) {
-          collided = true;
-        }
-        palette[index] = p;
-      }
+      input.release_buffer(input.opaque, buffer);
     }
   }
-
   int nb_entries = 0;
   if (!collided) {
-    if (palette[0] == 0) pcolors = 1;
-    if (palette[0] == 1) palette[0] = 0;
+    pcolors = 1;  // always have all-zero as a palette color
     bool have_color = false;
     uint8_t minG = 255, maxG = 0;
     for (uint32_t k = 0; k < kHashSize; k++) {
       if (palette[k] == 0) continue;
       uint8_t p[4];
-      memcpy(p, &palette[k], 4);
+      for (int i = 0; i < 4; ++i) {
+        p[i] = (palette[k] >> (8 * i)) & 0xFF;
+      }
       // move entries to front so sort has less work
       palette[nb_entries] = palette[k];
       if (p[0] != p[1] || p[0] != p[2]) have_color = true;
@@ -3545,15 +3799,22 @@ JxlFastLosslessFrameState* LLEnc(const unsigned char* rgba, size_t width,
   if (!collided) {
     std::sort(
         palette.begin(), palette.begin() + nb_entries,
-        [](uint32_t ap, uint32_t bp) {
+        [&nb_chans](uint32_t ap, uint32_t bp) {
           if (ap == 0) return false;
           if (bp == 0) return true;
           uint8_t a[4], b[4];
-          memcpy(a, &ap, 4);
-          memcpy(b, &bp, 4);
+          for (int i = 0; i < 4; ++i) {
+            a[i] = (ap >> (8 * i)) & 0xFF;
+            b[i] = (bp >> (8 * i)) & 0xFF;
+          }
           float ay, by;
-          ay = (0.299f * a[0] + 0.587f * a[1] + 0.114f * a[2] + 0.01f) * a[3];
-          by = (0.299f * b[0] + 0.587f * b[1] + 0.114f * b[2] + 0.01f) * b[3];
+          if (nb_chans == 4) {
+            ay = (0.299f * a[0] + 0.587f * a[1] + 0.114f * a[2] + 0.01f) * a[3];
+            by = (0.299f * b[0] + 0.587f * b[1] + 0.114f * b[2] + 0.01f) * b[3];
+          } else {
+            ay = (0.299f * a[0] + 0.587f * a[1] + 0.114f * a[2] + 0.01f);
+            by = (0.299f * b[0] + 0.587f * b[1] + 0.114f * b[2] + 0.01f);
+          }
           return ay < by;  // sort on alpha*luma
         });
     for (int k = 0; k < nb_entries; k++) {
@@ -3570,20 +3831,46 @@ JxlFastLosslessFrameState* LLEnc(const unsigned char* rgba, size_t width,
   uint64_t raw_counts[4][kNumRawSymbols] = {};
   uint64_t lz77_counts[4][kNumLZ77] = {};
 
-  // sample the middle (effort * 2) rows of every group
-  for (size_t g = 0; g < num_groups_y * num_groups_x; g++) {
-    size_t xg = g % num_groups_x;
-    size_t yg = g / num_groups_x;
-    int y_offset = yg * 256;
-    int y_max = std::min<size_t>(height - yg * 256, 256);
-    int y_begin = y_offset + std::max<int>(0, y_max - 2 * effort) / 2;
-    int y_count =
-        std::min<int>(2 * effort * y_max / 256, y_offset + y_max - y_begin - 1);
-    int x_max =
-        std::min<size_t>(width - xg * 256, 256) / kChunkSize * kChunkSize;
-    CollectSamples(rgba, xg * 256, y_begin, x_max, stride, y_count, raw_counts,
-                   lz77_counts, !collided, bitdepth, nb_chans, big_endian,
-                   lookup.data());
+  bool onegroup = num_groups_x == 1 && num_groups_y == 1;
+
+  auto sample_rows = [&](size_t xg, size_t yg, size_t num_rows) {
+    size_t y0 = yg * 256;
+    size_t x0 = xg * 256;
+    size_t ys = std::min<size_t>(height - y0, 256);
+    size_t xs = std::min<size_t>(width - x0, 256);
+    size_t stride;
+    const void* buffer =
+        input.get_color_channel_data_at(input.opaque, x0, y0, xs, ys, &stride);
+    auto rgba = reinterpret_cast<const unsigned char*>(buffer);
+    int y_begin_group =
+        std::max<ssize_t>(
+            0, static_cast<ssize_t>(ys) - static_cast<ssize_t>(num_rows)) /
+        2;
+    int y_count = std::min<int>(num_rows, ys - y_begin_group);
+    int x_max = xs / kChunkSize * kChunkSize;
+    CollectSamples(rgba, 0, y_begin_group, x_max, stride, y_count, raw_counts,
+                   lz77_counts, onegroup, !collided, bitdepth, nb_chans,
+                   big_endian, lookup.data());
+    input.release_buffer(input.opaque, buffer);
+  };
+
+  // TODO(veluca): that `64` is an arbitrary constant, meant to correspond to
+  // the point where the number of processed rows is large enough that loading
+  // the entire image is cost-effective.
+  if (oneshot || effort >= 64) {
+    for (size_t g = 0; g < num_groups_y * num_groups_x; g++) {
+      size_t xg = g % num_groups_x;
+      size_t yg = g / num_groups_x;
+      size_t y0 = yg * 256;
+      size_t ys = std::min<size_t>(height - y0, 256);
+      size_t num_rows = 2 * effort * ys / 256;
+      sample_rows(xg, yg, num_rows);
+    }
+  } else {
+    // sample the middle (effort * 2 * num_groups) rows of the center group
+    // (possibly all of them).
+    sample_rows((num_groups_x - 1) / 2, (num_groups_y - 1) / 2,
+                2 * effort * num_groups_x * num_groups_y);
   }
 
   // TODO(veluca): can probably improve this and make it bitdepth-dependent.
@@ -3592,7 +3879,9 @@ JxlFastLosslessFrameState* LLEnc(const unsigned char* rgba, size_t width,
       5,    1,   1,    1,    1,    1,   1,   1,   1};
 
   bool doing_ycocg = nb_chans > 2 && collided;
-  for (size_t i = bitdepth.NumSymbols(doing_ycocg); i < kNumRawSymbols; i++) {
+  bool large_palette = !collided || pcolors >= 256;
+  for (size_t i = bitdepth.NumSymbols(doing_ycocg || large_palette);
+       i < kNumRawSymbols; i++) {
     base_raw_counts[i] = 0;
   }
 
@@ -3624,82 +3913,209 @@ JxlFastLosslessFrameState* LLEnc(const unsigned char* rgba, size_t width,
     }
   }
 
-  alignas(64) PrefixCode hcode[4];
+  JxlFastLosslessFrameState* frame_state = new JxlFastLosslessFrameState();
   for (size_t i = 0; i < 4; i++) {
-    hcode[i] = PrefixCode(bitdepth, raw_counts[i], lz77_counts[i]);
+    frame_state->hcode[i] = PrefixCode(bitdepth, raw_counts[i], lz77_counts[i]);
   }
 
-  bool onegroup = num_groups_x == 1 && num_groups_y == 1;
-
-  size_t num_groups = onegroup ? 1
-                               : (2 + num_dc_groups_x * num_dc_groups_y +
-                                  num_groups_x * num_groups_y);
-
-  JxlFastLosslessFrameState* frame_state = new JxlFastLosslessFrameState();
-
+  size_t num_dc_groups = num_dc_groups_x * num_dc_groups_y;
+  size_t num_ac_groups = num_groups_x * num_groups_y;
+  size_t num_groups = onegroup ? 1 : (2 + num_dc_groups + num_ac_groups);
+  frame_state->input = input;
   frame_state->width = width;
   frame_state->height = height;
+  frame_state->num_groups_x = num_groups_x;
+  frame_state->num_groups_y = num_groups_y;
+  frame_state->num_dc_groups_x = num_dc_groups_x;
+  frame_state->num_dc_groups_y = num_dc_groups_y;
   frame_state->nb_chans = nb_chans;
   frame_state->bitdepth = bitdepth.bitdepth;
+  frame_state->big_endian = big_endian;
+  frame_state->effort = effort;
+  frame_state->collided = collided;
+  frame_state->lookup = lookup;
 
   frame_state->group_data = std::vector<std::array<BitWriter, 4>>(num_groups);
+  frame_state->group_sizes.resize(num_groups);
   if (collided) {
-    PrepareDCGlobal(onegroup, width, height, nb_chans, hcode,
+    PrepareDCGlobal(onegroup, width, height, nb_chans, frame_state->hcode,
                     &frame_state->group_data[0][0]);
   } else {
-    PrepareDCGlobalPalette(onegroup, width, height, hcode, palette, pcolors,
+    PrepareDCGlobalPalette(onegroup, width, height, nb_chans,
+                           frame_state->hcode, palette, pcolors,
                            &frame_state->group_data[0][0]);
   }
-
-  auto run_one = [&](size_t g) {
-    size_t xg = g % num_groups_x;
-    size_t yg = g / num_groups_x;
-    size_t group_id =
-        onegroup ? 0 : (2 + num_dc_groups_x * num_dc_groups_y + g);
-    size_t xs = std::min<size_t>(width - xg * 256, 256);
-    size_t ys = std::min<size_t>(height - yg * 256, 256);
-    size_t x0 = xg * 256;
-    size_t y0 = yg * 256;
-    auto& gd = frame_state->group_data[group_id];
-    if (collided) {
-      WriteACSection(rgba, x0, y0, xs, ys, stride, onegroup, bitdepth, nb_chans,
-                     big_endian, hcode, gd);
-
-    } else {
-      WriteACSectionPalette(rgba, x0, y0, xs, ys, stride, onegroup, hcode,
-                            lookup.data(), nb_chans, gd[0]);
-    }
-  };
-
-  runner(
-      runner_opaque, &run_one,
-      +[](void* r, size_t i) { (*reinterpret_cast<decltype(&run_one)>(r))(i); },
-      num_groups_x * num_groups_y);
+  frame_state->group_sizes[0] = SectionSize(frame_state->group_data[0]);
+  if (!onegroup) {
+    ComputeAcGroupDataOffset(frame_state->group_sizes[0], num_dc_groups,
+                             num_ac_groups, frame_state->min_dc_global_size,
+                             frame_state->ac_group_data_offset);
+  }
 
   return frame_state;
 }
 
-JxlFastLosslessFrameState* JxlFastLosslessEncodeImpl(
-    const unsigned char* rgba, size_t width, size_t stride, size_t height,
+template <typename BitDepth>
+jxl::Status LLProcess(JxlFastLosslessFrameState* frame_state, bool is_last,
+                      BitDepth bitdepth, void* runner_opaque,
+                      FJxlParallelRunner runner,
+                      JxlEncoderOutputProcessorWrapper* output_processor) {
+#if !FJXL_STANDALONE
+  if (frame_state->process_done) {
+    JxlFastLosslessPrepareHeader(frame_state, /*add_image_header=*/0, is_last);
+    if (output_processor) {
+      JXL_RETURN_IF_ERROR(
+          JxlFastLosslessOutputFrame(frame_state, output_processor));
+    }
+    return true;
+  }
+#endif
+  // The maximum number of groups that we process concurrently here.
+  // TODO(szabadka) Use the number of threads or some outside parameter for the
+  // maximum memory usage instead.
+  constexpr size_t kMaxLocalGroups = 16;
+  bool onegroup = frame_state->group_sizes.size() == 1;
+  bool streaming = !onegroup && output_processor;
+  size_t total_groups = frame_state->num_groups_x * frame_state->num_groups_y;
+  size_t max_groups = streaming ? kMaxLocalGroups : total_groups;
+#if !FJXL_STANDALONE
+  size_t start_pos = 0;
+  if (streaming) {
+    start_pos = output_processor->CurrentPosition();
+    JXL_RETURN_IF_ERROR(
+        output_processor->Seek(start_pos + frame_state->ac_group_data_offset));
+  }
+#endif
+  for (size_t offset = 0; offset < total_groups; offset += max_groups) {
+    size_t num_groups = std::min(max_groups, total_groups - offset);
+    JxlFastLosslessFrameState local_frame_state;
+    if (streaming) {
+      local_frame_state.group_data =
+          std::vector<std::array<BitWriter, 4>>(num_groups);
+    }
+    auto run_one = [&](size_t i) {
+      size_t g = offset + i;
+      size_t xg = g % frame_state->num_groups_x;
+      size_t yg = g / frame_state->num_groups_x;
+      size_t num_dc_groups =
+          frame_state->num_dc_groups_x * frame_state->num_dc_groups_y;
+      size_t group_id = onegroup ? 0 : (2 + num_dc_groups + g);
+      size_t xs = std::min<size_t>(frame_state->width - xg * 256, 256);
+      size_t ys = std::min<size_t>(frame_state->height - yg * 256, 256);
+      size_t x0 = xg * 256;
+      size_t y0 = yg * 256;
+      size_t stride;
+      JxlChunkedFrameInputSource input = frame_state->input;
+      const void* buffer = input.get_color_channel_data_at(input.opaque, x0, y0,
+                                                           xs, ys, &stride);
+      const unsigned char* rgba =
+          reinterpret_cast<const unsigned char*>(buffer);
+
+      auto& gd = streaming ? local_frame_state.group_data[i]
+                           : frame_state->group_data[group_id];
+      if (frame_state->collided) {
+        WriteACSection(rgba, 0, 0, xs, ys, stride, onegroup, bitdepth,
+                       frame_state->nb_chans, frame_state->big_endian,
+                       frame_state->hcode, gd);
+      } else {
+        WriteACSectionPalette(rgba, 0, 0, xs, ys, stride, onegroup,
+                              frame_state->hcode, frame_state->lookup.data(),
+                              frame_state->nb_chans, gd[0]);
+      }
+      frame_state->group_sizes[group_id] = SectionSize(gd);
+      input.release_buffer(input.opaque, buffer);
+    };
+    runner(
+        runner_opaque, &run_one,
+        +[](void* r, size_t i) {
+          (*reinterpret_cast<decltype(&run_one)>(r))(i);
+        },
+        num_groups);
+#if !FJXL_STANDALONE
+    if (streaming) {
+      local_frame_state.nb_chans = frame_state->nb_chans;
+      local_frame_state.current_bit_writer = 1;
+      JXL_RETURN_IF_ERROR(
+          JxlFastLosslessOutputFrame(&local_frame_state, output_processor));
+    }
+#endif
+  }
+#if !FJXL_STANDALONE
+  if (streaming) {
+    size_t end_pos = output_processor->CurrentPosition();
+    JXL_RETURN_IF_ERROR(output_processor->Seek(start_pos));
+    frame_state->group_data.resize(1);
+    bool have_alpha = frame_state->nb_chans == 2 || frame_state->nb_chans == 4;
+    size_t padding = ComputeDcGlobalPadding(
+        frame_state->group_sizes, frame_state->ac_group_data_offset,
+        frame_state->min_dc_global_size, have_alpha, is_last);
+
+    for (size_t i = 0; i < padding; ++i) {
+      frame_state->group_data[0][0].Write(8, 0);
+    }
+    frame_state->group_sizes[0] += padding;
+    JxlFastLosslessPrepareHeader(frame_state, /*add_image_header=*/0, is_last);
+    assert(frame_state->ac_group_data_offset ==
+           JxlFastLosslessOutputSize(frame_state));
+    JXL_RETURN_IF_ERROR(
+        JxlFastLosslessOutputHeaders(frame_state, output_processor));
+    JXL_RETURN_IF_ERROR(output_processor->Seek(end_pos));
+  } else if (output_processor) {
+    assert(onegroup);
+    JxlFastLosslessPrepareHeader(frame_state, /*add_image_header=*/0, is_last);
+    if (output_processor) {
+      JXL_RETURN_IF_ERROR(
+          JxlFastLosslessOutputFrame(frame_state, output_processor));
+    }
+  }
+  frame_state->process_done = true;
+#endif
+  return true;
+}
+
+JxlFastLosslessFrameState* JxlFastLosslessPrepareImpl(
+    JxlChunkedFrameInputSource input, size_t width, size_t height,
     size_t nb_chans, size_t bitdepth, bool big_endian, int effort,
-    void* runner_opaque, FJxlParallelRunner runner) {
+    int oneshot) {
   assert(bitdepth > 0);
   assert(nb_chans <= 4);
   assert(nb_chans != 0);
   if (bitdepth <= 8) {
-    return LLEnc(rgba, width, stride, height, UpTo8Bits(bitdepth), nb_chans,
-                 big_endian, effort, runner_opaque, runner);
+    return LLPrepare(input, width, height, UpTo8Bits(bitdepth), nb_chans,
+                     big_endian, effort, oneshot);
   }
   if (bitdepth <= 13) {
-    return LLEnc(rgba, width, stride, height, From9To13Bits(bitdepth), nb_chans,
-                 big_endian, effort, runner_opaque, runner);
+    return LLPrepare(input, width, height, From9To13Bits(bitdepth), nb_chans,
+                     big_endian, effort, oneshot);
   }
   if (bitdepth == 14) {
-    return LLEnc(rgba, width, stride, height, Exactly14Bits(bitdepth), nb_chans,
-                 big_endian, effort, runner_opaque, runner);
+    return LLPrepare(input, width, height, Exactly14Bits(bitdepth), nb_chans,
+                     big_endian, effort, oneshot);
   }
-  return LLEnc(rgba, width, stride, height, MoreThan14Bits(bitdepth), nb_chans,
-               big_endian, effort, runner_opaque, runner);
+  return LLPrepare(input, width, height, MoreThan14Bits(bitdepth), nb_chans,
+                   big_endian, effort, oneshot);
+}
+
+jxl::Status JxlFastLosslessProcessFrameImpl(
+    JxlFastLosslessFrameState* frame_state, bool is_last, void* runner_opaque,
+    FJxlParallelRunner runner,
+    JxlEncoderOutputProcessorWrapper* output_processor) {
+  const size_t bitdepth = frame_state->bitdepth;
+  if (bitdepth <= 8) {
+    JXL_RETURN_IF_ERROR(LLProcess(frame_state, is_last, UpTo8Bits(bitdepth),
+                                  runner_opaque, runner, output_processor));
+  } else if (bitdepth <= 13) {
+    JXL_RETURN_IF_ERROR(LLProcess(frame_state, is_last, From9To13Bits(bitdepth),
+                                  runner_opaque, runner, output_processor));
+  } else if (bitdepth == 14) {
+    JXL_RETURN_IF_ERROR(LLProcess(frame_state, is_last, Exactly14Bits(bitdepth),
+                                  runner_opaque, runner, output_processor));
+  } else {
+    JXL_RETURN_IF_ERROR(LLProcess(frame_state, is_last,
+                                  MoreThan14Bits(bitdepth), runner_opaque,
+                                  runner, output_processor));
+  }
+  return true;
 }
 
 }  // namespace
@@ -3719,10 +4135,10 @@ namespace default_implementation {
 #undef FJXL_NEON
 }  // namespace default_implementation
 
-#else  // FJXL_ENABLE_NEON
+#else                                    // FJXL_ENABLE_NEON
 
 namespace default_implementation {
-#include "lib/jxl/enc_fast_lossless.cc"
+#include "lib/jxl/enc_fast_lossless.cc"  // NOLINT
 }
 
 #if FJXL_ENABLE_AVX2
@@ -3741,7 +4157,7 @@ namespace default_implementation {
 
 namespace AVX2 {
 #define FJXL_AVX2
-#include "lib/jxl/enc_fast_lossless.cc"
+#include "lib/jxl/enc_fast_lossless.cc"  // NOLINT
 #undef FJXL_AVX2
 }  // namespace AVX2
 
@@ -3780,14 +4196,46 @@ namespace AVX512 {
 
 extern "C" {
 
+#if FJXL_STANDALONE
+class FJxlFrameInput {
+ public:
+  FJxlFrameInput(const unsigned char* rgba, size_t row_stride, size_t nb_chans,
+                 size_t bitdepth)
+      : rgba_(rgba),
+        row_stride_(row_stride),
+        bytes_per_pixel_(bitdepth <= 8 ? nb_chans : 2 * nb_chans) {}
+
+  JxlChunkedFrameInputSource GetInputSource() {
+    return JxlChunkedFrameInputSource{this, GetDataAt,
+                                      [](void*, const void*) {}};
+  }
+
+ private:
+  static const void* GetDataAt(void* opaque, size_t xpos, size_t ypos,
+                               size_t xsize, size_t ysize, size_t* row_offset) {
+    FJxlFrameInput* self = static_cast<FJxlFrameInput*>(opaque);
+    *row_offset = self->row_stride_;
+    return self->rgba_ + ypos * (*row_offset) + xpos * self->bytes_per_pixel_;
+  }
+
+  const uint8_t* rgba_;
+  size_t row_stride_;
+  size_t bytes_per_pixel_;
+};
+
 size_t JxlFastLosslessEncode(const unsigned char* rgba, size_t width,
                              size_t row_stride, size_t height, size_t nb_chans,
-                             size_t bitdepth, int big_endian, int effort,
+                             size_t bitdepth, bool big_endian, int effort,
                              unsigned char** output, void* runner_opaque,
                              FJxlParallelRunner runner) {
+  FJxlFrameInput input(rgba, row_stride, nb_chans, bitdepth);
   auto frame_state = JxlFastLosslessPrepareFrame(
-      rgba, width, row_stride, height, nb_chans, bitdepth, big_endian, effort,
-      runner_opaque, runner);
+      input.GetInputSource(), width, height, nb_chans, bitdepth, big_endian,
+      effort, /*oneshot=*/true);
+  if (!JxlFastLosslessProcessFrame(frame_state, /*is_last=*/true, runner_opaque,
+                                   runner, nullptr)) {
+    return 0;
+  }
   JxlFastLosslessPrepareHeader(frame_state, /*add_image_header=*/1,
                                /*is_last=*/1);
   size_t output_size = JxlFastLosslessMaxRequiredOutput(frame_state);
@@ -3798,13 +4246,40 @@ size_t JxlFastLosslessEncode(const unsigned char* rgba, size_t width,
                                                output_size - total)) != 0) {
     total += written;
   }
+  JxlFastLosslessFreeFrameState(frame_state);
   return total;
 }
+#endif
 
 JxlFastLosslessFrameState* JxlFastLosslessPrepareFrame(
-    const unsigned char* rgba, size_t width, size_t row_stride, size_t height,
-    size_t nb_chans, size_t bitdepth, int big_endian, int effort,
-    void* runner_opaque, FJxlParallelRunner runner) {
+    JxlChunkedFrameInputSource input, size_t width, size_t height,
+    size_t nb_chans, size_t bitdepth, bool big_endian, int effort,
+    int oneshot) {
+#if FJXL_ENABLE_AVX512
+  if (HasCpuFeature(CpuFeature::kAVX512CD) &&
+      HasCpuFeature(CpuFeature::kVBMI) &&
+      HasCpuFeature(CpuFeature::kAVX512BW) &&
+      HasCpuFeature(CpuFeature::kAVX512F) &&
+      HasCpuFeature(CpuFeature::kAVX512VL)) {
+    return AVX512::JxlFastLosslessPrepareImpl(
+        input, width, height, nb_chans, bitdepth, big_endian, effort, oneshot);
+  }
+#endif
+#if FJXL_ENABLE_AVX2
+  if (HasCpuFeature(CpuFeature::kAVX2)) {
+    return AVX2::JxlFastLosslessPrepareImpl(
+        input, width, height, nb_chans, bitdepth, big_endian, effort, oneshot);
+  }
+#endif
+
+  return default_implementation::JxlFastLosslessPrepareImpl(
+      input, width, height, nb_chans, bitdepth, big_endian, effort, oneshot);
+}
+
+bool JxlFastLosslessProcessFrame(
+    JxlFastLosslessFrameState* frame_state, bool is_last, void* runner_opaque,
+    FJxlParallelRunner runner,
+    JxlEncoderOutputProcessorWrapper* output_processor) {
   auto trivial_runner =
       +[](void*, void* opaque, void fun(void*, size_t), size_t count) {
         for (size_t i = 0; i < count; i++) {
@@ -3817,28 +4292,48 @@ JxlFastLosslessFrameState* JxlFastLosslessPrepareFrame(
   }
 
 #if FJXL_ENABLE_AVX512
-  if (__builtin_cpu_supports("avx512cd") &&
-      __builtin_cpu_supports("avx512vbmi") &&
-      __builtin_cpu_supports("avx512bw") && __builtin_cpu_supports("avx512f") &&
-      __builtin_cpu_supports("avx512vl")) {
-    return AVX512::JxlFastLosslessEncodeImpl(rgba, width, row_stride, height,
-                                             nb_chans, bitdepth, big_endian,
-                                             effort, runner_opaque, runner);
+  if (HasCpuFeature(CpuFeature::kAVX512CD) &&
+      HasCpuFeature(CpuFeature::kVBMI) &&
+      HasCpuFeature(CpuFeature::kAVX512BW) &&
+      HasCpuFeature(CpuFeature::kAVX512F) &&
+      HasCpuFeature(CpuFeature::kAVX512VL)) {
+    JXL_RETURN_IF_ERROR(AVX512::JxlFastLosslessProcessFrameImpl(
+        frame_state, is_last, runner_opaque, runner, output_processor));
+    return true;
   }
 #endif
 #if FJXL_ENABLE_AVX2
-  if (__builtin_cpu_supports("avx2")) {
-    return AVX2::JxlFastLosslessEncodeImpl(rgba, width, row_stride, height,
-                                           nb_chans, bitdepth, big_endian,
-                                           effort, runner_opaque, runner);
+  if (HasCpuFeature(CpuFeature::kAVX2)) {
+    JXL_RETURN_IF_ERROR(AVX2::JxlFastLosslessProcessFrameImpl(
+        frame_state, is_last, runner_opaque, runner, output_processor));
+    return true;
   }
 #endif
 
-  return default_implementation::JxlFastLosslessEncodeImpl(
-      rgba, width, row_stride, height, nb_chans, bitdepth, big_endian, effort,
-      runner_opaque, runner);
+  JXL_RETURN_IF_ERROR(default_implementation::JxlFastLosslessProcessFrameImpl(
+      frame_state, is_last, runner_opaque, runner, output_processor));
+  return true;
 }
 
 }  // extern "C"
+
+#if !FJXL_STANDALONE
+bool JxlFastLosslessOutputFrame(
+    JxlFastLosslessFrameState* frame_state,
+    JxlEncoderOutputProcessorWrapper* output_processor) {
+  size_t fl_size = JxlFastLosslessOutputSize(frame_state);
+  size_t written = 0;
+  while (written < fl_size) {
+    JXL_ASSIGN_OR_RETURN(auto buffer,
+                         output_processor->GetBuffer(32, fl_size - written));
+    size_t n =
+        JxlFastLosslessWriteOutput(frame_state, buffer.data(), buffer.size());
+    if (n == 0) break;
+    JXL_RETURN_IF_ERROR(buffer.advance(n));
+    written += n;
+  };
+  return true;
+}
+#endif
 
 #endif  // FJXL_SELF_INCLUDE

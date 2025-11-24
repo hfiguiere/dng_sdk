@@ -1,6 +1,8 @@
 # Description:
 #   Brotli is a generic-purpose lossless compression algorithm.
 
+load(":compiler_config_setting.bzl", "create_msvc_config")
+
 package(
     default_visibility = ["//visibility:public"],
 )
@@ -38,8 +40,6 @@ config_setting(
     values = {"cpu": "x64_windows_msys"},
     visibility = ["//visibility:public"],
 )
-
-load(":compiler_config_setting.bzl", "create_msvc_config")
 
 create_msvc_config()
 
@@ -123,7 +123,10 @@ cc_library(
     srcs = [":enc_sources"],
     hdrs = [":enc_headers"],
     copts = STRICT_C_OPTIONS,
-    linkopts = ["-lm"],
+    linkopts = select({
+        ":msvc": [],
+        "//conditions:default": ["-lm"],
+    }),
     deps = [":brotlicommon"],
 )
 

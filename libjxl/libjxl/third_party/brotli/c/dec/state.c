@@ -4,12 +4,14 @@
    See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
 */
 
-#include "./state.h"
+#include "state.h"
 
 #include <stdlib.h>  /* free, malloc */
 
 #include <brotli/types.h>
-#include "./huffman.h"
+
+#include "../common/dictionary.h"
+#include "huffman.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -42,6 +44,7 @@ BROTLI_BOOL BrotliDecoderStateInit(BrotliDecoderState* s,
   s->pos = 0;
   s->rb_roundtrips = 0;
   s->partial_pos_out = 0;
+  s->used_input = 0;
 
   s->block_type_trees = NULL;
   s->block_len_trees = NULL;
@@ -81,8 +84,10 @@ BROTLI_BOOL BrotliDecoderStateInit(BrotliDecoderState* s,
 
   s->mtf_upper_bound = 63;
 
-  s->dictionary = BrotliGetDictionary();
-  s->transforms = BrotliGetTransforms();
+  s->compound_dictionary = NULL;
+  s->dictionary =
+      BrotliSharedDictionaryCreateInstance(alloc_func, free_func, opaque);
+  if (!s->dictionary) return BROTLI_FALSE;
 
   return BROTLI_TRUE;
 }
@@ -126,9 +131,24 @@ void BrotliDecoderStateCleanupAfterMetablock(BrotliDecoderState* s) {
   BROTLI_DECODER_FREE(s, s->distance_hgroup.htrees);
 }
 
+#ifdef BROTLI_REPORTING
+/* When BROTLI_REPORTING is defined extra reporting module have to be linked. */
+void BrotliDecoderOnFinish(const BrotliDecoderState* s);
+#define BROTLI_DECODER_ON_FINISH(s) BrotliDecoderOnFinish(s);
+#else
+#if !defined(BROTLI_DECODER_ON_FINISH)
+#define BROTLI_DECODER_ON_FINISH(s) (void)(s);
+#endif
+#endif
+
 void BrotliDecoderStateCleanup(BrotliDecoderState* s) {
   BrotliDecoderStateCleanupAfterMetablock(s);
 
+  BROTLI_DECODER_ON_FINISH(s);
+
+  BROTLI_DECODER_FREE(s, s->compound_dictionary);
+  BrotliSharedDictionaryDestroyInstance(s->dictionary);
+  s->dictionary = NULL;
   BROTLI_DECODER_FREE(s, s->ringbuffer);
   BROTLI_DECODER_FREE(s, s->block_type_trees);
 }
@@ -136,9 +156,11 @@ void BrotliDecoderStateCleanup(BrotliDecoderState* s) {
 BROTLI_BOOL BrotliDecoderHuffmanTreeGroupInit(BrotliDecoderState* s,
     HuffmanTreeGroup* group, uint32_t alphabet_size_max,
     uint32_t alphabet_size_limit, uint32_t ntrees) {
-  /* Pack two allocations into one */
-  const size_t max_table_size =
-      kMaxHuffmanTableSize[(alphabet_size_limit + 31) >> 5];
+  /* 376 = 256 (1-st level table) + 4 + 7 + 15 + 31 + 63 (2-nd level mix-tables)
+     This number is discovered "unlimited" "enough" calculator; it is actually
+     a wee bigger than required in several cases (especially for alphabets with
+     less than 16 symbols). */
+  const size_t max_table_size = alphabet_size_limit + 376;
   const size_t code_size = sizeof(HuffmanCode) * ntrees * max_table_size;
   const size_t htree_size = sizeof(HuffmanCode*) * ntrees;
   /* Pointer alignment is, hopefully, wider than sizeof(HuffmanCode). */

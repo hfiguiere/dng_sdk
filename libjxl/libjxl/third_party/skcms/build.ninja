@@ -4,6 +4,7 @@ subninja ninja/clang
 subninja ninja/clang.O0
 subninja ninja/clang.sse2
 subninja ninja/clang.sse41
+subninja ninja/clang.hsw
 subninja ninja/clang.avx512
 subninja ninja/clang.lsan
 subninja ninja/clang.m32
@@ -25,7 +26,6 @@ subninja ninja/gcc.tiny
 subninja ninja/gcc.xsan
 
 subninja ninja/android
-subninja ninja/android.fp16
 subninja ninja/android.nofp16
 subninja ninja/android.lsan
 subninja ninja/android.portable
