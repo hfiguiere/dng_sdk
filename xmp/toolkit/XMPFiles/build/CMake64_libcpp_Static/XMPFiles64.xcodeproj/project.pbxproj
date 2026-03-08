@@ -1706,7 +1706,7 @@
 		};
 		34D48D3928E737AB000B5261 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2349533C2DC97FF400EE6DCB /* Debug.xcconfig */;
+			baseConfigurationReference = 2349533A2DC97FF400EE6DCB /* Debug.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -2105,7 +2105,7 @@
 		};
 		34D48DB728E738FC000B5261 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2349533A2DC97FF400EE6DCB /* Release.xcconfig */;
+			baseConfigurationReference = 2349533C2DC97FF400EE6DCB /* Release.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				COMBINE_HIDPI_IMAGES = YES;

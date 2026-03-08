@@ -61,14 +61,13 @@ additional dependencies:
 
 Release Notes / Changelog:
 
+1.7.1 2471 January 29, 2026
+
+    - Vulnerability issue fixes.
+
 1.7.1 2410 November 17, 2025
 
-    - Fixes the following vulnerability issues:
-
-        VULN-32661
-        VULN-32888
-        VULN-32991
-        VULN-33007
+    - Vulnerability issue fixes.
 
     - Other minor bug fixes.
 

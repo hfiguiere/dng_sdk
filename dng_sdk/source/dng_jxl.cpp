@@ -78,7 +78,23 @@ class jxl_memory_block
 
 				// See dng_memory_block::PhysicalSize.
 
-				fPhysicalBuffer = allocator.Malloc (160u + bytesNeeded);
+				size_t mallocSize = (size_t) (160u + bytesNeeded);
+
+				if (mallocSize <= bytesNeeded)
+					{
+
+					ThrowOverflow ();
+
+					}
+
+				fPhysicalBuffer = allocator.Malloc (mallocSize);
+
+				if (!fPhysicalBuffer)
+					{
+
+					ThrowMemoryFull ();
+
+					}
 
 				fLogicalBuffer = (void *) DNG_ALIGN_SIMD (fPhysicalBuffer);
 
@@ -905,29 +921,42 @@ class jxl_image_chunk_reader
 
 			#if qLogStreamIntput
 
-			printf ("input: get_color_channel_data_at (x=%d, y=%d, w=%d, h=%d)\n",
-					int (xpos),
-					int (ypos),
-					int (xsize),
-					int (ysize));
+			printf ("input: get_color_channel_data_at (x=%zu, y=%zu, w=%zu, h=%zu)\n",
+					xpos,
+					ypos,
+					xsize,
+					ysize);
 
 			#endif
-			
+
+			if (xpos  > 0x7fffffff ||
+				ypos  > 0x7fffffff ||
+				xsize > 0x7fffffff ||
+				ysize > 0x7fffffff)
+				{
+
+				ThrowOverflow ("coordinate too large");
+
+				}
+
 			dng_pixel_buffer buffer;
 
 			buffer.fArea.t = int32 (ypos);
 			buffer.fArea.l = int32 (xpos);
-			buffer.fArea.b = int32 (ypos + ysize);
-			buffer.fArea.r = int32 (xpos + xsize);
+			buffer.fArea.b = SafeInt32Add (int32 (ypos), int32 (ysize));
+			buffer.fArea.r = SafeInt32Add (int32 (xpos), int32 (xsize));
 
 			buffer.fPlanes = fImage.Planes ();
 
 			// Assume row-col-plane interleaved.
-			
+
+			DNG_REQUIRE (buffer.fPlanes    <= 0x7fffffff, "planes too large");
+			DNG_REQUIRE (buffer.fArea.W () <= 0x7fffffff, "buffer too wide");
+
 			buffer.fPlaneStep = 1;
 			buffer.fColStep	  = buffer.fPlanes;
-			buffer.fRowStep	  = SafeUint32Mult (buffer.fPlanes,
-												buffer.fArea.W ());
+			buffer.fRowStep	  = SafeInt32Mult (buffer.fPlanes,
+											   buffer.fArea.W ());
 
 			buffer.fPixelType = fImage.PixelType ();
 			buffer.fPixelSize = TagTypeSize (buffer.fPixelType);
@@ -1092,27 +1121,40 @@ class jxl_buffer_chunk_reader
 
 			#if qLogStreamIntput
 
-			printf ("input: get_color_channel_data_at (x=%d, y=%d, w=%d, h=%d)\n",
-					int (xpos),
-					int (ypos),
-					int (xsize),
-					int (ysize));
+			printf ("input: get_color_channel_data_at (x=%zu, y=%zu, w=%zu, h=%zu)\n",
+					xpos,
+					ypos,
+					xsize,
+					ysize);
 
 			#endif
+
+			if (xpos  > 0x7fffffff ||
+				ypos  > 0x7fffffff ||
+				xsize > 0x7fffffff ||
+				ysize > 0x7fffffff)
+				{
+
+				ThrowOverflow ("coordinate too large");
+
+				}
 			
 			dng_pixel_buffer buffer = fBuffer;
 
-			buffer.fArea.t = int32 (ypos) + fBuffer.fArea.t;
-			buffer.fArea.l = int32 (xpos) + fBuffer.fArea.l;
-			buffer.fArea.b = buffer.fArea.t + int32 (ysize);
-			buffer.fArea.r = buffer.fArea.l + int32 (xsize);
+			buffer.fArea.t = SafeInt32Add (int32 (ypos),   fBuffer.fArea.t);
+			buffer.fArea.l = SafeInt32Add (int32 (xpos),   fBuffer.fArea.l);
+			buffer.fArea.b = SafeInt32Add (buffer.fArea.t, int32 (ysize));
+			buffer.fArea.r = SafeInt32Add (buffer.fArea.l, int32 (xsize));
 
 			// Assume row-col-plane interleaved.
-			
+
+			DNG_REQUIRE (buffer.fPlanes    <= 0x7fffffff, "planes too large");
+			DNG_REQUIRE (buffer.fArea.W () <= 0x7fffffff, "buffer too wide");
+
 			buffer.fPlaneStep = 1;
 			buffer.fColStep	  = buffer.fPlanes;
-			buffer.fRowStep	  = SafeUint32Mult (buffer.fPlanes,
-												buffer.fArea.W ());
+			buffer.fRowStep	  = SafeInt32Mult (buffer.fPlanes,
+											   buffer.fArea.W ());
 
 			const uint32 bytesNeeded = SafeUint32Mult (buffer.fRowStep,
 													   buffer.fArea.H (),
@@ -1955,16 +1997,20 @@ static JxlEncoderPtr EncodeJXL_Common (dng_host &host,
 
 	previewPixelBuffer.fPlanes = planes;
 
+	DNG_REQUIRE (previewPixelBuffer.fArea.W () <= 0x7fffffff,
+				 "fArea.W too large");
+
 	previewPixelBuffer.fPlaneStep = 1;
 	previewPixelBuffer.fColStep   = (int32) planes;
-	previewPixelBuffer.fRowStep   = (int32) planes * (int32) previewPixelBuffer.fArea.W ();
+	previewPixelBuffer.fRowStep   = SafeInt32Mult ((int32) planes,
+												   (int32) previewPixelBuffer.fArea.W ());
 
 	previewPixelBuffer.fPixelType = srcPixelType;
 	previewPixelBuffer.fPixelSize = TagTypeSize (previewPixelBuffer.fPixelType);
 
-	uint32 previewBytesNeeded = (previewPixelBuffer.fRowStep *
-								 previewPixelBuffer.fArea.H () *
-								 previewPixelBuffer.fPixelSize); 
+	uint32 previewBytesNeeded = SafeUint32Mult (previewPixelBuffer.fRowStep,
+												previewPixelBuffer.fArea.H (),
+												previewPixelBuffer.fPixelSize);
 
 	AutoPtr<dng_memory_block> previewBlock (host.Allocate (previewBytesNeeded));
 
@@ -3288,6 +3334,10 @@ void dng_jxl_decoder::Decode (dng_host &host,
 
 			dng_point size;
 
+			DNG_REQUIRE (basicInfo.xsize <= 0x7fffffff &&
+						 basicInfo.ysize <= 0x7fffffff,
+						 "Image size exceeds supported size.");
+
 			size.h = basicInfo.xsize;
 			size.v = basicInfo.ysize;
 
@@ -3301,7 +3351,8 @@ void dng_jxl_decoder::Decode (dng_host &host,
 			  
 			buffer.fPlaneStep = 1;
 			buffer.fColStep	  = totalPlanes;
-			buffer.fRowStep	  = buffer.fColStep * size.h;
+			buffer.fRowStep	  = SafeInt32Mult (buffer.fColStep,
+											   size.h);
 
 			buffer.fPixelType = pixelType;
 			buffer.fPixelSize = TagTypeSize (buffer.fPixelType);
@@ -3340,11 +3391,13 @@ void dng_jxl_decoder::Decode (dng_host &host,
 
 			wholeBuffer.fColStep   = 1;
 			wholeBuffer.fPlaneStep = size.h;
-			wholeBuffer.fRowStep   = wholeBuffer.fPlaneStep * totalPlanes;
+			wholeBuffer.fRowStep   = SafeInt32Mult (wholeBuffer.fPlaneStep,
+													totalPlanes);
 
-			const uint64 bytesNeeded = (uint64 (wholeBuffer.fRowStep) *
-										uint64 (wholeBuffer.fArea.H ()) *
-										uint64 (wholeBuffer.fPixelSize));
+			const uint64 bytesNeeded =
+				(uint64) SafeInt64Mult (int64 (wholeBuffer.fRowStep),
+										int64 (wholeBuffer.fArea.H ()),
+										int64 (wholeBuffer.fPixelSize));
 
 			cbData.fBlock.Reset (new jxl_memory_block (host.Allocator (),
 													   bytesNeeded));
@@ -3373,6 +3426,9 @@ void dng_jxl_decoder::Decode (dng_host &host,
 													   &size),
 						 "JxlDecoderImageOutBufferSize",
 						 &parallelData);
+
+			DNG_REQUIRE (size <= 0xffffffff,
+						 "JxlDecoderImageOutBufferSize too large");
 
 			block.Reset (host.Allocate ((uint32) size));
 
