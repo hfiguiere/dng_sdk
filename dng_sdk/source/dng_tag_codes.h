@@ -453,6 +453,7 @@ enum
 	tcCanonCR3,
 	tcJXL,
 	tcAVIF,
+	tcWebP,
 	
 	};
 

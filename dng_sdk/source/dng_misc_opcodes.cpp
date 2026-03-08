@@ -440,7 +440,7 @@ void dng_opcode_MapTable::ReplicateLastEntry ()
 	
 	uint16 *table = fTable->Buffer_uint16 ();
 		
-	uint16 lastEntry = table [fCount];
+	uint16 lastEntry = table [fCount - 1];
 	
 	for (uint32 index = fCount; index < 0x10000; index++)
 		{
@@ -511,7 +511,7 @@ void dng_opcode_MapTable::Prepare (dng_negative &negative,
 		
 		uint16 *dstTable = fBlackAdjustedTable->Buffer_uint16 ();
 		
-		real64 srcScale = 65535.0 / (65535.0 - blackLevel);
+		real64 srcScale = (blackLevel < 65535) ? 65535.0 / (65535.0 - blackLevel) : 0.0;
 		
 		real64 dstScale = (65535.0 - blackLevel) / 65535.0;
 		

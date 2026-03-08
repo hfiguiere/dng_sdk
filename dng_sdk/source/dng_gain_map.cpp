@@ -1323,7 +1323,7 @@ void dng_opcode_GainMap::ProcessArea (dng_negative &negative,
 			
 			blackOffset2 = ((real32) blackLevel) / 65535.0f;
 			blackScale2	 = 1.0f - blackOffset2;
-			blackScale1	 = 1.0f / blackScale2;
+			blackScale1	 = (blackScale2 != 0.0) ? 1.0f / blackScale2 : 0.0;
 			blackOffset1 = 1.0f - blackScale1;
 			
 			}
