@@ -143,6 +143,9 @@
 		34E22C5027A3218D00CA8B44 /* targets.cc in Sources */ = {isa = PBXBuildFile; fileRef = 34E22C1627A3218D00CA8B44 /* targets.cc */; };
 		34E22C5527A3223200CA8B44 /* skcms.cc in Sources */ = {isa = PBXBuildFile; fileRef = 34E22C5427A3223200CA8B44 /* skcms.cc */; };
 		34E22C5627A3223200CA8B44 /* skcms.cc in Sources */ = {isa = PBXBuildFile; fileRef = 34E22C5427A3223200CA8B44 /* skcms.cc */; };
+		F1A000022E3B100000CA8B44 /* skcms_TransformBaseline.cc in Sources */ = {isa = PBXBuildFile; fileRef = F1A000012E3B100000CA8B44 /* skcms_TransformBaseline.cc */; };
+		F1A000032E3B100000CA8B44 /* skcms_TransformBaseline.cc in Sources */ = {isa = PBXBuildFile; fileRef = F1A000012E3B100000CA8B44 /* skcms_TransformBaseline.cc */; };
+		F1A000042E3B100000CA8B44 /* skcms_TransformBaseline.cc in Sources */ = {isa = PBXBuildFile; fileRef = F1A000012E3B100000CA8B44 /* skcms_TransformBaseline.cc */; };
 		34E230DE27A3226300CA8B44 /* thread_parallel_runner_internal.cc in Sources */ = {isa = PBXBuildFile; fileRef = 34E22DD827A3226200CA8B44 /* thread_parallel_runner_internal.cc */; };
 		34E230DF27A3226300CA8B44 /* thread_parallel_runner_internal.cc in Sources */ = {isa = PBXBuildFile; fileRef = 34E22DD827A3226200CA8B44 /* thread_parallel_runner_internal.cc */; };
 		34E230E027A3226300CA8B44 /* thread_parallel_runner_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 34E22DD927A3226200CA8B44 /* thread_parallel_runner_internal.h */; };
@@ -1538,6 +1541,7 @@
 		34E22C1527A3218D00CA8B44 /* base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = base.h; sourceTree = "<group>"; };
 		34E22C1627A3218D00CA8B44 /* targets.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = targets.cc; sourceTree = "<group>"; };
 		34E22C5427A3223200CA8B44 /* skcms.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = skcms.cc; sourceTree = "<group>"; };
+		F1A000012E3B100000CA8B44 /* skcms_TransformBaseline.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = src/skcms_TransformBaseline.cc; sourceTree = "<group>"; };
 		34E22DD727A3226200CA8B44 /* libjxl_threads.pc.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = libjxl_threads.pc.in; sourceTree = "<group>"; };
 		34E22DD827A3226200CA8B44 /* thread_parallel_runner_internal.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = thread_parallel_runner_internal.cc; sourceTree = "<group>"; };
 		34E22DD927A3226200CA8B44 /* thread_parallel_runner_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = thread_parallel_runner_internal.h; sourceTree = "<group>"; };
@@ -2327,6 +2331,7 @@
 			isa = PBXGroup;
 			children = (
 				34E22C5427A3223200CA8B44 /* skcms.cc */,
+				F1A000012E3B100000CA8B44 /* skcms_TransformBaseline.cc */,
 			);
 			path = skcms;
 			sourceTree = "<group>";
@@ -3903,6 +3908,7 @@
 				34FB019C2B76966B00BCB233 /* image_bundle.cc in Sources */,
 				34FB037F2B769BD900BCB233 /* bit_cost.c in Sources */,
 				34E22C5527A3223200CA8B44 /* skcms.cc in Sources */,
+				F1A000022E3B100000CA8B44 /* skcms_TransformBaseline.cc in Sources */,
 				34FB00132B76966B00BCB233 /* dec_patch_dictionary.cc in Sources */,
 				34FB01452B76966B00BCB233 /* frame_header.cc in Sources */,
 				34FB00072B76966B00BCB233 /* enc_fast_lossless.cc in Sources */,
@@ -4086,6 +4092,7 @@
 				34FB019D2B76966B00BCB233 /* image_bundle.cc in Sources */,
 				34FB03802B769BD900BCB233 /* bit_cost.c in Sources */,
 				34E22C5627A3223200CA8B44 /* skcms.cc in Sources */,
+				F1A000032E3B100000CA8B44 /* skcms_TransformBaseline.cc in Sources */,
 				34FB00142B76966B00BCB233 /* dec_patch_dictionary.cc in Sources */,
 				34FB01462B76966B00BCB233 /* frame_header.cc in Sources */,
 				34FB00082B76966B00BCB233 /* enc_fast_lossless.cc in Sources */,
@@ -4269,6 +4276,7 @@
 				34FB019E2B76966B00BCB233 /* image_bundle.cc in Sources */,
 				34FB03812B769BD900BCB233 /* bit_cost.c in Sources */,
 				C240340B29711D3400AF94CC /* skcms.cc in Sources */,
+				F1A000042E3B100000CA8B44 /* skcms_TransformBaseline.cc in Sources */,
 				34FB00152B76966B00BCB233 /* dec_patch_dictionary.cc in Sources */,
 				34FB01472B76966B00BCB233 /* frame_header.cc in Sources */,
 				34FB00092B76966B00BCB233 /* enc_fast_lossless.cc in Sources */,

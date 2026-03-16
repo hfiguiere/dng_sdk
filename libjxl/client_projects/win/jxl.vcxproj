@@ -597,6 +597,7 @@
     <ClCompile Include="..\..\libjxl\lib\threads\thread_parallel_runner.cc" />
     <ClCompile Include="..\..\libjxl\lib\threads\thread_parallel_runner_internal.cc" />
     <ClCompile Include="..\..\libjxl\third_party\skcms\skcms.cc" />
+    <ClCompile Include="..\..\libjxl\third_party\skcms\src\skcms_TransformBaseline.cc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\libjxl\lib\jxl\jxl.syms" />

@@ -22,10 +22,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if !defined(HWY_NO_LIBCXX)
-#include <ostream>
-#endif
-
 #include "hwy/detect_compiler_arch.h"
 #include "hwy/highway_export.h"
 
@@ -165,8 +161,7 @@ namespace hwy {
 // Returns a pointer whose type is `type` (T*), while allowing the compiler to
 // assume that the untyped pointer `ptr` is aligned to a multiple of sizeof(T).
 #define HWY_RCAST_ALIGNED(type, ptr) \
-  reinterpret_cast<type>(            \
-      HWY_ASSUME_ALIGNED((ptr), alignof(hwy::RemovePtr<type>)))
+  reinterpret_cast<type>(HWY_ASSUME_ALIGNED((ptr), alignof(RemovePtr<type>)))
 
 // Clang and GCC require attributes on each function into which SIMD intrinsics
 // are inlined. Support both per-function annotation (HWY_ATTR) for lambdas and
@@ -258,13 +253,12 @@ HWY_DLLEXPORT HWY_NORETURN void HWY_FORMAT(3, 4)
   ::hwy::Abort(__FILE__, __LINE__, format, ##__VA_ARGS__)
 
 // Always enabled.
-#define HWY_ASSERT_M(condition, msg)               \
-  do {                                             \
-    if (!(condition)) {                            \
-      HWY_ABORT("Assert %s: %s", #condition, msg); \
-    }                                              \
+#define HWY_ASSERT(condition)             \
+  do {                                    \
+    if (!(condition)) {                   \
+      HWY_ABORT("Assert %s", #condition); \
+    }                                     \
   } while (0)
-#define HWY_ASSERT(condition) HWY_ASSERT_M(condition, "")
 
 #if HWY_HAS_FEATURE(memory_sanitizer) || defined(MEMORY_SANITIZER) || \
     defined(__SANITIZE_MEMORY__)
@@ -323,12 +317,8 @@ HWY_DLLEXPORT HWY_NORETURN void HWY_FORMAT(3, 4)
 #endif  // HWY_IS_DEBUG_BUILD
 
 #if HWY_IS_DEBUG_BUILD
-#define HWY_DASSERT_M(condition, msg) HWY_ASSERT_M(condition, msg)
-#define HWY_DASSERT(condition) HWY_ASSERT_M(condition, "")
+#define HWY_DASSERT(condition) HWY_ASSERT(condition)
 #else
-#define HWY_DASSERT_M(condition, msg) \
-  do {                                \
-  } while (0)
 #define HWY_DASSERT(condition) \
   do {                         \
   } while (0)
@@ -463,13 +453,6 @@ static inline HWY_MAYBE_UNUSED bool operator==(const uint128_t& a,
   return a.lo == b.lo && a.hi == b.hi;
 }
 
-#if !defined(HWY_NO_LIBCXX)
-static inline HWY_MAYBE_UNUSED std::ostream& operator<<(std::ostream& os,
-                                                        const uint128_t& n) {
-  return os << "[hi=" << n.hi << ",lo=" << n.lo << "]";
-}
-#endif
-
 static inline HWY_MAYBE_UNUSED bool operator<(const K64V64& a,
                                               const K64V64& b) {
   return a.key < b.key;
@@ -484,13 +467,6 @@ static inline HWY_MAYBE_UNUSED bool operator==(const K64V64& a,
   return a.key == b.key;
 }
 
-#if !defined(HWY_NO_LIBCXX)
-static inline HWY_MAYBE_UNUSED std::ostream& operator<<(std::ostream& os,
-                                                        const K64V64& n) {
-  return os << "[k=" << n.key << ",v=" << n.value << "]";
-}
-#endif
-
 static inline HWY_MAYBE_UNUSED bool operator<(const K32V32& a,
                                               const K32V32& b) {
   return a.key < b.key;
@@ -504,13 +480,6 @@ static inline HWY_MAYBE_UNUSED bool operator==(const K32V32& a,
                                                const K32V32& b) {
   return a.key == b.key;
 }
-
-#if !defined(HWY_NO_LIBCXX)
-static inline HWY_MAYBE_UNUSED std::ostream& operator<<(std::ostream& os,
-                                                        const K32V32& n) {
-  return os << "[k=" << n.key << ",v=" << n.value << "]";
-}
-#endif
 
 //------------------------------------------------------------------------------
 // Controlling overload resolution (SFINAE)
@@ -913,85 +882,76 @@ HWY_INLINE constexpr bool IsIntegerLaneType<uint64_t>() {
   return true;
 }
 
-namespace detail {
-
 template <class T>
-static HWY_INLINE constexpr bool IsNonCvInteger() {
-  // NOTE: Do not add a IsNonCvInteger<wchar_t>() specialization below as it is
+HWY_API constexpr bool IsInteger() {
+  // NOTE: Do not add a IsInteger<wchar_t>() specialization below as it is
   // possible for IsSame<wchar_t, uint16_t>() to be true when compiled with MSVC
   // with the /Zc:wchar_t- option.
-  return IsIntegerLaneType<T>() || IsSame<T, wchar_t>() ||
-         IsSameEither<T, size_t, ptrdiff_t>() ||
-         IsSameEither<T, intptr_t, uintptr_t>();
+  return IsIntegerLaneType<T>() || IsSame<RemoveCvRef<T>, wchar_t>() ||
+         IsSameEither<RemoveCvRef<T>, size_t, ptrdiff_t>() ||
+         IsSameEither<RemoveCvRef<T>, intptr_t, uintptr_t>();
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<bool>() {
+HWY_INLINE constexpr bool IsInteger<bool>() {
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<char>() {
+HWY_INLINE constexpr bool IsInteger<char>() {
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<signed char>() {
+HWY_INLINE constexpr bool IsInteger<signed char>() {
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<unsigned char>() {
+HWY_INLINE constexpr bool IsInteger<unsigned char>() {
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<short>() {  // NOLINT
+HWY_INLINE constexpr bool IsInteger<short>() {  // NOLINT
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<unsigned short>() {  // NOLINT
+HWY_INLINE constexpr bool IsInteger<unsigned short>() {  // NOLINT
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<int>() {
+HWY_INLINE constexpr bool IsInteger<int>() {
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<unsigned>() {
+HWY_INLINE constexpr bool IsInteger<unsigned>() {
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<long>() {  // NOLINT
+HWY_INLINE constexpr bool IsInteger<long>() {  // NOLINT
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<unsigned long>() {  // NOLINT
+HWY_INLINE constexpr bool IsInteger<unsigned long>() {  // NOLINT
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<long long>() {  // NOLINT
+HWY_INLINE constexpr bool IsInteger<long long>() {  // NOLINT
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<unsigned long long>() {  // NOLINT
+HWY_INLINE constexpr bool IsInteger<unsigned long long>() {  // NOLINT
   return true;
 }
 #if defined(__cpp_char8_t) && __cpp_char8_t >= 201811L
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<char8_t>() {
+HWY_INLINE constexpr bool IsInteger<char8_t>() {
   return true;
 }
 #endif
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<char16_t>() {
+HWY_INLINE constexpr bool IsInteger<char16_t>() {
   return true;
 }
 template <>
-HWY_INLINE constexpr bool IsNonCvInteger<char32_t>() {
+HWY_INLINE constexpr bool IsInteger<char32_t>() {
   return true;
-}
-
-}  // namespace detail
-
-template <class T>
-HWY_API constexpr bool IsInteger() {
-  return detail::IsNonCvInteger<RemoveCvRef<T>>();
 }
 
 // -----------------------------------------------------------------------------
@@ -1172,12 +1132,10 @@ struct alignas(2) float16_t {
 #else
 #error "Logic error: condition should be 'all but NEON_HAVE_F16C'"
 #endif
-#elif HWY_IDE
-  using Native = uint16_t;
 #endif  // HWY_HAVE_SCALAR_F16_TYPE
 
   union {
-#if HWY_HAVE_SCALAR_F16_TYPE || HWY_IDE
+#if HWY_HAVE_SCALAR_F16_TYPE
     // Accessed via NativeLaneType, and used directly if
     // HWY_HAVE_SCALAR_F16_OPERATORS.
     Native native;
@@ -1659,12 +1617,10 @@ HWY_F16_CONSTEXPR inline std::partial_ordering operator<=>(
 struct alignas(2) bfloat16_t {
 #if HWY_HAVE_SCALAR_BF16_TYPE
   using Native = __bf16;
-#elif HWY_IDE
-  using Native = uint16_t;
 #endif
 
   union {
-#if HWY_HAVE_SCALAR_BF16_TYPE || HWY_IDE
+#if HWY_HAVE_SCALAR_BF16_TYPE
     // Accessed via NativeLaneType, and used directly if
     // HWY_HAVE_SCALAR_BF16_OPERATORS.
     Native native;
@@ -1681,7 +1637,7 @@ struct alignas(2) bfloat16_t {
   bfloat16_t& operator=(const bfloat16_t& arg) noexcept = default;
 
 // Only enable implicit conversions if we have a native type.
-#if HWY_HAVE_SCALAR_BF16_TYPE || HWY_IDE
+#if HWY_HAVE_SCALAR_BF16_TYPE
   constexpr bfloat16_t(Native arg) noexcept : native(arg) {}
   constexpr operator Native() const noexcept { return native; }
 #endif
@@ -2425,17 +2381,6 @@ constexpr MakeSigned<T> MaxExponentField() {
     return static_cast<ResultT>(a op b.native);                               \
   }
 
-#define HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(op, assign_op, T2)                 \
-  template <typename T1,                                                   \
-            hwy::EnableIf<hwy::IsInteger<RemoveCvRef<T1>>() ||             \
-                          hwy::IsFloat3264<RemoveCvRef<T1>>()>* = nullptr, \
-            typename ResultT =                                             \
-                decltype(DeclVal<T1&>() assign_op DeclVal<T2::Native>())>  \
-  static HWY_INLINE constexpr ResultT operator assign_op(T1& a,            \
-                                                         T2 b) noexcept {  \
-    return (a assign_op b.native);                                         \
-  }
-
 #define HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(op, op_func, T1)         \
   HWY_RHS_SPECIAL_FLOAT_ARITH_OP(op, op_func, T1)                             \
   template <                                                                  \
@@ -2454,10 +2399,6 @@ HWY_RHS_SPECIAL_FLOAT_ARITH_OP(+, operator+, float16_t)
 HWY_RHS_SPECIAL_FLOAT_ARITH_OP(-, operator-, float16_t)
 HWY_RHS_SPECIAL_FLOAT_ARITH_OP(*, operator*, float16_t)
 HWY_RHS_SPECIAL_FLOAT_ARITH_OP(/, operator/, float16_t)
-HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(+, +=, float16_t)
-HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(-, -=, float16_t)
-HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(*, *=, float16_t)
-HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(/, /=, float16_t)
 HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(==, operator==, float16_t)
 HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(!=, operator!=, float16_t)
 HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(<, operator<, float16_t)
@@ -2474,10 +2415,6 @@ HWY_RHS_SPECIAL_FLOAT_ARITH_OP(+, operator+, bfloat16_t)
 HWY_RHS_SPECIAL_FLOAT_ARITH_OP(-, operator-, bfloat16_t)
 HWY_RHS_SPECIAL_FLOAT_ARITH_OP(*, operator*, bfloat16_t)
 HWY_RHS_SPECIAL_FLOAT_ARITH_OP(/, operator/, bfloat16_t)
-HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(+, +=, bfloat16_t)
-HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(-, -=, bfloat16_t)
-HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(*, *=, bfloat16_t)
-HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP(/, /=, bfloat16_t)
 HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(==, operator==, bfloat16_t)
 HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(!=, operator!=, bfloat16_t)
 HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(<, operator<, bfloat16_t)
@@ -2490,7 +2427,6 @@ HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(<=>, operator<=>, bfloat16_t)
 #endif  // HWY_HAVE_SCALAR_BF16_OPERATORS
 
 #undef HWY_RHS_SPECIAL_FLOAT_ARITH_OP
-#undef HWY_RHS_SPECIAL_FLOAT_ASSIGN_OP
 #undef HWY_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP
 
 #endif  // HWY_HAVE_SCALAR_F16_OPERATORS || HWY_HAVE_SCALAR_BF16_OPERATORS

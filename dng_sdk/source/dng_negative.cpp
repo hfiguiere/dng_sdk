@@ -7032,7 +7032,7 @@ void dng_negative::ConvertToProxy (dng_host &host,
 			
 		// Figure out the requested proxy pixel size.
 		
-		real64 aspectRatio = AspectRatio ();
+		real64 aspectRatio = BaseAspectRatio ();
 		
 		dng_point newSize (proxySize, proxySize);
 		

@@ -9,7 +9,7 @@
     #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "skcms.h"
+#include "src/skcms_public.h"
 #include "src/skcms_internals.h"
 #include "test_only.h"
 #include <stdlib.h>
@@ -196,6 +196,7 @@ void dump_profile(const skcms_ICCProfile* profile, FILE* fp) {
     fprintf(fp, "%20s : 0x%08X : %u\n", "Size", profile->size, profile->size);
     dump_sig_field(fp, "Data color space", profile->data_color_space);
     dump_sig_field(fp, "PCS", profile->pcs);
+    fprintf(fp, "%20s :            : %d\n", "Input Channel Count", skcms_GetInputChannelCount(profile));
     fprintf(fp, "%20s : 0x%08X : %u\n", "Tag count", profile->tag_count, profile->tag_count);
 
     fprintf(fp, "\n");

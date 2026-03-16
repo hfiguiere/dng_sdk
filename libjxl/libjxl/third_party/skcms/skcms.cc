@@ -5,7 +5,7 @@
  * found in the LICENSE file.
  */
 
-#include "skcms.h"  // NO_G3_REWRITE
+#include "src/skcms_public.h"  // NO_G3_REWRITE
 #include "src/skcms_internals.h"  // NO_G3_REWRITE
 #include "src/skcms_Transform.h"  // NO_G3_REWRITE
 #include <assert.h>
@@ -35,9 +35,10 @@
 
 using namespace skcms_private;
 
-static bool runtime_cpu_detection = true;
+static bool sAllowRuntimeCPUDetection = true;
+
 void skcms_DisableRuntimeCPUDetection() {
-    runtime_cpu_detection = false;
+    sAllowRuntimeCPUDetection = false;
 }
 
 static float log2f_(float x) {
@@ -90,9 +91,13 @@ static float exp2f_(float x) {
 
 // Not static, as it's used by some test tools.
 float powf_(float x, float y) {
-    assert (x >= 0);
-    return (x == 0) || (x == 1) ? x
-                                : exp2f_(log2f_(x) * y);
+    if (x <= 0.f) {
+        return 0.f;
+    }
+    if (x == 1.f) {
+        return 1.f;
+    }
+    return exp2f_(log2f_(x) * y);
 }
 
 static float expf_(float x) {
@@ -231,9 +236,9 @@ float skcms_TransferFunction_eval(const skcms_TransferFunction* tf, float x) {
             return sign * (x < tf->d ?       tf->c * x + tf->f
                                      : powf_(tf->a * x + tf->b, tf->g) + tf->e);
 
-        case skcms_TFType_PQish: return sign * powf_(fmaxf_(pq.A + pq.B * powf_(x, pq.C), 0)
-                                                         / (pq.D + pq.E * powf_(x, pq.C)),
-                                                     pq.F);
+        case skcms_TFType_PQish:
+            return sign *
+                   powf_((pq.A + pq.B * powf_(x, pq.C)) / (pq.D + pq.E * powf_(x, pq.C)), pq.F);
     }
     return 0;
 }
@@ -434,6 +439,69 @@ bool skcms_GetWTPT(const skcms_ICCProfile* profile, float xyz[3]) {
     skcms_ICCTag tag;
     return skcms_GetTagBySignature(profile, skcms_Signature_WTPT, &tag) &&
            read_tag_xyz(&tag, &xyz[0], &xyz[1], &xyz[2]);
+}
+
+static int data_color_space_channel_count(uint32_t data_color_space) {
+    switch (data_color_space) {
+        case skcms_Signature_CMYK:   return 4;
+        case skcms_Signature_Gray:   return 1;
+        case skcms_Signature_RGB:    return 3;
+        case skcms_Signature_Lab:    return 3;
+        case skcms_Signature_XYZ:    return 3;
+        case skcms_Signature_CIELUV: return 3;
+        case skcms_Signature_YCbCr:  return 3;
+        case skcms_Signature_CIEYxy: return 3;
+        case skcms_Signature_HSV:    return 3;
+        case skcms_Signature_HLS:    return 3;
+        case skcms_Signature_CMY:    return 3;
+        case skcms_Signature_2CLR:   return 2;
+        case skcms_Signature_3CLR:   return 3;
+        case skcms_Signature_4CLR:   return 4;
+        case skcms_Signature_5CLR:   return 5;
+        case skcms_Signature_6CLR:   return 6;
+        case skcms_Signature_7CLR:   return 7;
+        case skcms_Signature_8CLR:   return 8;
+        case skcms_Signature_9CLR:   return 9;
+        case skcms_Signature_10CLR:  return 10;
+        case skcms_Signature_11CLR:  return 11;
+        case skcms_Signature_12CLR:  return 12;
+        case skcms_Signature_13CLR:  return 13;
+        case skcms_Signature_14CLR:  return 14;
+        case skcms_Signature_15CLR:  return 15;
+        default:                     return -1;
+    }
+}
+
+int skcms_GetInputChannelCount(const skcms_ICCProfile* profile) {
+    int a2b_count = 0;
+    if (profile->has_A2B) {
+        a2b_count = profile->A2B.input_channels != 0
+                        ? static_cast<int>(profile->A2B.input_channels)
+                        : 3;
+    }
+
+    skcms_ICCTag tag;
+    int trc_count = 0;
+    if (skcms_GetTagBySignature(profile, skcms_Signature_kTRC, &tag)) {
+        trc_count = 1;
+    } else if (profile->has_trc) {
+        trc_count = 3;
+    }
+
+    int dcs_count = data_color_space_channel_count(profile->data_color_space);
+
+    if (dcs_count < 0) {
+        return -1;
+    }
+
+    if (a2b_count > 0 && a2b_count != dcs_count) {
+        return -1;
+    }
+    if (trc_count > 0 && trc_count != dcs_count) {
+        return -1;
+    }
+
+    return dcs_count;
 }
 
 static bool read_to_XYZD50(const skcms_ICCTag* rXYZ, const skcms_ICCTag* gXYZ,
@@ -1236,7 +1304,7 @@ static bool usable_as_src(const skcms_ICCProfile* profile) {
 bool skcms_ParseWithA2BPriority(const void* buf, size_t len,
                                 const int priority[], const int priorities,
                                 skcms_ICCProfile* profile) {
-    assert(SAFE_SIZEOF(header_Layout) == 132);
+    static_assert(SAFE_SIZEOF(header_Layout) == 132, "need to update header code");
 
     if (!profile) {
         return false;
@@ -1396,88 +1464,89 @@ const skcms_ICCProfile* skcms_sRGB_profile() {
 
         // We choose to represent sRGB with its canonical transfer function,
         // and with its canonical XYZD50 gamut matrix.
-        true,  // has_trc, followed by the 3 trc curves
-        {
+        {   // the 3 trc curves
             {{0, {2.4f, (float)(1/1.055), (float)(0.055/1.055), (float)(1/12.92), 0.04045f, 0, 0}}},
             {{0, {2.4f, (float)(1/1.055), (float)(0.055/1.055), (float)(1/12.92), 0.04045f, 0, 0}}},
             {{0, {2.4f, (float)(1/1.055), (float)(0.055/1.055), (float)(1/12.92), 0.04045f, 0, 0}}},
         },
 
-        true,  // has_toXYZD50, followed by 3x3 toXYZD50 matrix
-        {{
+        {{  // 3x3 toXYZD50 matrix
             { 0.436065674f, 0.385147095f, 0.143066406f },
             { 0.222488403f, 0.716873169f, 0.060607910f },
             { 0.013916016f, 0.097076416f, 0.714096069f },
         }},
 
-        false, // has_A2B, followed by A2B itself, which we don't care about.
-        {
-            0,
-            {
+        {   // an empty A2B
+            {   // input_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
-            {0,0,0,0},
-            nullptr,
-            nullptr,
+            nullptr,   // grid_8
+            nullptr,   // grid_16
+            0,         // input_channels
+            {0,0,0,0}, // grid_points
 
-            0,
-            {
+            {   // matrix_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
-            {{
+            {{  // matrix (3x4)
                 { 0,0,0,0 },
                 { 0,0,0,0 },
                 { 0,0,0,0 },
             }},
+            0,  // matrix_channels
 
-            0,
-            {
+            0,  // output_channels
+            {   // output_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
         },
 
-        false, // has_B2A, followed by B2A itself, which we also don't care about.
-        {
-            0,
-            {
+        {   // an empty B2A
+            {   // input_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
+            0,  // input_channels
 
-            0,
-            {{
+            0,  // matrix_channels
+            {   // matrix_curves
+                {{0, {0,0, 0,0,0,0,0}}},
+                {{0, {0,0, 0,0,0,0,0}}},
+                {{0, {0,0, 0,0,0,0,0}}},
+            },
+            {{  // matrix (3x4)
                 { 0,0,0,0 },
                 { 0,0,0,0 },
                 { 0,0,0,0 },
             }},
-            {
-                {{0, {0,0, 0,0,0,0,0}}},
-                {{0, {0,0, 0,0,0,0,0}}},
-                {{0, {0,0, 0,0,0,0,0}}},
-            },
 
-            0,
-            {0,0,0,0},
-            nullptr,
-            nullptr,
-            {
+            {   // output_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
+            nullptr,    // grid_8
+            nullptr,    // grid_16
+            {0,0,0,0},  // grid_points
+            0,          // output_channels
         },
 
-        false, // has_CICP, followed by cicp itself which we don't care about.
-        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },  // an empty CICP
+
+        true,  // has_trc
+        true,  // has_toXYZD50
+        false, // has_A2B
+        false, // has B2A
+        false, // has_CICP
     };
     return &sRGB_profile;
 }
@@ -1492,88 +1561,89 @@ const skcms_ICCProfile* skcms_XYZD50_profile() {
         skcms_Signature_XYZ,   // pcs
         0,                     // tag count, moot here
 
-        true,  // has_trc, followed by the 3 trc curves
-        {
+        {   // the 3 trc curves
             {{0, {1,1, 0,0,0,0,0}}},
             {{0, {1,1, 0,0,0,0,0}}},
             {{0, {1,1, 0,0,0,0,0}}},
         },
 
-        true,  // has_toXYZD50, followed by 3x3 toXYZD50 matrix
-        {{
+        {{  // 3x3 toXYZD50 matrix
             { 1,0,0 },
             { 0,1,0 },
             { 0,0,1 },
         }},
 
-        false, // has_A2B, followed by A2B itself, which we don't care about.
-        {
-            0,
-            {
+        {   // an empty A2B
+            {   // input_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
-            {0,0,0,0},
-            nullptr,
-            nullptr,
+            nullptr,   // grid_8
+            nullptr,   // grid_16
+            0,         // input_channels
+            {0,0,0,0}, // grid_points
 
-            0,
-            {
+            {   // matrix_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
-            {{
+            {{  // matrix (3x4)
                 { 0,0,0,0 },
                 { 0,0,0,0 },
                 { 0,0,0,0 },
             }},
+            0,  // matrix_channels
 
-            0,
-            {
+            0,  // output_channels
+            {   // output_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
         },
 
-        false, // has_B2A, followed by B2A itself, which we also don't care about.
-        {
-            0,
-            {
+        {   // an empty B2A
+            {   // input_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
+            0,  // input_channels
 
-            0,
-            {{
+            0,  // matrix_channels
+            {   // matrix_curves
+                {{0, {0,0, 0,0,0,0,0}}},
+                {{0, {0,0, 0,0,0,0,0}}},
+                {{0, {0,0, 0,0,0,0,0}}},
+            },
+            {{  // matrix (3x4)
                 { 0,0,0,0 },
                 { 0,0,0,0 },
                 { 0,0,0,0 },
             }},
-            {
-                {{0, {0,0, 0,0,0,0,0}}},
-                {{0, {0,0, 0,0,0,0,0}}},
-                {{0, {0,0, 0,0,0,0,0}}},
-            },
 
-            0,
-            {0,0,0,0},
-            nullptr,
-            nullptr,
-            {
+            {   // output_curves
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
                 {{0, {0,0, 0,0,0,0,0}}},
             },
+            nullptr,    // grid_8
+            nullptr,    // grid_16
+            {0,0,0,0},  // grid_points
+            0,          // output_channels
         },
 
-        false, // has_CICP, followed by cicp itself which we don't care about.
-        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },  // an empty CICP
+
+        true,  // has_trc
+        true,  // has_toXYZD50
+        false, // has_A2B
+        false, // has B2A
+        false, // has_CICP
     };
 
     return &XYZD50_profile;
@@ -1811,11 +1881,10 @@ bool skcms_Matrix3x3_invert(const skcms_Matrix3x3* src, skcms_Matrix3x3* dst) {
     }
 
     double invdet = 1.0 / determinant;
-	#if 0 // TODO(erichan): 
-    if (invdet > +FLT_MAX || invdet < -FLT_MAX || !isfinitef_((float)invdet)) {
+    const float invdet_f = (float)invdet;
+    if (!isfinitef_(invdet_f)) {
         return false;
     }
-	#endif
 
     b0 *= invdet;
     b1 *= invdet;
@@ -2294,151 +2363,67 @@ bool skcms_ApproximateCurve(const skcms_Curve* curve,
     return isfinitef_(*max_error);
 }
 
-// ~~~~ Impl. of skcms_Transform() ~~~~
+enum class CpuType { Baseline, HSW, SKX };
 
-// First, instantiate our default exec_ops() implementation using the default compiliation target.
+static CpuType cpu_type() {
+    #if defined(SKCMS_PORTABLE) || !defined(__x86_64__) || defined(SKCMS_FORCE_BASELINE)
+        return CpuType::Baseline;
+    #elif defined(SKCMS_FORCE_HSW)
+        return CpuType::HSW;
+    #elif defined(SKCMS_FORCE_SKX)
+        return CpuType::SKX;
+    #else
+        static const CpuType type = []{
+            if (!sAllowRuntimeCPUDetection) {
+                return CpuType::Baseline;
+            }
+            // See http://www.sandpile.org/x86/cpuid.htm
 
-namespace baseline {
-#if defined(SKCMS_PORTABLE) || !(defined(__clang__) || defined(__GNUC__)) \
-                            || (defined(__EMSCRIPTEN_major__) && !defined(__wasm_simd128__))
-    #define N 1
-    template <typename T> using V = T;
-#elif defined(__AVX512F__) && defined(__AVX512DQ__)
-    #define N 16
-    template <typename T> using V = skcms_private::Vec<N,T>;
-#elif defined(__AVX__)
-    #define N 8
-    template <typename T> using V = skcms_private::Vec<N,T>;
-#else
-    #define N 4
-    template <typename T> using V = skcms_private::Vec<N,T>;
-#endif
+            // First, a basic cpuid(1) lets us check prerequisites for HSW, SKX.
+            uint32_t eax, ebx, ecx, edx;
+            __asm__ __volatile__("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+                                         : "0"(1), "2"(0));
+            if ((edx & (1u<<25)) &&  // SSE
+                (edx & (1u<<26)) &&  // SSE2
+                (ecx & (1u<< 0)) &&  // SSE3
+                (ecx & (1u<< 9)) &&  // SSSE3
+                (ecx & (1u<<12)) &&  // FMA (N.B. not used, avoided even)
+                (ecx & (1u<<19)) &&  // SSE4.1
+                (ecx & (1u<<20)) &&  // SSE4.2
+                (ecx & (1u<<26)) &&  // XSAVE
+                (ecx & (1u<<27)) &&  // OSXSAVE
+                (ecx & (1u<<28)) &&  // AVX
+                (ecx & (1u<<29))) {  // F16C
 
-    #include "src/Transform_inl.h"
-    #undef N
-}
-
-// Now, instantiate any other versions of run_program() we may want for runtime detection.
-#if !defined(SKCMS_PORTABLE) &&                           \
-    !defined(SKCMS_NO_RUNTIME_CPU_DETECTION) &&           \
-        (( defined(__clang__) && __clang_major__ >= 5) || \
-         (!defined(__clang__) && defined(__GNUC__)))      \
-     && defined(__x86_64__)
-
-    #if !defined(__AVX2__)
-        #if defined(__clang__)
-            #pragma clang attribute push(__attribute__((target("avx2,f16c"))), apply_to=function)
-        #elif defined(__GNUC__)
-            #pragma GCC push_options
-            #pragma GCC target("avx2,f16c")
-        #endif
-
-        namespace hsw {
-            #define USING_AVX
-            #define USING_AVX_F16C
-            #define USING_AVX2
-            #define N 8
-            template <typename T> using V = skcms_private::Vec<N,T>;
-
-            #include "src/Transform_inl.h"
-
-            // src/Transform_inl.h will undefine USING_* for us.
-            #undef N
-        }
-
-        #if defined(__clang__)
-            #pragma clang attribute pop
-        #elif defined(__GNUC__)
-            #pragma GCC pop_options
-        #endif
-
-        #define TEST_FOR_HSW
-    #endif
-
-    #if !defined(__AVX512F__) || !defined(__AVX512DQ__)
-        #if defined(__clang__)
-            #pragma clang attribute push(__attribute__((target("avx512f,avx512dq,avx512cd,avx512bw,avx512vl"))), apply_to=function)
-        #elif defined(__GNUC__)
-            #pragma GCC push_options
-            #pragma GCC target("avx512f,avx512dq,avx512cd,avx512bw,avx512vl")
-        #endif
-
-        namespace skx {
-            #define USING_AVX512F
-            #define N 16
-            template <typename T> using V = skcms_private::Vec<N,T>;
-
-            #include "src/Transform_inl.h"
-
-            // src/Transform_inl.h will undefine USING_* for us.
-            #undef N
-        }
-
-        #if defined(__clang__)
-            #pragma clang attribute pop
-        #elif defined(__GNUC__)
-            #pragma GCC pop_options
-        #endif
-
-        #define TEST_FOR_SKX
-    #endif
-
-    #if defined(TEST_FOR_HSW) || defined(TEST_FOR_SKX)
-        enum class CpuType { None, HSW, SKX };
-        static CpuType cpu_type() {
-            static const CpuType type = []{
-                if (!runtime_cpu_detection) {
-                    return CpuType::None;
-                }
-                // See http://www.sandpile.org/x86/cpuid.htm
-
-                // First, a basic cpuid(1) lets us check prerequisites for HSW, SKX.
-                uint32_t eax, ebx, ecx, edx;
+                // Call cpuid(7) to check for AVX2 and AVX-512 bits.
                 __asm__ __volatile__("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-                                             : "0"(1), "2"(0));
-                if ((edx & (1u<<25)) &&  // SSE
-                    (edx & (1u<<26)) &&  // SSE2
-                    (ecx & (1u<< 0)) &&  // SSE3
-                    (ecx & (1u<< 9)) &&  // SSSE3
-                    (ecx & (1u<<12)) &&  // FMA (N.B. not used, avoided even)
-                    (ecx & (1u<<19)) &&  // SSE4.1
-                    (ecx & (1u<<20)) &&  // SSE4.2
-                    (ecx & (1u<<26)) &&  // XSAVE
-                    (ecx & (1u<<27)) &&  // OSXSAVE
-                    (ecx & (1u<<28)) &&  // AVX
-                    (ecx & (1u<<29))) {  // F16C
+                                             : "0"(7), "2"(0));
+                // eax from xgetbv(0) will tell us whether XMM, YMM, and ZMM state is saved.
+                uint32_t xcr0, dont_need_edx;
+                __asm__ __volatile__("xgetbv" : "=a"(xcr0), "=d"(dont_need_edx) : "c"(0));
 
-                    // Call cpuid(7) to check for AVX2 and AVX-512 bits.
-                    __asm__ __volatile__("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-                                                 : "0"(7), "2"(0));
-                    // eax from xgetbv(0) will tell us whether XMM, YMM, and ZMM state is saved.
-                    uint32_t xcr0, dont_need_edx;
-                    __asm__ __volatile__("xgetbv" : "=a"(xcr0), "=d"(dont_need_edx) : "c"(0));
-
-                    if ((xcr0 & (1u<<1)) &&  // XMM register state saved?
-                        (xcr0 & (1u<<2)) &&  // YMM register state saved?
-                        (ebx  & (1u<<5))) {  // AVX2
-                        // At this point we're at least HSW.  Continue checking for SKX.
-                        if ((xcr0 & (1u<< 5)) && // Opmasks state saved?
-                            (xcr0 & (1u<< 6)) && // First 16 ZMM registers saved?
-                            (xcr0 & (1u<< 7)) && // High 16 ZMM registers saved?
-                            (ebx  & (1u<<16)) && // AVX512F
-                            (ebx  & (1u<<17)) && // AVX512DQ
-                            (ebx  & (1u<<28)) && // AVX512CD
-                            (ebx  & (1u<<30)) && // AVX512BW
-                            (ebx  & (1u<<31))) { // AVX512VL
-                            return CpuType::SKX;
-                        }
-                        return CpuType::HSW;
+                if ((xcr0 & (1u<<1)) &&  // XMM register state saved?
+                    (xcr0 & (1u<<2)) &&  // YMM register state saved?
+                    (ebx  & (1u<<5))) {  // AVX2
+                    // At this point we're at least HSW.  Continue checking for SKX.
+                    if ((xcr0 & (1u<< 5)) && // Opmasks state saved?
+                        (xcr0 & (1u<< 6)) && // First 16 ZMM registers saved?
+                        (xcr0 & (1u<< 7)) && // High 16 ZMM registers saved?
+                        (ebx  & (1u<<16)) && // AVX512F
+                        (ebx  & (1u<<17)) && // AVX512DQ
+                        (ebx  & (1u<<28)) && // AVX512CD
+                        (ebx  & (1u<<30)) && // AVX512BW
+                        (ebx  & (1u<<31))) { // AVX512VL
+                        return CpuType::SKX;
                     }
+                    return CpuType::HSW;
                 }
-                return CpuType::None;
-            }();
-            return type;
-        }
+            }
+            return CpuType::Baseline;
+        }();
+        return type;
     #endif
-
-#endif
+}
 
 static bool tf_is_gamma(const skcms_TransferFunction& tf) {
     return tf.g > 0 && tf.a == 1 &&
@@ -2484,65 +2469,72 @@ static OpAndArg select_curve_op(const skcms_Curve* curve, int channel) {
 }
 
 static int select_curve_ops(const skcms_Curve* curves, int numChannels, OpAndArg* ops) {
-    int position = 0;
-    for (int index = 0; index < numChannels; ++index) {
-        ops[position] = select_curve_op(&curves[index], index);
-        if (ops[position].arg) {
-            ++position;
+    // We process the channels in reverse order, yielding ops in ABGR order.
+    // (Working backwards allows us to fuse trailing B+G+R ops into a single RGB op.)
+    int cursor = 0;
+    for (int index = numChannels; index-- > 0; ) {
+        ops[cursor] = select_curve_op(&curves[index], index);
+        if (ops[cursor].arg) {
+            ++cursor;
         }
+    }
 
-        // Identify separate R/G/B functions which can be fused into a single op.
-        // (We do this check inside the loop in order to allow R+G+B+A to be fused into RGB+A.)
-        if (index == 2 && position == 3) {
-            struct FusableOps {
-                Op r, g, b, rgb;
-            };
-            static constexpr FusableOps kFusableOps[] = {
-                {Op::gamma_r,  Op::gamma_g,  Op::gamma_b,  Op::gamma_rgb},
-                {Op::tf_r,     Op::tf_g,     Op::tf_b,     Op::tf_rgb},
-                {Op::pq_r,     Op::pq_g,     Op::pq_b,     Op::pq_rgb},
-                {Op::hlg_r,    Op::hlg_g,    Op::hlg_b,    Op::hlg_rgb},
-                {Op::hlginv_r, Op::hlginv_g, Op::hlginv_b, Op::hlginv_rgb},
-            };
-            for (const FusableOps& fusableOp : kFusableOps) {
-                if (ops[0].op == fusableOp.r &&
-                    ops[1].op == fusableOp.g &&
-                    ops[2].op == fusableOp.b &&
-                    (0 == memcmp(ops[0].arg, ops[1].arg, sizeof(skcms_TransferFunction))) &&
-                    (0 == memcmp(ops[0].arg, ops[2].arg, sizeof(skcms_TransferFunction)))) {
+    // Identify separate B+G+R ops and fuse them into a single RGB op.
+    if (cursor >= 3) {
+        struct FusableOps {
+            Op r, g, b, rgb;
+        };
+        static constexpr FusableOps kFusableOps[] = {
+            {Op::gamma_r,  Op::gamma_g,  Op::gamma_b,  Op::gamma_rgb},
+            {Op::tf_r,     Op::tf_g,     Op::tf_b,     Op::tf_rgb},
+            {Op::pq_r,     Op::pq_g,     Op::pq_b,     Op::pq_rgb},
+            {Op::hlg_r,    Op::hlg_g,    Op::hlg_b,    Op::hlg_rgb},
+            {Op::hlginv_r, Op::hlginv_g, Op::hlginv_b, Op::hlginv_rgb},
+        };
 
-                    ops[0].op = fusableOp.rgb;
-                    position = 1;
-                    break;
-                }
+        int posR = cursor - 1;
+        int posG = cursor - 2;
+        int posB = cursor - 3;
+        for (const FusableOps& fusableOp : kFusableOps) {
+            if (ops[posR].op == fusableOp.r &&
+                ops[posG].op == fusableOp.g &&
+                ops[posB].op == fusableOp.b &&
+                (0 == memcmp(ops[posR].arg, ops[posG].arg, sizeof(skcms_TransferFunction))) &&
+                (0 == memcmp(ops[posR].arg, ops[posB].arg, sizeof(skcms_TransferFunction)))) {
+                // Fuse the three matching ops into one.
+                ops[posB].op = fusableOp.rgb;
+                cursor -= 2;
+                break;
             }
         }
     }
 
-    return position;
+    return cursor;
 }
 
 static size_t bytes_per_pixel(skcms_PixelFormat fmt) {
     switch (fmt >> 1) {   // ignore rgb/bgr
-        case skcms_PixelFormat_A_8             >> 1: return  1;
-        case skcms_PixelFormat_G_8             >> 1: return  1;
-        case skcms_PixelFormat_ABGR_4444       >> 1: return  2;
-        case skcms_PixelFormat_RGB_565         >> 1: return  2;
-        case skcms_PixelFormat_RGB_888         >> 1: return  3;
-        case skcms_PixelFormat_RGBA_8888       >> 1: return  4;
-        case skcms_PixelFormat_RGBA_8888_sRGB  >> 1: return  4;
-        case skcms_PixelFormat_RGBA_1010102    >> 1: return  4;
-        case skcms_PixelFormat_RGB_101010x_XR  >> 1: return  4;
-        case skcms_PixelFormat_RGB_161616LE    >> 1: return  6;
-        case skcms_PixelFormat_RGBA_16161616LE >> 1: return  8;
-        case skcms_PixelFormat_RGB_161616BE    >> 1: return  6;
-        case skcms_PixelFormat_RGBA_16161616BE >> 1: return  8;
-        case skcms_PixelFormat_RGB_hhh_Norm    >> 1: return  6;
-        case skcms_PixelFormat_RGBA_hhhh_Norm  >> 1: return  8;
-        case skcms_PixelFormat_RGB_hhh         >> 1: return  6;
-        case skcms_PixelFormat_RGBA_hhhh       >> 1: return  8;
-        case skcms_PixelFormat_RGB_fff         >> 1: return 12;
-        case skcms_PixelFormat_RGBA_ffff       >> 1: return 16;
+        case skcms_PixelFormat_A_8              >> 1: return  1;
+        case skcms_PixelFormat_G_8              >> 1: return  1;
+        case skcms_PixelFormat_GA_88            >> 1: return  2;
+        case skcms_PixelFormat_ABGR_4444        >> 1: return  2;
+        case skcms_PixelFormat_RGB_565          >> 1: return  2;
+        case skcms_PixelFormat_RGB_888          >> 1: return  3;
+        case skcms_PixelFormat_RGBA_8888        >> 1: return  4;
+        case skcms_PixelFormat_RGBA_8888_sRGB   >> 1: return  4;
+        case skcms_PixelFormat_RGBA_1010102     >> 1: return  4;
+        case skcms_PixelFormat_RGB_101010x_XR   >> 1: return  4;
+        case skcms_PixelFormat_RGB_161616LE     >> 1: return  6;
+        case skcms_PixelFormat_RGBA_10101010_XR >> 1: return  8;
+        case skcms_PixelFormat_RGBA_16161616LE  >> 1: return  8;
+        case skcms_PixelFormat_RGB_161616BE     >> 1: return  6;
+        case skcms_PixelFormat_RGBA_16161616BE  >> 1: return  8;
+        case skcms_PixelFormat_RGB_hhh_Norm     >> 1: return  6;
+        case skcms_PixelFormat_RGBA_hhhh_Norm   >> 1: return  8;
+        case skcms_PixelFormat_RGB_hhh          >> 1: return  6;
+        case skcms_PixelFormat_RGBA_hhhh        >> 1: return  8;
+        case skcms_PixelFormat_RGB_fff          >> 1: return 12;
+        case skcms_PixelFormat_RGBA_ffff        >> 1: return 16;
     }
     assert(false);
     return 0;
@@ -2635,24 +2627,26 @@ bool skcms_Transform(const void*             src,
 
     switch (srcFmt >> 1) {
         default: return false;
-        case skcms_PixelFormat_A_8             >> 1: add_op(Op::load_a8);         break;
-        case skcms_PixelFormat_G_8             >> 1: add_op(Op::load_g8);         break;
-        case skcms_PixelFormat_ABGR_4444       >> 1: add_op(Op::load_4444);       break;
-        case skcms_PixelFormat_RGB_565         >> 1: add_op(Op::load_565);        break;
-        case skcms_PixelFormat_RGB_888         >> 1: add_op(Op::load_888);        break;
-        case skcms_PixelFormat_RGBA_8888       >> 1: add_op(Op::load_8888);       break;
-        case skcms_PixelFormat_RGBA_1010102    >> 1: add_op(Op::load_1010102);    break;
-        case skcms_PixelFormat_RGB_101010x_XR  >> 1: add_op(Op::load_101010x_XR); break;
-        case skcms_PixelFormat_RGB_161616LE    >> 1: add_op(Op::load_161616LE);   break;
-        case skcms_PixelFormat_RGBA_16161616LE >> 1: add_op(Op::load_16161616LE); break;
-        case skcms_PixelFormat_RGB_161616BE    >> 1: add_op(Op::load_161616BE);   break;
-        case skcms_PixelFormat_RGBA_16161616BE >> 1: add_op(Op::load_16161616BE); break;
-        case skcms_PixelFormat_RGB_hhh_Norm    >> 1: add_op(Op::load_hhh);        break;
-        case skcms_PixelFormat_RGBA_hhhh_Norm  >> 1: add_op(Op::load_hhhh);       break;
-        case skcms_PixelFormat_RGB_hhh         >> 1: add_op(Op::load_hhh);        break;
-        case skcms_PixelFormat_RGBA_hhhh       >> 1: add_op(Op::load_hhhh);       break;
-        case skcms_PixelFormat_RGB_fff         >> 1: add_op(Op::load_fff);        break;
-        case skcms_PixelFormat_RGBA_ffff       >> 1: add_op(Op::load_ffff);       break;
+        case skcms_PixelFormat_A_8              >> 1: add_op(Op::load_a8);          break;
+        case skcms_PixelFormat_G_8              >> 1: add_op(Op::load_g8);          break;
+        case skcms_PixelFormat_GA_88            >> 1: add_op(Op::load_ga88);        break;
+        case skcms_PixelFormat_ABGR_4444        >> 1: add_op(Op::load_4444);        break;
+        case skcms_PixelFormat_RGB_565          >> 1: add_op(Op::load_565);         break;
+        case skcms_PixelFormat_RGB_888          >> 1: add_op(Op::load_888);         break;
+        case skcms_PixelFormat_RGBA_8888        >> 1: add_op(Op::load_8888);        break;
+        case skcms_PixelFormat_RGBA_1010102     >> 1: add_op(Op::load_1010102);     break;
+        case skcms_PixelFormat_RGB_101010x_XR   >> 1: add_op(Op::load_101010x_XR);  break;
+        case skcms_PixelFormat_RGBA_10101010_XR >> 1: add_op(Op::load_10101010_XR); break;
+        case skcms_PixelFormat_RGB_161616LE     >> 1: add_op(Op::load_161616LE);    break;
+        case skcms_PixelFormat_RGBA_16161616LE  >> 1: add_op(Op::load_16161616LE);  break;
+        case skcms_PixelFormat_RGB_161616BE     >> 1: add_op(Op::load_161616BE);    break;
+        case skcms_PixelFormat_RGBA_16161616BE  >> 1: add_op(Op::load_16161616BE);  break;
+        case skcms_PixelFormat_RGB_hhh_Norm     >> 1: add_op(Op::load_hhh);         break;
+        case skcms_PixelFormat_RGBA_hhhh_Norm   >> 1: add_op(Op::load_hhhh);        break;
+        case skcms_PixelFormat_RGB_hhh          >> 1: add_op(Op::load_hhh);         break;
+        case skcms_PixelFormat_RGBA_hhhh        >> 1: add_op(Op::load_hhhh);        break;
+        case skcms_PixelFormat_RGB_fff          >> 1: add_op(Op::load_fff);         break;
+        case skcms_PixelFormat_RGBA_ffff        >> 1: add_op(Op::load_ffff);        break;
 
         case skcms_PixelFormat_RGBA_8888_sRGB >> 1:
             add_op(Op::load_8888);
@@ -2667,12 +2661,17 @@ bool skcms_Transform(const void*             src,
         add_op(Op::swap_rb);
     }
     skcms_ICCProfile gray_dst_profile;
-    if ((dstFmt >> 1) == (skcms_PixelFormat_G_8 >> 1)) {
-        // When transforming to gray, stop at XYZ (by setting toXYZ to identity), then transform
-        // luminance (Y) by the destination transfer function.
-        gray_dst_profile = *dstProfile;
-        skcms_SetXYZD50(&gray_dst_profile, &skcms_XYZD50_profile()->toXYZD50);
-        dstProfile = &gray_dst_profile;
+    switch (dstFmt >> 1) {
+        case skcms_PixelFormat_G_8:
+        case skcms_PixelFormat_GA_88:
+            // When transforming to gray, stop at XYZ (by setting toXYZ to identity), then transform
+            // luminance (Y) by the destination transfer function.
+            gray_dst_profile = *dstProfile;
+            skcms_SetXYZD50(&gray_dst_profile, &skcms_XYZD50_profile()->toXYZD50);
+            dstProfile = &gray_dst_profile;
+            break;
+        default:
+            break;
     }
 
     if (srcProfile->data_color_space == skcms_Signature_CMYK) {
@@ -2834,6 +2833,7 @@ bool skcms_Transform(const void*             src,
         default: return false;
         case skcms_PixelFormat_A_8             >> 1: add_op(Op::store_a8);         break;
         case skcms_PixelFormat_G_8             >> 1: add_op(Op::store_g8);         break;
+        case skcms_PixelFormat_GA_88           >> 1: add_op(Op::store_ga88);       break;
         case skcms_PixelFormat_ABGR_4444       >> 1: add_op(Op::store_4444);       break;
         case skcms_PixelFormat_RGB_565         >> 1: add_op(Op::store_565);        break;
         case skcms_PixelFormat_RGB_888         >> 1: add_op(Op::store_888);        break;
@@ -2861,20 +2861,23 @@ bool skcms_Transform(const void*             src,
     assert(contexts <= context + ARRAY_COUNT(context));
 
     auto run = baseline::run_program;
-#if defined(TEST_FOR_HSW)
     switch (cpu_type()) {
-        case CpuType::None:                        break;
-        case CpuType::HSW: run = hsw::run_program; break;
-        case CpuType::SKX: run = hsw::run_program; break;
+        case CpuType::SKX:
+            #if !defined(SKCMS_DISABLE_SKX)
+                run = skx::run_program;
+                break;
+            #endif
+
+        case CpuType::HSW:
+            #if !defined(SKCMS_DISABLE_HSW)
+                run = hsw::run_program;
+                break;
+            #endif
+
+        case CpuType::Baseline:
+            break;
     }
-#endif
-#if defined(TEST_FOR_SKX)
-    switch (cpu_type()) {
-        case CpuType::None:                        break;
-        case CpuType::HSW:                         break;
-        case CpuType::SKX: run = skx::run_program; break;
-    }
-#endif
+
     run(program, context, ops - program, (const char*)src, (char*)dst, n, src_bpp,dst_bpp);
     return true;
 }

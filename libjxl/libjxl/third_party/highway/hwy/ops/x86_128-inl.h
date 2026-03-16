@@ -4226,18 +4226,6 @@ HWY_API Vec128<uint16_t, N> AverageRound(const Vec128<uint16_t, N> a,
   return Vec128<uint16_t, N>{_mm_avg_epu16(a.raw, b.raw)};
 }
 
-// I8/I16 AverageRound is generic for all vector lengths
-template <class V, HWY_IF_SIGNED_V(V),
-          HWY_IF_T_SIZE_ONE_OF_V(V, (1 << 1) | (1 << 2))>
-HWY_API V AverageRound(V a, V b) {
-  const DFromV<decltype(a)> d;
-  const RebindToUnsigned<decltype(d)> du;
-  const V sign_bit = SignBit(d);
-  return Xor(BitCast(d, AverageRound(BitCast(du, Xor(a, sign_bit)),
-                                     BitCast(du, Xor(b, sign_bit)))),
-             sign_bit);
-}
-
 // ------------------------------ Integer multiplication
 
 template <size_t N>
@@ -5062,43 +5050,6 @@ HWY_API Vec128<double, N> operator*(const Vec128<double, N> a,
 HWY_API Vec64<double> operator*(const Vec64<double> a, const Vec64<double> b) {
   return Vec64<double>{_mm_mul_sd(a.raw, b.raw)};
 }
-
-#if HWY_TARGET <= HWY_AVX3
-
-#ifdef HWY_NATIVE_MUL_BY_POW2
-#undef HWY_NATIVE_MUL_BY_POW2
-#else
-#define HWY_NATIVE_MUL_BY_POW2
-#endif
-
-#if HWY_HAVE_FLOAT16
-template <size_t N>
-HWY_API Vec128<float16_t, N> MulByFloorPow2(Vec128<float16_t, N> a,
-                                            Vec128<float16_t, N> b) {
-  return Vec128<float16_t, N>{_mm_scalef_ph(a.raw, b.raw)};
-}
-#endif
-
-template <size_t N>
-HWY_API Vec128<float, N> MulByFloorPow2(Vec128<float, N> a,
-                                        Vec128<float, N> b) {
-  return Vec128<float, N>{_mm_scalef_ps(a.raw, b.raw)};
-}
-
-template <size_t N>
-HWY_API Vec128<double, N> MulByFloorPow2(Vec128<double, N> a,
-                                         Vec128<double, N> b) {
-  return Vec128<double, N>{_mm_scalef_pd(a.raw, b.raw)};
-}
-
-// MulByPow2 is generic for all vector lengths on AVX3
-template <class V, HWY_IF_FLOAT_V(V)>
-HWY_API V MulByPow2(V v, VFromD<RebindToSigned<DFromV<V>>> exp) {
-  const DFromV<decltype(v)> d;
-  return MulByFloorPow2(v, ConvertTo(d, exp));
-}
-
-#endif  // HWY_TARGET <= HWY_AVX3
 
 #if HWY_HAVE_FLOAT16
 template <size_t N>
@@ -9637,27 +9588,14 @@ HWY_INLINE VFromD<D> PromoteOddTo(hwy::SignedTag /*to_type_tag*/,
 
 // ------------------------------ WidenMulPairwiseAdd (PromoteEvenTo)
 
-#if HWY_NATIVE_DOT_BF16
-
-template <class DF, HWY_IF_F32_D(DF), HWY_IF_V_SIZE_LE_D(DF, 16),
-          class VBF = VFromD<Repartition<bfloat16_t, DF>>>
-HWY_API VFromD<DF> WidenMulPairwiseAdd(DF df, VBF a, VBF b) {
-  return VFromD<DF>{_mm_dpbf16_ps(Zero(df).raw,
-                                  reinterpret_cast<__m128bh>(a.raw),
-                                  reinterpret_cast<__m128bh>(b.raw))};
-}
-
-#else
-
 // Generic for all vector lengths.
 template <class DF, HWY_IF_F32_D(DF),
           class VBF = VFromD<Repartition<bfloat16_t, DF>>>
 HWY_API VFromD<DF> WidenMulPairwiseAdd(DF df, VBF a, VBF b) {
+  // TODO(janwas): _mm_dpbf16_ps when available
   return MulAdd(PromoteEvenTo(df, a), PromoteEvenTo(df, b),
                 Mul(PromoteOddTo(df, a), PromoteOddTo(df, b)));
 }
-
-#endif  // HWY_NATIVE_DOT_BF16
 
 // Even if N=1, the input is always at least 2 lanes, hence madd_epi16 is safe.
 template <class D32, HWY_IF_I32_D(D32), HWY_IF_V_SIZE_LE_D(D32, 16),
@@ -11682,8 +11620,7 @@ X86ScalarNearestInt(TF flt_val) {
 
 // If these are in namespace detail, the x86_256/512 templates are not found.
 template <class DI, HWY_IF_V_SIZE_LE_D(DI, 16), HWY_IF_I32_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI,
-                                               VFromD<RebindToFloat<DI>> v) {
+HWY_INLINE VFromD<DI> NearestIntInRange(DI, VFromD<RebindToFloat<DI>> v) {
 #if HWY_COMPILER_GCC_ACTUAL
   // Workaround for undefined behavior in _mm_cvtps_epi32 with GCC if any values
   // of v[i] are not within the range of an int32_t
@@ -11711,229 +11648,17 @@ static HWY_INLINE VFromD<DI> NearestIntInRange(DI,
 #endif
 }
 
-#if HWY_HAVE_FLOAT16
-template <class DI, HWY_IF_V_SIZE_LE_D(DI, 16), HWY_IF_I16_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI /*di*/,
-                                               VFromD<RebindToFloat<DI>> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm_cvtph_epi16 if any values of v[i]
-  // are not within the range of an int16_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 1200 && !HWY_IS_DEBUG_BUILD && \
-    HWY_HAVE_SCALAR_F16_TYPE
-  if (detail::IsConstantX86VecForF2IConv<int16_t>(v)) {
-    typedef hwy::float16_t::Native GccF16RawVectType
-        __attribute__((__vector_size__(16)));
-    const auto raw_v = reinterpret_cast<GccF16RawVectType>(v.raw);
-    return Dup128VecFromValues(DI(),
-                               detail::X86ScalarNearestInt<int16_t>(raw_v[0]),
-                               detail::X86ScalarNearestInt<int16_t>(raw_v[1]),
-                               detail::X86ScalarNearestInt<int16_t>(raw_v[2]),
-                               detail::X86ScalarNearestInt<int16_t>(raw_v[3]),
-                               detail::X86ScalarNearestInt<int16_t>(raw_v[4]),
-                               detail::X86ScalarNearestInt<int16_t>(raw_v[5]),
-                               detail::X86ScalarNearestInt<int16_t>(raw_v[6]),
-                               detail::X86ScalarNearestInt<int16_t>(raw_v[7]));
-  }
-#endif
-
-  __m128i raw_result;
-  __asm__("vcvtph2w {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else  // !HWY_COMPILER_GCC_ACTUAL
-  return VFromD<DI>{_mm_cvtph_epi16(v.raw)};
-#endif
-}
-#endif  // HWY_HAVE_FLOAT16
-
-#if HWY_TARGET <= HWY_AVX3
-
-template <class DI, HWY_IF_V_SIZE_LE_D(DI, 16), HWY_IF_I64_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI /*di*/,
-                                               VFromD<RebindToFloat<DI>> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm_cvtpd_epi64 with GCC if any
-  // values of v[i] are not within the range of an int64_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 700 && !HWY_IS_DEBUG_BUILD
-  if (detail::IsConstantX86VecForF2IConv<int64_t>(v)) {
-    typedef double GccF64RawVectType __attribute__((__vector_size__(16)));
-    const auto raw_v = reinterpret_cast<GccF64RawVectType>(v.raw);
-    return Dup128VecFromValues(DI(),
-                               detail::X86ScalarNearestInt<int64_t>(raw_v[0]),
-                               detail::X86ScalarNearestInt<int64_t>(raw_v[1]));
-  }
-#endif
-
-  __m128i raw_result;
-  __asm__("vcvtpd2qq {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else  // !HWY_COMPILER_GCC_ACTUAL
-  return VFromD<DI>{_mm_cvtpd_epi64(v.raw)};
-#endif
-}
-
-#else  // HWY_TARGET > HWY_AVX3
-
-namespace detail {
-
-#if HWY_ARCH_X86_64
-template <size_t N>
-static HWY_INLINE int64_t
-SSE2ConvFirstF64LaneToNearestI64(Vec128<double, N> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm_cvtsd_si64 with GCC if v[0] is
-  // not within the range of an int64_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 700 && !HWY_IS_DEBUG_BUILD
-  if (IsConstantX86Vec(hwy::SizeTag<1>(), v)) {
-    typedef double GccF64RawVectType __attribute__((__vector_size__(16)));
-    const auto raw_v = reinterpret_cast<GccF64RawVectType>(v.raw);
-    return X86ScalarNearestInt<int64_t>(raw_v[0]);
-  }
-#endif
-
-  int64_t result;
-  __asm__("%vcvtsd2si {%1, %0|%0, %1}"
-          : "=r"(result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return result;
-#else
-  return _mm_cvtsd_si64(v.raw);
-#endif
-}
-#endif  // HWY_ARCH_X86_64
-
-#if !HWY_ARCH_X86_64 || HWY_TARGET <= HWY_AVX2
-template <class DI64, HWY_IF_I64_D(DI64)>
-static HWY_INLINE VFromD<DI64> SSE2NearestI64InRange(
-    DI64 di64, VFromD<RebindToFloat<DI64>> v) {
-  const RebindToFloat<DI64> df64;
-  const RebindToUnsigned<DI64> du64;
-  using VI64 = VFromD<decltype(di64)>;
-
-  const auto mant_end = Set(df64, MantissaEnd<double>());
-  const auto is_small = Lt(Abs(v), mant_end);
-
-  const auto adj_v = Max(v, Set(df64, -9223372036854775808.0)) +
-                     IfThenElseZero(is_small, CopySignToAbs(mant_end, v));
-  const auto adj_v_biased_exp =
-      And(BitCast(di64, ShiftRight<52>(BitCast(du64, adj_v))),
-          Set(di64, int64_t{0x7FF}));
-
-  // We can simply subtract 1075 from adj_v_biased_exp[i] to get shift_int since
-  // adj_v_biased_exp[i] is at least 1075
-  const VI64 shift_int = adj_v_biased_exp + Set(di64, int64_t{-1075});
-
-  const VI64 mantissa = BitCast(di64, adj_v) & Set(di64, (1LL << 52) - 1);
-  // Include implicit 1-bit if is_small[i] is 0. NOTE: the shift count may
-  // exceed 63; we rely on x86 returning zero in that case.
-  const VI64 int53 = mantissa | IfThenZeroElse(RebindMask(di64, is_small),
-                                               Set(di64, 1LL << 52));
-
-  const VI64 sign_mask = BroadcastSignBit(BitCast(di64, v));
-  // If the input was negative, negate the integer (two's complement).
-  return ((int53 << shift_int) ^ sign_mask) - sign_mask;
-}
-#endif  // !HWY_ARCH_X86_64 || HWY_TARGET <= HWY_AVX2
-
-}  // namespace detail
-
-#if HWY_ARCH_X86_64
-template <class DI, HWY_IF_V_SIZE_D(DI, 8), HWY_IF_I64_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI /*di*/, Vec64<double> v) {
-  return VFromD<DI>{
-      _mm_cvtsi64_si128(detail::SSE2ConvFirstF64LaneToNearestI64(v))};
-}
-template <class DI, HWY_IF_V_SIZE_D(DI, 16), HWY_IF_I64_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI /*di*/, Vec128<double> v) {
-  const __m128i i0 =
-      _mm_cvtsi64_si128(detail::SSE2ConvFirstF64LaneToNearestI64(v));
-  const Full64<double> dd2;
-  const __m128i i1 = _mm_cvtsi64_si128(
-      detail::SSE2ConvFirstF64LaneToNearestI64(UpperHalf(dd2, v)));
-  return VFromD<DI>{_mm_unpacklo_epi64(i0, i1)};
-}
-#endif  // HWY_ARCH_X86_64
-
-#if !HWY_ARCH_X86_64 || HWY_TARGET <= HWY_AVX2
-template <class DI, HWY_IF_V_SIZE_GT_D(DI, (HWY_ARCH_X86_64 ? 16 : 0)),
-          HWY_IF_I64_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI di,
-                                               VFromD<RebindToFloat<DI>> v) {
-  return detail::SSE2NearestI64InRange(di, v);
-}
-#endif  //  !HWY_ARCH_X86_64 || HWY_TARGET <= HWY_AVX2
-
-#endif  // HWY_TARGET <= HWY_AVX3
-
-template <class DI, HWY_IF_V_SIZE_LE_D(DI, 8), HWY_IF_I32_D(DI)>
-static HWY_INLINE VFromD<DI> DemoteToNearestIntInRange(
-    DI, VFromD<Rebind<double, DI>> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm_cvtpd_epi32 with GCC if any values
-  // of v[i] are not within the range of an int32_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 700 && !HWY_IS_DEBUG_BUILD
-  if (detail::IsConstantX86VecForF2IConv<int32_t>(v)) {
-    typedef double GccF32RawVectType __attribute__((__vector_size__(16)));
-    const auto raw_v = reinterpret_cast<GccF32RawVectType>(v.raw);
-    return Dup128VecFromValues(
-        DI(), detail::X86ScalarNearestInt<int32_t>(raw_v[0]),
-        detail::X86ScalarNearestInt<int32_t>(raw_v[1]), int32_t{0}, int32_t{0});
-  }
-#endif
-
-  __m128i raw_result;
-  __asm__("%vcvtpd2dq {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else  // !HWY_COMPILER_GCC_ACTUAL
-  return VFromD<DI>{_mm_cvtpd_epi32(v.raw)};
-#endif
-}
-
-// F16/F32/F64 NearestInt is generic for all vector lengths
+// Generic for all vector lengths.
 template <class VF, class DF = DFromV<VF>, class DI = RebindToSigned<DF>,
-          HWY_IF_FLOAT_D(DF),
-          HWY_IF_T_SIZE_ONE_OF_D(DF, (1 << 4) | (1 << 8) |
-                                         (HWY_HAVE_FLOAT16 ? (1 << 2) : 0))>
+          HWY_IF_F32_D(DF)>
 HWY_API VFromD<DI> NearestInt(const VF v) {
   const DI di;
-  using TI = TFromD<DI>;
-  using TF = TFromD<DF>;
-  using TFArith = If<sizeof(TF) <= sizeof(float), float, RemoveCvRef<TF>>;
-
-  constexpr TFArith kMinOutOfRangePosVal =
-      static_cast<TFArith>(-static_cast<TFArith>(LimitsMin<TI>()));
-  static_assert(kMinOutOfRangePosVal > static_cast<TFArith>(0.0),
-                "kMinOutOfRangePosVal > 0.0 must be true");
-
   // See comment at the first occurrence of "IfThenElse(overflow,".
   // Here we are rounding, whereas previous occurrences truncate, but there is
   // no difference because the previous float value is well below the max i32.
-  const auto overflow = RebindMask(
-      di, Ge(v, Set(DF(), ConvertScalarTo<TF>(kMinOutOfRangePosVal))));
-  auto result =
-      IfThenElse(overflow, Set(di, LimitsMax<TI>()), NearestIntInRange(di, v));
-
-  return result;
-}
-
-template <class DI, HWY_IF_I32_D(DI)>
-HWY_API VFromD<DI> DemoteToNearestInt(DI, VFromD<Rebind<double, DI>> v) {
-  const DI di;
-  const Rebind<double, DI> df64;
-  return DemoteToNearestIntInRange(di, Min(v, Set(df64, 2147483647.0)));
+  const auto overflow = RebindMask(di, Ge(v, Set(DF(), 2147483648.0f)));
+  return IfThenElse(overflow, Set(di, LimitsMax<int32_t>()),
+                    NearestIntInRange(di, v));
 }
 
 // ------------------------------ Floating-point rounding (ConvertTo)
@@ -11999,25 +11724,6 @@ HWY_API Vec128<T, N> Ceil(const Vec128<T, N> v) {
   return IfThenElse(detail::UseInt(v), int_f - neg1, v);
 }
 
-#ifdef HWY_NATIVE_CEIL_FLOOR_INT
-#undef HWY_NATIVE_CEIL_FLOOR_INT
-#else
-#define HWY_NATIVE_CEIL_FLOOR_INT
-#endif
-
-template <class V, HWY_IF_FLOAT_V(V)>
-HWY_API VFromD<RebindToSigned<DFromV<V>>> CeilInt(V v) {
-  const DFromV<decltype(v)> df;
-  const RebindToSigned<decltype(df)> di;
-
-  const auto integer = ConvertTo(di, v);  // round toward 0
-  const auto int_f = ConvertTo(df, integer);
-
-  // Truncating a positive non-integer ends up smaller; if so, add 1.
-  return integer -
-         VecFromMask(di, RebindMask(di, And(detail::UseInt(v), int_f < v)));
-}
-
 // Toward -infinity, aka floor
 template <typename T, size_t N>
 HWY_API Vec128<T, N> Floor(const Vec128<T, N> v) {
@@ -12032,19 +11738,6 @@ HWY_API Vec128<T, N> Floor(const Vec128<T, N> v) {
   const auto neg1 = ConvertTo(df, VecFromMask(di, RebindMask(di, int_f > v)));
 
   return IfThenElse(detail::UseInt(v), int_f + neg1, v);
-}
-
-template <class V, HWY_IF_FLOAT_V(V)>
-HWY_API VFromD<RebindToSigned<DFromV<V>>> FloorInt(V v) {
-  const DFromV<decltype(v)> df;
-  const RebindToSigned<decltype(df)> di;
-
-  const auto integer = ConvertTo(di, v);  // round toward 0
-  const auto int_f = ConvertTo(df, integer);
-
-  // Truncating a negative non-integer ends up larger; if so, subtract 1.
-  return integer +
-         VecFromMask(di, RebindMask(di, And(detail::UseInt(v), int_f > v)));
 }
 
 #else

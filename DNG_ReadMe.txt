@@ -61,6 +61,14 @@ additional dependencies:
 
 Release Notes / Changelog:
 
+1.7.1 2502 March 3, 2026
+
+    - Vulnerability issue fixes.
+
+    - JXL library updates.
+
+    - Minor fixes and cleanups.
+
 1.7.1 2471 January 29, 2026
 
     - Vulnerability issue fixes.

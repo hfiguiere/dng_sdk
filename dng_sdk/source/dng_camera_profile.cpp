@@ -1850,6 +1850,8 @@ void dng_camera_profile::SetFourColorBayer ()
 	fForwardMatrix1.Clear ();
 	fForwardMatrix2.Clear ();
 	fForwardMatrix3.Clear ();
+
+	ClearFingerprint ();
 	
 	}
 
@@ -2039,6 +2041,8 @@ void dng_camera_profile::SetProfileGainTableMap
 	{
 	
 	fProfileGainTableMap = gainTableMap;
+
+	ClearFingerprint ();
 	
 	}
 
@@ -2112,6 +2116,8 @@ void dng_camera_profile::SetMaskedRGBTables
 	{
 	
 	fMaskedRGBTables = maskedRGBTables;
+
+	ClearFingerprint ();
 	
 	}
 
@@ -2122,6 +2128,8 @@ void dng_camera_profile::SetMaskedRGBTables
 	{
 	
 	fMaskedRGBTables.reset (maskedRGBTables.Release ());
+
+	ClearFingerprint ();
 	
 	}
 

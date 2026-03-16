@@ -11,7 +11,7 @@
     #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "skcms.h"
+#include "src/skcms_public.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

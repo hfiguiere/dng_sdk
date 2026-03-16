@@ -87,10 +87,10 @@ selects.config_setting_group(
 
 # Additional warnings for Clang OR GCC (skip for MSVC)
 CLANG_GCC_COPTS = [
-    "-Wunused",
+    "-Wunused-parameter",
+    "-Wunused-variable",
     "-Wextra-semi",
     "-Wunreachable-code",
-    "-Wshadow",
 ]
 
 # Warnings supported by Clang and Clang-cl
@@ -109,7 +109,6 @@ CLANG_OR_CLANGCL_OPTS = CLANG_GCC_COPTS + [
     "-Wtautological-overlap-compare",
     "-Wthread-safety-analysis",
     "-Wundefined-func-template",
-    "-Wunreachable-code-aggressive",
     "-Wunused-comparison",
 ]
 
@@ -343,7 +342,6 @@ cc_library(
         ":nanobenchmark",
         ":profiler",
         ":stats",
-        ":topology",
     ],
 )
 
@@ -488,14 +486,12 @@ HWY_TESTS = [
     ("hwy/", "targets_test"),
     ("hwy/tests/", "arithmetic_test"),
     ("hwy/tests/", "bit_permute_test"),
-    ("hwy/tests/", "blockwise_combine_test"),
     ("hwy/tests/", "blockwise_shift_test"),
     ("hwy/tests/", "blockwise_test"),
     ("hwy/tests/", "cast_test"),
     ("hwy/tests/", "combine_test"),
     ("hwy/tests/", "compare_test"),
     ("hwy/tests/", "compress_test"),
-    ("hwy/tests/", "concat_test"),
     ("hwy/tests/", "convert_test"),
     ("hwy/tests/", "count_test"),
     ("hwy/tests/", "crypto_test"),
@@ -504,7 +500,6 @@ HWY_TESTS = [
     ("hwy/tests/", "dup128_vec_test"),
     ("hwy/tests/", "expand_test"),
     ("hwy/tests/", "float_test"),
-    ("hwy/tests/", "fma_test"),
     ("hwy/tests/", "foreach_vec_test"),
     ("hwy/tests/", "if_test"),
     ("hwy/tests/", "in_range_float_to_int_conv_test"),
@@ -519,17 +514,13 @@ HWY_TESTS = [
     ("hwy/tests/", "masked_minmax_test"),
     ("hwy/tests/", "memory_test"),
     ("hwy/tests/", "minmax_test"),
-    ("hwy/tests/", "mul_by_pow2_test"),
-    ("hwy/tests/", "mul_pairwise_test"),
     ("hwy/tests/", "mul_test"),
     ("hwy/tests/", "reduction_test"),
     ("hwy/tests/", "resize_test"),
     ("hwy/tests/", "reverse_test"),
-    ("hwy/tests/", "rotate_test"),
     ("hwy/tests/", "saturated_test"),
     ("hwy/tests/", "shift_test"),
     ("hwy/tests/", "shuffle4_test"),
-    ("hwy/tests/", "sign_test"),
     ("hwy/tests/", "slide_up_down_test"),
     ("hwy/tests/", "sums_abs_diff_test"),
     ("hwy/tests/", "swizzle_block_test"),

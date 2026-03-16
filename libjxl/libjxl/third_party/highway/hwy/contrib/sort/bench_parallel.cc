@@ -14,20 +14,18 @@
 // limitations under the License.
 
 // Concurrent, independent sorts for generating more memory traffic and testing
-// scalability when bandwidth-limited. If you want to use multiple threads for
-// a single sort, you can use ips4o and integrate vqsort by calling it from
-// `baseCaseSort` and increasing `IPS4OML_BASE_CASE_SIZE` to say 8192.
+// scalability.
 
 #include <stdint.h>
 #include <stdio.h>
 
 #include <condition_variable>  //NOLINT
 #include <functional>
+#include <memory>
 #include <mutex>   //NOLINT
 #include <thread>  //NOLINT
+#include <utility>
 #include <vector>
-
-#include "hwy/timer.h"
 
 // clang-format off
 #undef HWY_TARGET_INCLUDE
@@ -180,8 +178,8 @@ void RunWithoutVerify(Traits st, const Dist dist, const size_t num_keys,
   (void)GenerateInput(dist, aligned.get(), num_lanes);
 
   const Timestamp t0;
-  Run(algo, reinterpret_cast<KeyType*>(aligned.get()), num_keys, shared, thread,
-      /*k_keys=*/0, Order());
+  Run<Order>(algo, reinterpret_cast<KeyType*>(aligned.get()), num_keys, shared,
+             thread);
   HWY_ASSERT(aligned[0] < aligned[num_lanes - 1]);
 }
 
@@ -209,7 +207,7 @@ void BenchParallel() {
 
   SharedState shared;
 
-  std::vector<SortResult> results;
+  std::vector<Result> results;
   for (size_t nt = 1; nt < NT; nt += HWY_MAX(1, NT / 16)) {
     Timestamp t0;
     // Default capture because MSVC wants algo/dist but clang does not.

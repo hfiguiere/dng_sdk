@@ -3122,7 +3122,7 @@ void dng_image_table::PutCompressedStream (dng_stream &stream,
 		
 		tempImage.Reset (tiffImage->Clone ());
 		
-		tempImage->Offset (dng_point (0, 0) - fImage->Bounds ().TL ());
+		tempImage->Offset (-fImage->Bounds ().TL ());
 		
 		tiffImage = tempImage.Get ();
 		

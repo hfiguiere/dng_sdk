@@ -79,8 +79,7 @@ class Stats {
     min_ = HWY_MIN(min_, x);
     max_ = HWY_MAX(max_, x);
 
-    // Logarithmic transform avoids/delays underflow and overflow.
-    sum_log_ += std::log(static_cast<double>(x));
+    product_ *= x;
 
     // Online moments. Reference: https://goo.gl/9ha694
     const double d = x - m1_;
@@ -101,7 +100,7 @@ class Stats {
   float Max() const { return max_; }
 
   double GeometricMean() const {
-    return n_ == 0 ? 0.0 : std::exp(sum_log_ / n_);
+    return n_ == 0 ? 0.0 : pow(product_, 1.0 / n_);
   }
 
   double Mean() const { return m1_; }
@@ -166,7 +165,7 @@ class Stats {
     min_ = hwy::HighestValue<float>();
     max_ = hwy::LowestValue<float>();
 
-    sum_log_ = 0.0;
+    product_ = 1.0;
 
     m1_ = 0.0;
     m2_ = 0.0;
@@ -180,7 +179,7 @@ class Stats {
   float min_;
   float max_;
 
-  double sum_log_;  // for geomean
+  double product_;  // for geomean
 
   // Moments
   double m1_;

@@ -208,6 +208,10 @@ void dng_show_message (const char *s)
 
 /*****************************************************************************/
 
+#if (qMacOS || qiPhone)
+__attribute__((__format__ (__printf__, 1, 2)))
+#endif
+
 void dng_show_message_f (const char *fmt, ... )
 	{
 	
