@@ -37,7 +37,7 @@ using U8  = V<uint8_t>;
     #define  USING_AVX
 #endif
 #if !defined(USING_AVX_F16C) && defined(USING_AVX) && defined(__F16C__)
-    #define  USING AVX_F16C
+    #define  USING_AVX_F16C
 #endif
 #if !defined(USING_AVX2)     && defined(USING_AVX) && defined(__AVX2__)
     #define  USING_AVX2
@@ -211,6 +211,9 @@ SI U64 swap_endian_16x4(const U64& rgba) {
 #if defined(USING_NEON)
     SI F min_(F x, F y) { return (F)vminq_f32((float32x4_t)x, (float32x4_t)y); }
     SI F max_(F x, F y) { return (F)vmaxq_f32((float32x4_t)x, (float32x4_t)y); }
+#elif defined(__loongarch_sx)
+    SI F min_(F x, F y) { return (F)__lsx_vfmin_s(x, y); }
+    SI F max_(F x, F y) { return (F)__lsx_vfmax_s(x, y); }
 #else
     SI F min_(F x, F y) { return if_then_else(x > y, y, x); }
     SI F max_(F x, F y) { return if_then_else(x < y, y, x); }
@@ -231,6 +234,8 @@ SI F floor_(F x) {
     return __builtin_ia32_roundps256(x, 0x01/*_MM_FROUND_FLOOR*/);
 #elif defined(__SSE4_1__)
     return _mm_floor_ps(x);
+#elif defined(__loongarch_sx)
+    return __lsx_vfrintrm_s((__m128)x);
 #else
     // Round trip through integers with a truncating cast.
     F roundtrip = cast<F>(cast<I32>(x));
@@ -644,7 +649,7 @@ SI void sample_clut_8(const uint8_t* grid_8, I32 ix, F* r, F* g, F* b, F* a) {
 }
 
 SI void sample_clut_16(const uint8_t* grid_16, I32 ix, F* r, F* g, F* b) {
-#if defined(__arm__)
+#if defined(__arm__) || defined(__loongarch_sx)
     // This is up to 2x faster on 32-bit ARM than the #else-case fast path.
     *r = F_from_U16_BE(gather_16(grid_16, 3*ix+0));
     *g = F_from_U16_BE(gather_16(grid_16, 3*ix+1));
@@ -769,27 +774,60 @@ struct Ctx {
     template <typename T> operator T*() { return (const T*)fArg; }
 };
 
-#define DECLARE_STAGE(name, arg)                                                                \
-    SI void Exec_##name##_k(arg, const char* src, char* dst, F& r, F& g, F& b, F& a, int i);    \
-                                                                                                \
-    SI void Exec_##name(const void* v, const char* s, char* d, F& r, F& g, F& b, F& a, int i) { \
-        Exec_##name##_k(Ctx{v}, s, d, r, g, b, a, i);                                           \
-    }                                                                                           \
-                                                                                                \
-    SI void Exec_##name##_k(arg,                                                                \
-                            SKCMS_MAYBE_UNUSED const char* src,                                 \
-                            SKCMS_MAYBE_UNUSED char* dst,                                       \
-                            SKCMS_MAYBE_UNUSED F& r,                                            \
-                            SKCMS_MAYBE_UNUSED F& g,                                            \
-                            SKCMS_MAYBE_UNUSED F& b,                                            \
-                            SKCMS_MAYBE_UNUSED F& a,                                            \
-                            SKCMS_MAYBE_UNUSED int i)
+#define STAGE_PARAMS(MAYBE_REF) SKCMS_MAYBE_UNUSED const char* src, \
+                                SKCMS_MAYBE_UNUSED char* dst,       \
+                                SKCMS_MAYBE_UNUSED F MAYBE_REF r,   \
+                                SKCMS_MAYBE_UNUSED F MAYBE_REF g,   \
+                                SKCMS_MAYBE_UNUSED F MAYBE_REF b,   \
+                                SKCMS_MAYBE_UNUSED F MAYBE_REF a,   \
+                                SKCMS_MAYBE_UNUSED int i
 
-#define STAGE(name, arg) \
-    DECLARE_STAGE(name, arg)
+#if SKCMS_HAS_MUSTTAIL
 
-#define FINAL_STAGE(name, arg) \
-    DECLARE_STAGE(name, arg)
+    // Stages take a stage list, and each stage is responsible for tail-calling the next one.
+    //
+    // Unfortunately, we can't declare a StageFn as a function pointer which takes a pointer to
+    // another StageFn; declaring this leads to a circular dependency. To avoid this, StageFn is
+    // wrapped in a single-element `struct StageList` which we are able to forward-declare.
+    struct StageList;
+    using StageFn = void (*)(StageList stages, const void** ctx, STAGE_PARAMS());
+    struct StageList {
+        const StageFn* fn;
+    };
+
+    #define DECLARE_STAGE(name, arg, CALL_NEXT)                                 \
+        SI void Exec_##name##_k(arg, STAGE_PARAMS(&));                          \
+                                                                                \
+        SI void Exec_##name(StageList list, const void** ctx, STAGE_PARAMS()) { \
+            Exec_##name##_k(Ctx{*ctx}, src, dst, r, g, b, a, i);                \
+            ++list.fn; ++ctx;                                                   \
+            CALL_NEXT;                                                          \
+        }                                                                       \
+                                                                                \
+        SI void Exec_##name##_k(arg, STAGE_PARAMS(&))
+
+    #define STAGE(name, arg)                                                                \
+        DECLARE_STAGE(name, arg, [[clang::musttail]] return (*list.fn)(list, ctx, src, dst, \
+                                                                       r, g, b, a, i))
+
+    #define FINAL_STAGE(name, arg) \
+        DECLARE_STAGE(name, arg, /* Stop executing stages and return to the caller. */)
+
+#else
+
+    #define DECLARE_STAGE(name, arg)                            \
+        SI void Exec_##name##_k(arg, STAGE_PARAMS(&));          \
+                                                                \
+        SI void Exec_##name(const void* ctx, STAGE_PARAMS(&)) { \
+            Exec_##name##_k(Ctx{ctx}, src, dst, r, g, b, a, i); \
+        }                                                       \
+                                                                \
+        SI void Exec_##name##_k(arg, STAGE_PARAMS(&))
+
+    #define STAGE(name, arg)       DECLARE_STAGE(name, arg)
+    #define FINAL_STAGE(name, arg) DECLARE_STAGE(name, arg)
+
+#endif
 
 STAGE(load_a8, NoCtx) {
     a = F_from_U8(load<U8>(src + 1*i));
@@ -797,6 +835,12 @@ STAGE(load_a8, NoCtx) {
 
 STAGE(load_g8, NoCtx) {
     r = g = b = F_from_U8(load<U8>(src + 1*i));
+}
+
+STAGE(load_ga88, NoCtx) {
+    U16 u16 = load<U16>(src + 2 * i);
+    r = g = b = cast<F>((u16 >> 0) & 0xff) * (1 / 255.0f);
+            a = cast<F>((u16 >> 8) & 0xff) * (1 / 255.0f);
 }
 
 STAGE(load_4444, NoCtx) {
@@ -867,6 +911,17 @@ STAGE(load_101010x_XR, NoCtx) {
     r = cast<F>((rgba >>  0) & 0x3ff) * (1/1023.0f) * range + min;
     g = cast<F>((rgba >> 10) & 0x3ff) * (1/1023.0f) * range + min;
     b = cast<F>((rgba >> 20) & 0x3ff) * (1/1023.0f) * range + min;
+}
+
+STAGE(load_10101010_XR, NoCtx) {
+    static constexpr float min = -0.752941f;
+    static constexpr float max = 1.25098f;
+    static constexpr float range = max - min;
+    U64 rgba = load<U64>(src + 8 * i);
+    r = cast<F>((rgba >>  (0+6)) & 0x3ff) * (1/1023.0f) * range + min;
+    g = cast<F>((rgba >> (16+6)) & 0x3ff) * (1/1023.0f) * range + min;
+    b = cast<F>((rgba >> (32+6)) & 0x3ff) * (1/1023.0f) * range + min;
+    a = cast<F>((rgba >> (48+6)) & 0x3ff) * (1/1023.0f) * range + min;
 }
 
 STAGE(load_161616LE, NoCtx) {
@@ -1195,7 +1250,7 @@ STAGE(clut_B2A, const skcms_B2A* b2a) {
     clut(b2a, &r,&g,&b,&a);
 }
 
-// From here on down, the store_ ops are all "final stages," ending the loop.
+// From here on down, the store_ ops are all "final stages," terminating processing of this group.
 
 FINAL_STAGE(store_a8, NoCtx) {
     store(dst + 1*i, cast<U8>(to_fixed(a * 255)));
@@ -1204,6 +1259,12 @@ FINAL_STAGE(store_a8, NoCtx) {
 FINAL_STAGE(store_g8, NoCtx) {
     // g should be holding luminance (Y) (r,g,b ~~~> X,Y,Z)
     store(dst + 1*i, cast<U8>(to_fixed(g * 255)));
+}
+
+FINAL_STAGE(store_ga88, NoCtx) {
+    // g should be holding luminance (Y) (r,g,b ~~~> X,Y,Z)
+    store<U16>(dst + 2*i, cast<U16>(to_fixed(g * 255) << 0 )
+                        | cast<U16>(to_fixed(a * 255) << 8 ));
 }
 
 FINAL_STAGE(store_4444, NoCtx) {
@@ -1255,7 +1316,6 @@ FINAL_STAGE(store_101010x_XR, NoCtx) {
     store(dst + 4*i, cast<U32>(to_fixed(((r - min) / range) * 1023)) <<  0
                    | cast<U32>(to_fixed(((g - min) / range) * 1023)) << 10
                    | cast<U32>(to_fixed(((b - min) / range) * 1023)) << 20);
-    return;
 }
 
 FINAL_STAGE(store_1010102, NoCtx) {
@@ -1433,28 +1493,58 @@ FINAL_STAGE(store_ffff, NoCtx) {
 #endif
 }
 
-static void exec_ops(const Op* ops, const void** contexts,
-                     const char* src, char* dst, int i) {
-    F r = F0, g = F0, b = F0, a = F1;
-    while (true) {
-        switch (*ops++) {
+#if SKCMS_HAS_MUSTTAIL
+
+    SI void exec_stages(StageFn* stages, const void** contexts, const char* src, char* dst, int i) {
+        (*stages)({stages}, contexts, src, dst, F0, F0, F0, F1, i);
+    }
+
+#else
+
+    static void exec_stages(const Op* ops, const void** contexts,
+                            const char* src, char* dst, int i) {
+        F r = F0, g = F0, b = F0, a = F1;
+        while (true) {
+            switch (*ops++) {
 #define M(name) case Op::name: Exec_##name(*contexts++, src, dst, r, g, b, a, i); break;
-            SKCMS_LOAD_OPS(M)
-            SKCMS_WORK_OPS(M)
+                SKCMS_WORK_OPS(M)
 #undef M
 #define M(name) case Op::name: Exec_##name(*contexts++, src, dst, r, g, b, a, i); return;
-            SKCMS_STORE_OPS(M)
+                SKCMS_STORE_OPS(M)
 #undef M
+            }
         }
     }
-}
 
-static void run_program(const Op* program, const void** contexts, ptrdiff_t /*programSize*/,
-                        const char* src, char* dst, int n,
-                        const size_t src_bpp, const size_t dst_bpp) {
+#endif
+
+// NOLINTNEXTLINE(misc-definitions-in-headers)
+void run_program(const Op* program, const void** contexts, SKCMS_MAYBE_UNUSED ptrdiff_t programSize,
+                 const char* src, char* dst, int n,
+                 const size_t src_bpp, const size_t dst_bpp) {
+#if SKCMS_HAS_MUSTTAIL
+    // Convert the program into an array of tailcall stages.
+    StageFn stages[32];
+    assert(programSize <= ARRAY_COUNT(stages));
+
+    static constexpr StageFn kStageFns[] = {
+#define M(name) &Exec_##name,
+        SKCMS_WORK_OPS(M)
+        SKCMS_STORE_OPS(M)
+#undef M
+    };
+
+    for (ptrdiff_t index = 0; index < programSize; ++index) {
+        stages[index] = kStageFns[(int)program[index]];
+    }
+#else
+    // Use the op array as-is.
+    const Op* stages = program;
+#endif
+
     int i = 0;
     while (n >= N) {
-        exec_ops(program, contexts, src, dst, i);
+        exec_stages(stages, contexts, src, dst, i);
         i += N;
         n -= N;
     }
@@ -1462,28 +1552,7 @@ static void run_program(const Op* program, const void** contexts, ptrdiff_t /*pr
         char tmp[4*4*N] = {0};
 
         memcpy(tmp, (const char*)src + (size_t)i*src_bpp, (size_t)n*src_bpp);
-        exec_ops(program, contexts, tmp, tmp, 0);
+        exec_stages(stages, contexts, tmp, tmp, 0);
         memcpy((char*)dst + (size_t)i*dst_bpp, tmp, (size_t)n*dst_bpp);
     }
 }
-
-// Clean up any #defines we may have set so that we can be #included again.
-#if defined(USING_AVX)
-    #undef  USING_AVX
-#endif
-#if defined(USING_AVX_F16C)
-    #undef  USING_AVX_F16C
-#endif
-#if defined(USING_AVX2)
-    #undef  USING_AVX2
-#endif
-#if defined(USING_AVX512F)
-    #undef  USING_AVX512F
-#endif
-
-#if defined(USING_NEON)
-    #undef  USING_NEON
-#endif
-#if defined(USING_NEON_F16C)
-    #undef  USING_NEON_F16C
-#endif

@@ -18,9 +18,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>  // strchr
 
 #include <map>
+#include <thread>  // NOLINT
 #include <vector>
 
 #include "hwy/detect_compiler_arch.h"  // HWY_OS_WIN
@@ -39,13 +39,10 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-#include <errno.h>
-#include <fcntl.h>
 #include <pthread.h>
 #include <sched.h>
-#include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>  // sysconf
+#include <unistd.h>
 #endif  // HWY_OS_LINUX || HWY_OS_FREEBSD
 
 #if HWY_OS_FREEBSD
@@ -57,11 +54,17 @@
 #include <emscripten/threading.h>
 #endif
 
+#if HWY_OS_LINUX
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#endif  // HWY_OS_LINUX
+
 #include "hwy/base.h"
 
 namespace hwy {
 
-HWY_CONTRIB_DLLEXPORT bool HaveThreadingSupport() {
+HWY_DLLEXPORT bool HaveThreadingSupport() {
 #if HWY_ARCH_WASM
   return emscripten_has_threading_support() != 0;
 #else
@@ -69,44 +72,32 @@ HWY_CONTRIB_DLLEXPORT bool HaveThreadingSupport() {
 #endif
 }
 
-HWY_CONTRIB_DLLEXPORT size_t TotalLogicalProcessors() {
+HWY_DLLEXPORT size_t TotalLogicalProcessors() {
   size_t lp = 0;
 #if HWY_ARCH_WASM
   const int num_cores = emscripten_num_logical_cores();
   if (num_cores > 0) lp = static_cast<size_t>(num_cores);
-#elif HWY_OS_WIN
-  SYSTEM_INFO sysinfo;
-  GetSystemInfo(&sysinfo);  // always succeeds
-  // WARNING: this is only for the current group, hence limited to 64.
-  lp = static_cast<size_t>(sysinfo.dwNumberOfProcessors);
-#elif HWY_OS_LINUX
-  // Use configured, not "online" (_SC_NPROCESSORS_ONLN), because we want an
-  // upper bound.
-  const long ret = sysconf(_SC_NPROCESSORS_CONF);  // NOLINT(runtime/int)
-  if (ret < 0) {
-    fprintf(stderr, "Unexpected value of _SC_NPROCESSORS_CONF: %d\n",
-            static_cast<int>(ret));
-  } else {
-    lp = static_cast<size_t>(ret);
-  }
+#else
+  const unsigned concurrency = std::thread::hardware_concurrency();
+  if (concurrency != 0) lp = static_cast<size_t>(concurrency);
 #endif
 
-  if (HWY_UNLIKELY(lp == 0)) {  // Failed to detect.
-    HWY_IF_CONSTEXPR(HWY_IS_DEBUG_BUILD) {
-      fprintf(stderr,
-              "Unknown TotalLogicalProcessors, assuming 1. "
-              "HWY_OS_: WIN=%d LINUX=%d APPLE=%d;\n"
-              "HWY_ARCH_: WASM=%d X86=%d PPC=%d ARM=%d RISCV=%d S390X=%d\n",
-              HWY_OS_WIN, HWY_OS_LINUX, HWY_OS_APPLE, HWY_ARCH_WASM,
-              HWY_ARCH_X86, HWY_ARCH_PPC, HWY_ARCH_ARM, HWY_ARCH_RISCV,
-              HWY_ARCH_S390X);
+  // WASM or C++ stdlib failed to detect #CPUs.
+  if (lp == 0) {
+    if (HWY_IS_DEBUG_BUILD) {
+      fprintf(
+          stderr,
+          "Unknown TotalLogicalProcessors. HWY_OS_: WIN=%d LINUX=%d APPLE=%d;\n"
+          "HWY_ARCH_: WASM=%d X86=%d PPC=%d ARM=%d RISCV=%d S390X=%d\n",
+          HWY_OS_WIN, HWY_OS_LINUX, HWY_OS_APPLE, HWY_ARCH_WASM, HWY_ARCH_X86,
+          HWY_ARCH_PPC, HWY_ARCH_ARM, HWY_ARCH_RISCV, HWY_ARCH_S390X);
     }
     return 1;
   }
 
   // Warn that we are clamping.
-  if (HWY_UNLIKELY(lp > kMaxLogicalProcessors)) {
-    HWY_IF_CONSTEXPR(HWY_IS_DEBUG_BUILD) {
+  if (lp > kMaxLogicalProcessors) {
+    if (HWY_IS_DEBUG_BUILD) {
       fprintf(stderr, "OS reports %zu processors but clamping to %zu\n", lp,
               kMaxLogicalProcessors);
     }
@@ -120,7 +111,7 @@ HWY_CONTRIB_DLLEXPORT size_t TotalLogicalProcessors() {
 #include <sys/syscall.h>
 #endif
 
-HWY_CONTRIB_DLLEXPORT bool GetThreadAffinity(LogicalProcessorSet& lps) {
+HWY_DLLEXPORT bool GetThreadAffinity(LogicalProcessorSet& lps) {
 #if HWY_OS_WIN
   // Only support the first 64 because WINE does not support processor groups.
   const HANDLE hThread = GetCurrentThread();
@@ -182,7 +173,7 @@ HWY_CONTRIB_DLLEXPORT bool GetThreadAffinity(LogicalProcessorSet& lps) {
 #endif
 }
 
-HWY_CONTRIB_DLLEXPORT bool SetThreadAffinity(const LogicalProcessorSet& lps) {
+HWY_DLLEXPORT bool SetThreadAffinity(const LogicalProcessorSet& lps) {
 #if HWY_OS_WIN
   const HANDLE hThread = GetCurrentThread();
   const DWORD_PTR prev = SetThreadAffinityMask(hThread, lps.Get64());
@@ -268,7 +259,7 @@ class File {
     if (fd_ < 0) return 0;
     size_t pos = 0;
     for (;;) {
-      // read instead of `pread`, which might not work for sysfs.
+      // read instead of pread, which might not work for sysfs.
       const auto bytes_read = read(fd_, buf200 + pos, 200 - pos);
       if (bytes_read == 0) {  // EOF: done
         buf200[pos++] = '\0';
@@ -290,60 +281,39 @@ class File {
   int fd_;
 };
 
-// Returns bytes read, or 0 on failure.
-size_t ReadSysfs(const char* format, size_t lp, char* buf200) {
+// Interprets as base-10 ASCII, handling an K or M suffix if present.
+bool ParseSysfs(const char* str, size_t len, size_t* out) {
+  size_t value = 0;
+  // 9 digits cannot overflow even 32-bit size_t.
+  size_t pos = 0;
+  for (; pos < HWY_MIN(len, 9); ++pos) {
+    const int c = str[pos];
+    if (c < '0' || c > '9') break;
+    value *= 10;
+    value += static_cast<size_t>(c - '0');
+  }
+  if (pos == 0) {  // No digits found
+    *out = 0;
+    return false;
+  }
+  if (str[pos] == 'K') value <<= 10;
+  if (str[pos] == 'M') value <<= 20;
+  *out = value;
+  return true;
+}
+
+bool ReadSysfs(const char* format, size_t lp, size_t* out) {
   char path[200];
   const int bytes_written = snprintf(path, sizeof(path), format, lp);
   HWY_ASSERT(0 < bytes_written &&
              bytes_written < static_cast<int>(sizeof(path) - 1));
 
   const File file(path);
-  return file.Read(buf200);
-}
-
-// Interprets [str + pos, str + end) as base-10 ASCII. Stops when any non-digit
-// is found, or at end. Returns false if no digits found.
-bool ParseDigits(const char* str, const size_t end, size_t& pos, size_t* out) {
-  HWY_ASSERT(pos <= end);
-  // 9 digits cannot overflow even 32-bit size_t.
-  const size_t stop = pos + 9;
-  *out = 0;
-  for (; pos < HWY_MIN(end, stop); ++pos) {
-    const int c = str[pos];
-    if (c < '0' || c > '9') break;
-    *out *= 10;
-    *out += static_cast<size_t>(c - '0');
-  }
-  if (pos == 0) {  // No digits found
-    *out = 0;
-    return false;
-  }
-  return true;
-}
-
-// Number, plus optional K or M suffix, plus terminator.
-bool ParseNumberWithOptionalSuffix(const char* str, size_t len, size_t* out) {
-  size_t pos = 0;
-  if (!ParseDigits(str, len, pos, out)) return false;
-  if (str[pos] == 'K') {
-    *out <<= 10;
-    ++pos;
-  }
-  if (str[pos] == 'M') {
-    *out <<= 20;
-    ++pos;
-  }
-  if (str[pos] != '\0' && str[pos] != '\n') {
-    HWY_ABORT("Expected [suffix] terminator at %zu %s\n", pos, str);
-  }
-  return true;
-}
-
-bool ReadNumberWithOptionalSuffix(const char* format, size_t lp, size_t* out) {
   char buf200[200];
-  const size_t pos = ReadSysfs(format, lp, buf200);
+  const size_t pos = file.Read(buf200);
   if (pos == 0) return false;
-  return ParseNumberWithOptionalSuffix(buf200, pos, out);
+
+  return ParseSysfs(buf200, pos, out);
 }
 
 const char* kPackage =
@@ -352,7 +322,6 @@ const char* kCluster = "/sys/devices/system/cpu/cpu%zu/cache/index3/id";
 const char* kCore = "/sys/devices/system/cpu/cpu%zu/topology/core_id";
 const char* kL2Size = "/sys/devices/system/cpu/cpu%zu/cache/index2/size";
 const char* kL3Size = "/sys/devices/system/cpu/cpu%zu/cache/index3/size";
-const char* kNode = "/sys/devices/system/node/node%zu/cpulist";
 
 // sysfs values can be arbitrarily large, so store in a map and replace with
 // indices in order of appearance.
@@ -363,7 +332,7 @@ class Remapper {
   template <typename T>
   bool operator()(const char* format, size_t lp, T* HWY_RESTRICT out_index) {
     size_t opaque;
-    if (!ReadNumberWithOptionalSuffix(format, lp, &opaque)) return false;
+    if (!ReadSysfs(format, lp, &opaque)) return false;
 
     const auto ib = indices_.insert({opaque, num_});
     num_ += ib.second;                      // increment if inserted
@@ -413,86 +382,14 @@ std::vector<PerPackage> DetectPackages(std::vector<Topology::LP>& lps) {
   return per_package;
 }
 
-// Sets LP.node for all `lps`.
-void SetNodes(std::vector<Topology::LP>& lps) {
-  // For each NUMA node found via sysfs:
-  for (size_t node = 0;; node++) {
-    // Read its cpulist so we can scatter `node` to all its `lps`.
-    char buf200[200];
-    const size_t bytes_read = ReadSysfs(kNode, node, buf200);
-    if (bytes_read == 0) break;
-
-    constexpr size_t kNotFound = ~size_t{0};
-    size_t pos = 0;
-
-    // Returns first `found_pos >= pos` where `buf200[found_pos] == c`, or
-    // `kNotFound`.
-    const auto find = [buf200, &pos](char c) -> size_t {
-      const char* found_ptr = strchr(buf200 + pos, c);
-      if (found_ptr == nullptr) return kNotFound;
-      HWY_ASSERT(found_ptr >= buf200);
-      const size_t found_pos = static_cast<size_t>(found_ptr - buf200);
-      HWY_ASSERT(found_pos >= pos && buf200[found_pos] == c);
-      return found_pos;
-    };
-
-    // Reads LP number and advances `pos`. `end` is for verifying we did not
-    // read past a known terminator, or the end of string.
-    const auto parse_lp = [buf200, bytes_read, &pos,
-                           &lps](size_t end) -> size_t {
-      end = HWY_MIN(end, bytes_read);
-      size_t lp;
-      HWY_ASSERT(ParseDigits(buf200, end, pos, &lp));
-      HWY_IF_CONSTEXPR(HWY_ARCH_RISCV) {
-        // On RISC-V, both TotalLogicalProcessors and GetThreadAffinity may
-        // under-report the count, hence clamp.
-        lp = HWY_MIN(lp, lps.size() - 1);
-      }
-      HWY_ASSERT(lp < lps.size());
-      HWY_ASSERT(pos <= end);
-      return lp;
-    };
-
-    // Parse all [first-]last separated by commas.
-    for (;;) {
-      // Single number or first of range: ends with dash, comma, or end.
-      const size_t lp_range_first = parse_lp(HWY_MIN(find('-'), find(',')));
-
-      if (buf200[pos] == '-') {  // range
-        ++pos;                   // skip dash
-        // Last of range ends with comma or end.
-        const size_t lp_range_last = parse_lp(find(','));
-
-        for (size_t lp = lp_range_first; lp <= lp_range_last; ++lp) {
-          lps[lp].node = static_cast<uint8_t>(node);
-        }
-      } else {  // single number
-        lps[lp_range_first].node = static_cast<uint8_t>(node);
-      }
-
-      // Done if reached end of string.
-      if (pos == bytes_read || buf200[pos] == '\0' || buf200[pos] == '\n') {
-        break;
-      }
-      // Comma means at least one more term is coming.
-      if (buf200[pos] == ',') {
-        ++pos;
-        continue;
-      }
-      HWY_ABORT("Unexpected character at %zu in %s\n", pos, buf200);
-    }  // for pos
-  }  // for node
-}
-
 }  // namespace
 #endif  // HWY_OS_LINUX
 
-HWY_CONTRIB_DLLEXPORT Topology::Topology() {
+HWY_DLLEXPORT Topology::Topology() {
 #if HWY_OS_LINUX
   lps.resize(TotalLogicalProcessors());
   const std::vector<PerPackage>& per_package = DetectPackages(lps);
   if (per_package.empty()) return;
-  SetNodes(lps);
 
   // Allocate per-package/cluster/core vectors. This indicates to callers that
   // detection succeeded.
@@ -516,10 +413,10 @@ HWY_CONTRIB_DLLEXPORT Topology::Topology() {
       Cluster& c = p.clusters[ic];
       const size_t lp = c.lps.First();
       size_t bytes;
-      if (ReadNumberWithOptionalSuffix(kL2Size, lp, &bytes)) {
+      if (ReadSysfs(kL2Size, lp, &bytes)) {
         c.private_kib = bytes >> 10;
       }
-      if (ReadNumberWithOptionalSuffix(kL3Size, lp, &bytes)) {
+      if (ReadSysfs(kL3Size, lp, &bytes)) {
         c.shared_kib = bytes >> 10;
       }
     }

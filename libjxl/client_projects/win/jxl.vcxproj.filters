@@ -554,6 +554,9 @@
     <ClCompile Include="..\..\libjxl\third_party\skcms\skcms.cc">
       <Filter>skcms</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\libjxl\third_party\skcms\src\skcms_TransformBaseline.cc">
+      <Filter>skcms</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\libjxl\lib\jxl\simd_util.cc">
       <Filter>Source Files</Filter>
     </ClCompile>

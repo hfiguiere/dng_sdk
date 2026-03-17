@@ -10,9 +10,9 @@
 #pragma warning( disable : 6011 ) // dereferencing NULL pointer (from malloc)
 #endif
 
-#include "skcms.h"
-#include "test_only.h"
+#include "src/skcms_public.h"
 #include "src/skcms_internals.h"
+#include "test_only.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -418,6 +418,84 @@ static void test_FormatConversions_101010_xr(void) {
     expect(((dst2 >> 0) & 0xff) == 255);
     expect(((dst2 >> 8) & 0xff) == 127);
     expect(((dst2 >> 16) & 0xff) == 0);
+}
+
+static void test_FormatConversions_10101010_xr(void) {
+    uint64_t src[2];
+    src[0] = (384ULL << (0 + 6)) | (894ULL << (16 + 6)) | (384ULL << (32 + 6)) | (639ULL << (48 + 6));
+    src[1] = (384ULL << (0 + 6)) | (639ULL << (16 + 6)) | (384ULL << (32 + 6)) | (894ULL << (48 + 6));
+    uint32_t dst[2] = {0xffffffff, 0xffffffff};
+    expect(skcms_Transform(&src, skcms_PixelFormat_BGRA_10101010_XR,
+                           skcms_AlphaFormat_Unpremul, NULL, &dst,
+                           skcms_PixelFormat_BGRA_8888,
+                           skcms_AlphaFormat_Unpremul, NULL, 2));
+    expect(((dst[0] >> 0) & 0xff) == 0);
+    expect(((dst[0] >> 8) & 0xff) == 255);
+    expect(((dst[0] >> 16) & 0xff) == 0);
+    expect(((dst[0] >> 24) & 0xff) == 127);
+
+    expect(((dst[1] >> 0) & 0xff) == 0);
+    expect(((dst[1] >> 8) & 0xff) == 127);
+    expect(((dst[1] >> 16) & 0xff) == 0);
+    expect(((dst[1] >> 24) & 0xff) == 255);
+}
+
+static void test_FormatConversions_G8(void) {
+    uint8_t src[1 * 256] = {0};
+    for (int i = 0; i < 256; i++) {
+        src[i] = (uint8_t)i;
+    }
+
+    uint8_t dst[4 * 256] = {0};
+    expect(skcms_Transform(src, skcms_PixelFormat_G_8      , skcms_AlphaFormat_Unpremul, NULL,
+                           dst, skcms_PixelFormat_RGBA_8888, skcms_AlphaFormat_Unpremul, NULL,
+                           256));
+    for (int i = 0; i < 256; i++) {
+      expect(dst[i * 4 + 0] == (uint8_t)i);  // red = gray
+      expect(dst[i * 4 + 1] == (uint8_t)i);  // green = gray
+      expect(dst[i * 4 + 2] == (uint8_t)i);  // blue = gray
+      expect(dst[i * 4 + 3] == 0xFF);        // opaque
+    }
+
+    // Let's convert back the other way.
+    uint8_t back[1 * 256] = {0};
+    expect(skcms_Transform(dst,  skcms_PixelFormat_RGBA_8888, skcms_AlphaFormat_Unpremul, NULL,
+                           back, skcms_PixelFormat_G_8      , skcms_AlphaFormat_Unpremul, NULL,
+                           256));
+    for (int i = 0; i < 256; i++) {
+      expect(src[i] == back[i]);
+    }
+}
+
+static void test_FormatConversions_GA88(void) {
+    uint8_t src[2 * 256] = {0};
+    for (int i = 0; i < 256; i++) {
+        // Using a different "gray" and "alpha" value will hopefully catch most
+        // potential LE-vs-BE confusion bugs.
+        src[i * 2 + 0] = (uint8_t)i;
+        src[i * 2 + 1] = (uint8_t)((i * 7) % 256);
+    }
+
+    uint8_t dst[4 * 256] = {0};
+    expect(skcms_Transform(src, skcms_PixelFormat_GA_88    , skcms_AlphaFormat_Unpremul, NULL,
+                           dst, skcms_PixelFormat_RGBA_8888, skcms_AlphaFormat_Unpremul, NULL,
+                           256));
+    for (int i = 0; i < 256; i++) {
+      expect(dst[i * 4 + 0] == (uint8_t)i);  // red = gray
+      expect(dst[i * 4 + 1] == (uint8_t)i);  // green = gray
+      expect(dst[i * 4 + 2] == (uint8_t)i);  // blue = gray
+      expect(dst[i * 4 + 3] == src[i * 2 + 1]);
+    }
+
+    // Let's convert back the other way.
+    uint8_t back[2 * 256] = {0};
+    expect(skcms_Transform(dst,  skcms_PixelFormat_RGBA_8888, skcms_AlphaFormat_Unpremul, NULL,
+                           back, skcms_PixelFormat_GA_88    , skcms_AlphaFormat_Unpremul, NULL,
+                           256));
+    for (int i = 0; i < 256; i++) {
+      expect(src[i * 2 + 0] == back[i * 2 + 0]);
+      expect(src[i * 2 + 1] == back[i * 2 + 1]);
+    }
 }
 
 static void test_FormatConversions_half(void) {
@@ -1309,6 +1387,18 @@ static void test_Programmatic_sRGB(void) {
     expect(skcms_ApproximatelyEqualProfiles(&p, &srgb));
 }
 
+static void test_EqualityCheck(void) {
+    const skcms_ICCProfile* alpha = skcms_sRGB_profile();
+    const skcms_ICCProfile* beta = skcms_sRGB_profile();
+    const skcms_ICCProfile* gamma = skcms_XYZD50_profile();
+    const skcms_ICCProfile* delta = skcms_XYZD50_profile();
+
+    // This is pointer equality because we should cache calls to these profiles.
+    expect(alpha == beta);
+    expect(gamma == delta);
+    expect(alpha != gamma);
+}
+
 static void test_ExactlyEqual(void) {
     const skcms_ICCProfile* srgb = skcms_sRGB_profile();
     skcms_ICCProfile        copy = *srgb;
@@ -1852,10 +1942,13 @@ int main(int argc, char** argv) {
     test_FormatConversions_565();
     test_FormatConversions_101010();
     test_FormatConversions_101010_xr();
+    test_FormatConversions_10101010_xr();
     test_FormatConversions_16161616LE();
     test_FormatConversions_161616LE();
     test_FormatConversions_16161616BE();
     test_FormatConversions_161616BE();
+    test_FormatConversions_G8();
+    test_FormatConversions_GA88();
     test_FormatConversions_half();
     test_FormatConversions_half_norm();
     test_FormatConversions_float();
@@ -1869,6 +1962,7 @@ int main(int argc, char** argv) {
     test_AdaptToD50();
     test_PrimariesToXYZ();
     test_Programmatic_sRGB();
+    test_EqualityCheck();
     test_ExactlyEqual();
     test_GrayscaleAndRGBCanBeEqual();
     test_AliasedTransforms();

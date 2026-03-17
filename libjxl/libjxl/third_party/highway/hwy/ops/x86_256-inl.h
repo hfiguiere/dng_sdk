@@ -2651,25 +2651,6 @@ HWY_API Vec256<double> operator*(Vec256<double> a, Vec256<double> b) {
   return Vec256<double>{_mm256_mul_pd(a.raw, b.raw)};
 }
 
-#if HWY_TARGET <= HWY_AVX3
-
-#if HWY_HAVE_FLOAT16
-HWY_API Vec256<float16_t> MulByFloorPow2(Vec256<float16_t> a,
-                                         Vec256<float16_t> b) {
-  return Vec256<float16_t>{_mm256_scalef_ph(a.raw, b.raw)};
-}
-#endif
-
-HWY_API Vec256<float> MulByFloorPow2(Vec256<float> a, Vec256<float> b) {
-  return Vec256<float>{_mm256_scalef_ps(a.raw, b.raw)};
-}
-
-HWY_API Vec256<double> MulByFloorPow2(Vec256<double> a, Vec256<double> b) {
-  return Vec256<double>{_mm256_scalef_pd(a.raw, b.raw)};
-}
-
-#endif  // HWY_TARGET <= HWY_AVX3
-
 #if HWY_HAVE_FLOAT16
 HWY_API Vec256<float16_t> operator/(Vec256<float16_t> a, Vec256<float16_t> b) {
   return Vec256<float16_t>{_mm256_div_ph(a.raw, b.raw)};
@@ -6152,19 +6133,6 @@ HWY_API Vec256<int64_t> operator>>(Vec256<int64_t> v, Vec256<int64_t> bits) {
 }
 
 // ------------------------------ WidenMulPairwiseAdd
-
-#if HWY_NATIVE_DOT_BF16
-
-template <class DF, HWY_IF_F32_D(DF), HWY_IF_V_SIZE_D(DF, 32),
-          class VBF = VFromD<Repartition<bfloat16_t, DF>>>
-HWY_API VFromD<DF> WidenMulPairwiseAdd(DF df, VBF a, VBF b) {
-  return VFromD<DF>{_mm256_dpbf16_ps(Zero(df).raw,
-                                     reinterpret_cast<__m256bh>(a.raw),
-                                     reinterpret_cast<__m256bh>(b.raw))};
-}
-
-#endif  // HWY_NATIVE_DOT_BF16
-
 template <class D, HWY_IF_V_SIZE_D(D, 32), HWY_IF_I32_D(D)>
 HWY_API VFromD<D> WidenMulPairwiseAdd(D /*d32*/, Vec256<int16_t> a,
                                       Vec256<int16_t> b) {
@@ -7165,8 +7133,7 @@ HWY_API VFromD<DU> ConvertInRangeTo(DU /*du*/, VFromD<RebindToFloat<DU>> v) {
 #endif  // HWY_TARGET <= HWY_AVX3
 
 template <class DI, HWY_IF_V_SIZE_D(DI, 32), HWY_IF_I32_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI,
-                                               VFromD<RebindToFloat<DI>> v) {
+HWY_INLINE VFromD<DI> NearestIntInRange(DI, VFromD<RebindToFloat<DI>> v) {
 #if HWY_COMPILER_GCC_ACTUAL
   // Workaround for undefined behavior in _mm256_cvtps_epi32 if any values of
   // v[i] are not within the range of an int32_t
@@ -7196,113 +7163,6 @@ static HWY_INLINE VFromD<DI> NearestIntInRange(DI,
 #else   // !HWY_COMPILER_GCC_ACTUAL
   return VFromD<DI>{_mm256_cvtps_epi32(v.raw)};
 #endif  // HWY_COMPILER_GCC_ACTUAL
-}
-
-#if HWY_HAVE_FLOAT16
-template <class DI, HWY_IF_V_SIZE_D(DI, 32), HWY_IF_I16_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI /*d*/, Vec256<float16_t> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm256_cvtph_epi16 with GCC if any
-  // values of v[i] are not within the range of an int16_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 1200 && !HWY_IS_DEBUG_BUILD && \
-    HWY_HAVE_SCALAR_F16_TYPE
-  if (detail::IsConstantX86VecForF2IConv<int16_t>(v)) {
-    typedef hwy::float16_t::Native GccF16RawVectType
-        __attribute__((__vector_size__(32)));
-    const auto raw_v = reinterpret_cast<GccF16RawVectType>(v.raw);
-    return VFromD<DI>{
-        _mm256_setr_epi16(detail::X86ScalarNearestInt<int16_t>(raw_v[0]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[1]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[2]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[3]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[4]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[5]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[6]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[7]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[8]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[9]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[10]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[11]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[12]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[13]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[14]),
-                          detail::X86ScalarNearestInt<int16_t>(raw_v[15]))};
-  }
-#endif
-
-  __m256i raw_result;
-  __asm__("vcvtph2w {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else  // HWY_COMPILER_GCC_ACTUAL
-  return VFromD<DI>{_mm256_cvtph_epi16(v.raw)};
-#endif
-}
-#endif
-
-#if HWY_TARGET <= HWY_AVX3
-template <class DI, HWY_IF_V_SIZE_D(DI, 32), HWY_IF_I64_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI,
-                                               VFromD<RebindToFloat<DI>> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm256_cvtpd_epi64 with GCC if any
-  // values of v[i] are not within the range of an int64_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 700 && !HWY_IS_DEBUG_BUILD
-  if (detail::IsConstantX86VecForF2IConv<int64_t>(v)) {
-    typedef double GccF64RawVectType __attribute__((__vector_size__(32)));
-    const auto raw_v = reinterpret_cast<GccF64RawVectType>(v.raw);
-    return VFromD<DI>{
-        _mm256_setr_epi64x(detail::X86ScalarNearestInt<int64_t>(raw_v[0]),
-                           detail::X86ScalarNearestInt<int64_t>(raw_v[1]),
-                           detail::X86ScalarNearestInt<int64_t>(raw_v[2]),
-                           detail::X86ScalarNearestInt<int64_t>(raw_v[3]))};
-  }
-#endif
-
-  __m256i raw_result;
-  __asm__("vcvtpd2qq {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else   // !HWY_COMPILER_GCC_ACTUAL
-  return VFromD<DI>{_mm256_cvtpd_epi64(v.raw)};
-#endif  // HWY_COMPILER_GCC_ACTUAL
-}
-#endif  // HWY_TARGET <= HWY_AVX3
-
-template <class DI, HWY_IF_V_SIZE_D(DI, 16), HWY_IF_I32_D(DI)>
-static HWY_INLINE VFromD<DI> DemoteToNearestIntInRange(
-    DI, VFromD<Rebind<double, DI>> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm256_cvtpd_epi32 with GCC if any
-  // values of v[i] are not within the range of an int32_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 700 && !HWY_IS_DEBUG_BUILD
-  if (detail::IsConstantX86VecForF2IConv<int32_t>(v)) {
-    typedef double GccF32RawVectType __attribute__((__vector_size__(32)));
-    const auto raw_v = reinterpret_cast<GccF32RawVectType>(v.raw);
-    return Dup128VecFromValues(DI(),
-                               detail::X86ScalarNearestInt<int32_t>(raw_v[0]),
-                               detail::X86ScalarNearestInt<int32_t>(raw_v[1]),
-                               detail::X86ScalarNearestInt<int32_t>(raw_v[2]),
-                               detail::X86ScalarNearestInt<int32_t>(raw_v[3]));
-  }
-#endif
-
-  __m128i raw_result;
-  __asm__("vcvtpd2dq {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else  // !HWY_COMPILER_GCC_ACTUAL
-  return VFromD<DI>{_mm256_cvtpd_epi32(v.raw)};
-#endif
 }
 
 #ifndef HWY_DISABLE_F16C

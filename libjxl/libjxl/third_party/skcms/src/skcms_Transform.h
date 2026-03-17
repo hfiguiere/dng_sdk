@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+
 // skcms_Transform.h contains skcms implementation details.
 // Please don't use this header from outside the skcms repo.
 
@@ -14,15 +17,17 @@ namespace skcms_private {
 
 /** All transform ops */
 
-#define SKCMS_LOAD_OPS(M) \
+#define SKCMS_WORK_OPS(M) \
     M(load_a8)            \
     M(load_g8)            \
+    M(load_ga88)          \
     M(load_4444)          \
     M(load_565)           \
     M(load_888)           \
     M(load_8888)          \
     M(load_1010102)       \
     M(load_101010x_XR)    \
+    M(load_10101010_XR)   \
     M(load_161616LE)      \
     M(load_16161616LE)    \
     M(load_161616BE)      \
@@ -30,9 +35,8 @@ namespace skcms_private {
     M(load_hhh)           \
     M(load_hhhh)          \
     M(load_fff)           \
-    M(load_ffff)
-
-#define SKCMS_WORK_OPS(M) \
+    M(load_ffff)          \
+                          \
     M(swap_rb)            \
     M(clamp)              \
     M(invert)             \
@@ -86,6 +90,7 @@ namespace skcms_private {
 #define SKCMS_STORE_OPS(M) \
     M(store_a8)            \
     M(store_g8)            \
+    M(store_ga88)          \
     M(store_4444)          \
     M(store_565)           \
     M(store_888)           \
@@ -103,7 +108,6 @@ namespace skcms_private {
 
 enum class Op : int {
 #define M(op) op,
-    SKCMS_LOAD_OPS(M)
     SKCMS_WORK_OPS(M)
     SKCMS_STORE_OPS(M)
 #undef M
@@ -134,4 +138,27 @@ enum class Op : int {
     template <int N, typename T> using Vec = typename VecHelper<N, T>::V;
 #endif
 
+/** Interface */
+
+namespace baseline {
+
+void run_program(const Op* program, const void** contexts, ptrdiff_t programSize,
+                 const char* src, char* dst, int n,
+                 const size_t src_bpp, const size_t dst_bpp);
+
+}
+namespace hsw {
+
+void run_program(const Op* program, const void** contexts, ptrdiff_t programSize,
+                 const char* src, char* dst, int n,
+                 const size_t src_bpp, const size_t dst_bpp);
+
+}
+namespace skx {
+
+void run_program(const Op* program, const void** contexts, ptrdiff_t programSize,
+                 const char* src, char* dst, int n,
+                 const size_t src_bpp, const size_t dst_bpp);
+
+}
 }  // namespace skcms_private

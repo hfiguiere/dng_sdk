@@ -1878,21 +1878,6 @@ HWY_API Vec512<double> operator*(Vec512<double> a, Vec512<double> b) {
 }
 
 #if HWY_HAVE_FLOAT16
-HWY_API Vec512<float16_t> MulByFloorPow2(Vec512<float16_t> a,
-                                         Vec512<float16_t> b) {
-  return Vec512<float16_t>{_mm512_scalef_ph(a.raw, b.raw)};
-}
-#endif
-
-HWY_API Vec512<float> MulByFloorPow2(Vec512<float> a, Vec512<float> b) {
-  return Vec512<float>{_mm512_scalef_ps(a.raw, b.raw)};
-}
-
-HWY_API Vec512<double> MulByFloorPow2(Vec512<double> a, Vec512<double> b) {
-  return Vec512<double>{_mm512_scalef_pd(a.raw, b.raw)};
-}
-
-#if HWY_HAVE_FLOAT16
 HWY_API Vec512<float16_t> operator/(Vec512<float16_t> a, Vec512<float16_t> b) {
   return Vec512<float16_t>{_mm512_div_ph(a.raw, b.raw)};
 }
@@ -6433,8 +6418,7 @@ HWY_API VFromD<DU> ConvertInRangeTo(DU /*du*/, VFromD<RebindToFloat<DU>> v) {
 }
 
 template <class DI, HWY_IF_V_SIZE_D(DI, 64), HWY_IF_I32_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI,
-                                               VFromD<RebindToFloat<DI>> v) {
+HWY_INLINE VFromD<DI> NearestIntInRange(DI, VFromD<RebindToFloat<DI>> v) {
 #if HWY_COMPILER_GCC_ACTUAL
   // Workaround for undefined behavior in _mm512_cvtps_epi32 with GCC if any
   // values of v[i] are not within the range of an int32_t
@@ -6471,134 +6455,6 @@ static HWY_INLINE VFromD<DI> NearestIntInRange(DI,
   return VFromD<DI>{raw_result};
 #else
   return VFromD<DI>{_mm512_cvtps_epi32(v.raw)};
-#endif
-}
-
-#if HWY_HAVE_FLOAT16
-template <class DI, HWY_IF_V_SIZE_D(DI, 64), HWY_IF_I16_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI /*d*/, Vec512<float16_t> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm512_cvtph_epi16 with GCC if any
-  // values of v[i] are not within the range of an int16_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 1200 && !HWY_IS_DEBUG_BUILD && \
-    HWY_HAVE_SCALAR_F16_TYPE
-  if (detail::IsConstantX86VecForF2IConv<int16_t>(v)) {
-    typedef hwy::float16_t::Native GccF16RawVectType
-        __attribute__((__vector_size__(64)));
-    const auto raw_v = reinterpret_cast<GccF16RawVectType>(v.raw);
-    return VFromD<DI>{
-        _mm512_set_epi16(detail::X86ScalarNearestInt<int16_t>(raw_v[31]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[30]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[29]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[28]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[27]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[26]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[25]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[24]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[23]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[22]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[21]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[20]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[19]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[18]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[17]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[16]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[15]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[14]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[13]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[12]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[11]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[10]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[9]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[8]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[7]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[6]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[5]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[4]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[3]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[2]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[1]),
-                         detail::X86ScalarNearestInt<int16_t>(raw_v[0]))};
-  }
-#endif
-
-  __m512i raw_result;
-  __asm__("vcvtph2w {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else
-  return VFromD<DI>{_mm512_cvtph_epi16(v.raw)};
-#endif
-}
-#endif  // HWY_HAVE_FLOAT16
-
-template <class DI, HWY_IF_V_SIZE_D(DI, 64), HWY_IF_I64_D(DI)>
-static HWY_INLINE VFromD<DI> NearestIntInRange(DI /*di*/, Vec512<double> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm512_cvtpd_epi64 with GCC if any
-  // values of v[i] are not within the range of an int64_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 700 && !HWY_IS_DEBUG_BUILD
-  if (detail::IsConstantX86VecForF2IConv<int64_t>(v)) {
-    typedef double GccF64RawVectType __attribute__((__vector_size__(64)));
-    const auto raw_v = reinterpret_cast<GccF64RawVectType>(v.raw);
-    return VFromD<DI>{
-        _mm512_setr_epi64(detail::X86ScalarNearestInt<int64_t>(raw_v[0]),
-                          detail::X86ScalarNearestInt<int64_t>(raw_v[1]),
-                          detail::X86ScalarNearestInt<int64_t>(raw_v[2]),
-                          detail::X86ScalarNearestInt<int64_t>(raw_v[3]),
-                          detail::X86ScalarNearestInt<int64_t>(raw_v[4]),
-                          detail::X86ScalarNearestInt<int64_t>(raw_v[5]),
-                          detail::X86ScalarNearestInt<int64_t>(raw_v[6]),
-                          detail::X86ScalarNearestInt<int64_t>(raw_v[7]))};
-  }
-#endif
-
-  __m512i raw_result;
-  __asm__("vcvtpd2qq {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else
-  return VFromD<DI>{_mm512_cvtpd_epi64(v.raw)};
-#endif
-}
-
-template <class DI, HWY_IF_V_SIZE_D(DI, 32), HWY_IF_I32_D(DI)>
-static HWY_INLINE VFromD<DI> DemoteToNearestIntInRange(DI /* tag */,
-                                                       Vec512<double> v) {
-#if HWY_COMPILER_GCC_ACTUAL
-  // Workaround for undefined behavior in _mm512_cvtpd_epi32 with GCC if any
-  // values of v[i] are not within the range of an int32_t
-
-#if HWY_COMPILER_GCC_ACTUAL >= 700 && !HWY_IS_DEBUG_BUILD
-  if (detail::IsConstantX86VecForF2IConv<int32_t>(v)) {
-    typedef double GccF64RawVectType __attribute__((__vector_size__(64)));
-    const auto raw_v = reinterpret_cast<GccF64RawVectType>(v.raw);
-    return VFromD<DI>{
-        _mm256_setr_epi32(detail::X86ScalarNearestInt<int32_t>(raw_v[0]),
-                          detail::X86ScalarNearestInt<int32_t>(raw_v[1]),
-                          detail::X86ScalarNearestInt<int32_t>(raw_v[2]),
-                          detail::X86ScalarNearestInt<int32_t>(raw_v[3]),
-                          detail::X86ScalarNearestInt<int32_t>(raw_v[4]),
-                          detail::X86ScalarNearestInt<int32_t>(raw_v[5]),
-                          detail::X86ScalarNearestInt<int32_t>(raw_v[6]),
-                          detail::X86ScalarNearestInt<int32_t>(raw_v[7]))};
-  }
-#endif
-
-  __m256i raw_result;
-  __asm__("vcvtpd2dq {%1, %0|%0, %1}"
-          : "=" HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(raw_result)
-          : HWY_X86_GCC_INLINE_ASM_VEC_CONSTRAINT(v.raw)
-          :);
-  return VFromD<DI>{raw_result};
-#else
-  return VFromD<DI>{_mm512_cvtpd_epi32(v.raw)};
 #endif
 }
 
@@ -6932,15 +6788,6 @@ HWY_API intptr_t FindLastTrue(D d, MFromD<D> mask) {
 
 // ------------------------------ Compress
 
-#ifndef HWY_X86_SLOW_COMPRESS_STORE  // allow override
-// Slow on Zen4 and SPR, faster if we emulate via Compress().
-#if HWY_TARGET == HWY_AVX3_ZEN4 || HWY_TARGET == HWY_AVX3_SPR
-#define HWY_X86_SLOW_COMPRESS_STORE 1
-#else
-#define HWY_X86_SLOW_COMPRESS_STORE 0
-#endif
-#endif  // HWY_X86_SLOW_COMPRESS_STORE
-
 // Always implement 8-bit here even if we lack VBMI2 because we can do better
 // than generic_ops (8 at a time) via the native 32-bit compress (16 at a time).
 #ifdef HWY_NATIVE_COMPRESS8
@@ -6980,8 +6827,8 @@ HWY_INLINE Vec512<uint16_t> NativeCompress(const Vec512<uint16_t> v,
   return Vec512<uint16_t>{_mm512_maskz_compress_epi16(mask.raw, v.raw)};
 }
 
-// Do not even define these to prevent accidental usage.
-#if !HWY_X86_SLOW_COMPRESS_STORE
+// Slow on Zen4, do not even define these to prevent accidental usage.
+#if HWY_TARGET != HWY_AVX3_ZEN4
 
 template <size_t N>
 HWY_INLINE void NativeCompressStore(Vec128<uint8_t, N> v,
@@ -7013,7 +6860,7 @@ HWY_INLINE void NativeCompressStore(Vec512<uint16_t> v, Mask512<uint16_t> mask,
   _mm512_mask_compressstoreu_epi16(unaligned, mask.raw, v.raw);
 }
 
-#endif  // HWY_X86_SLOW_COMPRESS_STORE
+#endif  // HWY_TARGET != HWY_AVX3_ZEN4
 
 HWY_INLINE Vec512<uint8_t> NativeExpand(Vec512<uint8_t> v,
                                         Mask512<uint8_t> mask) {
@@ -7054,8 +6901,8 @@ HWY_INLINE Vec512<uint32_t> NativeCompress(Vec512<uint32_t> v,
 }
 // We use table-based compress for 64-bit lanes, see CompressIsPartition.
 
-// Do not even define these to prevent accidental usage.
-#if !HWY_X86_SLOW_COMPRESS_STORE
+// Slow on Zen4, do not even define these to prevent accidental usage.
+#if HWY_TARGET != HWY_AVX3_ZEN4
 
 template <size_t N>
 HWY_INLINE void NativeCompressStore(Vec128<uint32_t, N> v,
@@ -7116,7 +6963,7 @@ HWY_INLINE void NativeCompressStore(Vec512<double> v, Mask512<double> mask,
   _mm512_mask_compressstoreu_pd(unaligned, mask.raw, v.raw);
 }
 
-#endif  // HWY_X86_SLOW_COMPRESS_STORE
+#endif  // HWY_TARGET != HWY_AVX3_ZEN4
 
 HWY_INLINE Vec512<uint32_t> NativeExpand(Vec512<uint32_t> v,
                                          Mask512<uint32_t> mask) {
@@ -7576,7 +7423,7 @@ HWY_API V CompressBits(V v, const uint8_t* HWY_RESTRICT bits) {
 template <class D, HWY_IF_T_SIZE_ONE_OF_D(D, (1 << 1) | (1 << 2))>
 HWY_API size_t CompressStore(VFromD<D> v, MFromD<D> mask, D d,
                              TFromD<D>* HWY_RESTRICT unaligned) {
-#if HWY_X86_SLOW_COMPRESS_STORE
+#if HWY_TARGET == HWY_AVX3_ZEN4
   StoreU(Compress(v, mask), d, unaligned);
 #else
   const RebindToUnsigned<decltype(d)> du;
@@ -7588,7 +7435,7 @@ HWY_API size_t CompressStore(VFromD<D> v, MFromD<D> mask, D d,
 #else
   detail::EmuCompressStore(BitCast(du, v), mu, du, pu);
 #endif
-#endif  // HWY_X86_SLOW_COMPRESS_STORE
+#endif  // HWY_TARGET != HWY_AVX3_ZEN4
   const size_t count = CountTrue(d, mask);
   detail::MaybeUnpoison(unaligned, count);
   return count;
@@ -7598,7 +7445,7 @@ template <class D, HWY_IF_NOT_FLOAT_D(D),
           HWY_IF_T_SIZE_ONE_OF_D(D, (1 << 4) | (1 << 8))>
 HWY_API size_t CompressStore(VFromD<D> v, MFromD<D> mask, D d,
                              TFromD<D>* HWY_RESTRICT unaligned) {
-#if HWY_X86_SLOW_COMPRESS_STORE
+#if HWY_TARGET == HWY_AVX3_ZEN4
   StoreU(Compress(v, mask), d, unaligned);
 #else
   const RebindToUnsigned<decltype(d)> du;
@@ -7606,7 +7453,7 @@ HWY_API size_t CompressStore(VFromD<D> v, MFromD<D> mask, D d,
   using TU = TFromD<decltype(du)>;
   TU* HWY_RESTRICT pu = reinterpret_cast<TU*>(unaligned);
   detail::NativeCompressStore(BitCast(du, v), mu, pu);
-#endif  // HWY_X86_SLOW_COMPRESS_STORE
+#endif  // HWY_TARGET != HWY_AVX3_ZEN4
   const size_t count = CountTrue(d, mask);
   detail::MaybeUnpoison(unaligned, count);
   return count;
@@ -7616,12 +7463,12 @@ HWY_API size_t CompressStore(VFromD<D> v, MFromD<D> mask, D d,
 template <class D, HWY_IF_FLOAT3264_D(D)>
 HWY_API size_t CompressStore(VFromD<D> v, MFromD<D> mask, D d,
                              TFromD<D>* HWY_RESTRICT unaligned) {
-#if HWY_X86_SLOW_COMPRESS_STORE
+#if HWY_TARGET == HWY_AVX3_ZEN4
   StoreU(Compress(v, mask), d, unaligned);
 #else
   (void)d;
   detail::NativeCompressStore(v, mask, unaligned);
-#endif  // HWY_X86_SLOW_COMPRESS_STORE
+#endif  // HWY_TARGET != HWY_AVX3_ZEN4
   const size_t count = PopCount(uint64_t{mask.raw});
   detail::MaybeUnpoison(unaligned, count);
   return count;
@@ -7634,7 +7481,7 @@ HWY_API size_t CompressBlendedStore(VFromD<D> v, MFromD<D> m, D d,
   // Native CompressStore already does the blending at no extra cost (latency
   // 11, rthroughput 2 - same as compress plus store).
   if (HWY_TARGET == HWY_AVX3_DL ||
-      (!HWY_X86_SLOW_COMPRESS_STORE && sizeof(TFromD<D>) > 2)) {
+      (HWY_TARGET != HWY_AVX3_ZEN4 && sizeof(TFromD<D>) > 2)) {
     return CompressStore(v, m, d, unaligned);
   } else {
     const size_t count = CountTrue(d, m);
@@ -7958,17 +7805,6 @@ HWY_API Vec512<int64_t> operator>>(const Vec512<int64_t> v,
 }
 
 // ------------------------------ WidenMulPairwiseAdd
-
-#if HWY_NATIVE_DOT_BF16
-template <class DF, HWY_IF_F32_D(DF), HWY_IF_V_SIZE_D(DF, 64),
-          class VBF = VFromD<Repartition<bfloat16_t, DF>>>
-HWY_API VFromD<DF> WidenMulPairwiseAdd(DF df, VBF a, VBF b) {
-  return VFromD<DF>{_mm512_dpbf16_ps(Zero(df).raw,
-                                     reinterpret_cast<__m512bh>(a.raw),
-                                     reinterpret_cast<__m512bh>(b.raw))};
-}
-#endif  // HWY_NATIVE_DOT_BF16
-
 template <class D, HWY_IF_V_SIZE_D(D, 64), HWY_IF_I32_D(D)>
 HWY_API VFromD<D> WidenMulPairwiseAdd(D /*d32*/, Vec512<int16_t> a,
                                       Vec512<int16_t> b) {

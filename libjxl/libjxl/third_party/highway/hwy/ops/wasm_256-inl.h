@@ -214,8 +214,7 @@ HWY_API Vec256<T> SaturatedSub(Vec256<T> a, const Vec256<T> b) {
   return a;
 }
 
-template <typename T, HWY_IF_UNSIGNED(T),
-          HWY_IF_T_SIZE_ONE_OF(T, (1 << 1) | (1 << 2))>
+template <typename T>
 HWY_API Vec256<T> AverageRound(Vec256<T> a, const Vec256<T> b) {
   a.v0 = AverageRound(a.v0, b.v0);
   a.v1 = AverageRound(a.v1, b.v1);
@@ -370,31 +369,37 @@ HWY_API Vec256<T> operator/(Vec256<T> a, const Vec256<T> b) {
   return a;
 }
 
+// Approximate reciprocal
+HWY_API Vec256<float> ApproximateReciprocal(const Vec256<float> v) {
+  const Vec256<float> one = Set(Full256<float>(), 1.0f);
+  return one / v;
+}
+
 // ------------------------------ Floating-point multiply-add variants
 
-template <class T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<T> MulAdd(Vec256<T> mul, Vec256<T> x, Vec256<T> add) {
+HWY_API Vec256<float> MulAdd(Vec256<float> mul, Vec256<float> x,
+                             Vec256<float> add) {
   mul.v0 = MulAdd(mul.v0, x.v0, add.v0);
   mul.v1 = MulAdd(mul.v1, x.v1, add.v1);
   return mul;
 }
 
-template <class T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<T> NegMulAdd(Vec256<T> mul, Vec256<T> x, Vec256<T> add) {
+HWY_API Vec256<float> NegMulAdd(Vec256<float> mul, Vec256<float> x,
+                                Vec256<float> add) {
   mul.v0 = NegMulAdd(mul.v0, x.v0, add.v0);
   mul.v1 = NegMulAdd(mul.v1, x.v1, add.v1);
   return mul;
 }
 
-template <class T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<T> MulSub(Vec256<T> mul, Vec256<T> x, Vec256<T> sub) {
+HWY_API Vec256<float> MulSub(Vec256<float> mul, Vec256<float> x,
+                             Vec256<float> sub) {
   mul.v0 = MulSub(mul.v0, x.v0, sub.v0);
   mul.v1 = MulSub(mul.v1, x.v1, sub.v1);
   return mul;
 }
 
-template <class T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<T> NegMulSub(Vec256<T> mul, Vec256<T> x, Vec256<T> sub) {
+HWY_API Vec256<float> NegMulSub(Vec256<float> mul, Vec256<float> x,
+                                Vec256<float> sub) {
   mul.v0 = NegMulSub(mul.v0, x.v0, sub.v0);
   mul.v1 = NegMulSub(mul.v1, x.v1, sub.v1);
   return mul;
@@ -409,35 +414,38 @@ HWY_API Vec256<T> Sqrt(Vec256<T> v) {
   return v;
 }
 
+// Approximate reciprocal square root
+HWY_API Vec256<float> ApproximateReciprocalSqrt(const Vec256<float> v) {
+  // TODO(eustas): find cheaper a way to calculate this.
+  const Vec256<float> one = Set(Full256<float>(), 1.0f);
+  return one / Sqrt(v);
+}
+
 // ------------------------------ Floating-point rounding
 
 // Toward nearest integer, ties to even
-template <class T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<T> Round(Vec256<T> v) {
+HWY_API Vec256<float> Round(Vec256<float> v) {
   v.v0 = Round(v.v0);
   v.v1 = Round(v.v1);
   return v;
 }
 
 // Toward zero, aka truncate
-template <class T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<T> Trunc(Vec256<T> v) {
+HWY_API Vec256<float> Trunc(Vec256<float> v) {
   v.v0 = Trunc(v.v0);
   v.v1 = Trunc(v.v1);
   return v;
 }
 
 // Toward +infinity, aka ceiling
-template <class T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<T> Ceil(Vec256<T> v) {
+HWY_API Vec256<float> Ceil(Vec256<float> v) {
   v.v0 = Ceil(v.v0);
   v.v1 = Ceil(v.v1);
   return v;
 }
 
 // Toward -infinity, aka floor
-template <class T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<T> Floor(Vec256<T> v) {
+HWY_API Vec256<float> Floor(Vec256<float> v) {
   v.v0 = Floor(v.v0);
   v.v1 = Floor(v.v1);
   return v;
@@ -1876,14 +1884,6 @@ HWY_API Vec128<float16_t> DemoteTo(D d16, Vec256<float> v) {
   return Combine(d16, hi, lo);
 }
 
-template <class D, HWY_IF_F32_D(D)>
-HWY_API Vec128<float> DemoteTo(D df32, Vec256<double> v) {
-  const Half<decltype(df32)> df32h;
-  const Vec64<float> lo = DemoteTo(df32h, v.v0);
-  const Vec64<float> hi = DemoteTo(df32h, v.v1);
-  return Combine(df32, hi, lo);
-}
-
 // For already range-limited input [0, 255].
 HWY_API Vec64<uint8_t> U8FromU32(Vec256<uint32_t> v) {
   const Full64<uint8_t> du8;
@@ -1971,9 +1971,8 @@ HWY_API Vec256<TTo> ConvertTo(DTo d, const Vec256<TFrom> v) {
   return ret;
 }
 
-template <typename T, HWY_IF_FLOAT3264(T)>
-HWY_API Vec256<MakeSigned<T>> NearestInt(const Vec256<T> v) {
-  return ConvertTo(Full256<MakeSigned<T>>(), Round(v));
+HWY_API Vec256<int32_t> NearestInt(const Vec256<float> v) {
+  return ConvertTo(Full256<int32_t>(), Round(v));
 }
 
 // ================================================== MISC

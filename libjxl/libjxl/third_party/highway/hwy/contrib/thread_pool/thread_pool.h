@@ -26,7 +26,6 @@
 #include <stdio.h>  // snprintf
 
 #include <array>
-#include <new>
 #include <thread>  //NOLINT
 // IWYU pragma: end_exports
 
@@ -37,7 +36,6 @@
 #include "hwy/base.h"
 #include "hwy/cache_control.h"  // Pause
 #include "hwy/contrib/thread_pool/futex.h"
-#include "hwy/contrib/thread_pool/topology.h"
 
 // Temporary NOINLINE for profiling.
 #define HWY_POOL_INLINE HWY_NOINLINE
@@ -345,8 +343,8 @@ struct alignas(HWY_ALIGNMENT) PoolMem {
 class PoolMemOwner {
  public:
   explicit PoolMemOwner(size_t num_threads)
-      // The main thread also participates.
-      : num_workers_(num_threads + 1) {
+      // There is at least one worker, the main thread.
+      : num_workers_(HWY_MAX(num_threads, size_t{1})) {
     const size_t size = sizeof(PoolMem) + num_workers_ * sizeof(PoolWorker);
     bytes_ = hwy::AllocateAligned<uint8_t>(size);
     HWY_ASSERT(bytes_);
@@ -464,7 +462,7 @@ class ParallelFor {  // 0 bytes
       PoolWorker* other_worker = &mem.Worker(victim);
 
       // Until all of other_worker's work is done:
-      const uint64_t other_end = other_worker->WorkerGetEnd();
+      const uint64_t end = other_worker->WorkerGetEnd();
       for (;;) {
         // On x86 this generates a LOCK prefix, but that is only expensive if
         // there is actually contention, which is unlikely because we shard the
@@ -472,12 +470,12 @@ class ParallelFor {  // 0 bytes
         // traffic, and stealing happens in semi-random order.
         uint64_t task = other_worker->WorkerReserveTask();
 
-        // The worker that first sets `task` to `other_end` exits this loop.
-        // After that, `task` can be incremented up to `num_workers - 1` times,
-        // once per other worker.
-        HWY_DASSERT(task < other_end + num_workers);
+        // The worker that first sets `task` to `end` exits this loop. After
+        // that, `task` can be incremented up to `num_workers - 1` times, once
+        // per other worker.
+        HWY_DASSERT(task < end + num_workers);
 
-        if (HWY_UNLIKELY(task >= other_end)) {
+        if (HWY_UNLIKELY(task >= end)) {
           hwy::Pause();  // Reduce coherency traffic while stealing.
           break;
         }
@@ -557,12 +555,6 @@ class ThreadPool {
   // This typically includes hyperthreads, hence it is a loose upper bound.
   // -1 because these are in addition to the main thread.
   static size_t MaxThreads() {
-    LogicalProcessorSet lps;
-    // This is OS dependent, but more accurate if available because it takes
-    // into account restrictions set by cgroups or numactl/taskset.
-    if (GetThreadAffinity(lps)) {
-      return lps.Count() - 1;
-    }
     return static_cast<size_t>(std::thread::hardware_concurrency() - 1);
   }
 

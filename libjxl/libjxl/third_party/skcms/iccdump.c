@@ -14,9 +14,9 @@
     #define SKCMS_NORETURN noreturn
 #endif
 
-#include "skcms.h"
 #include "test_only.h"
 #include "src/skcms_internals.h"
+#include "src/skcms_public.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

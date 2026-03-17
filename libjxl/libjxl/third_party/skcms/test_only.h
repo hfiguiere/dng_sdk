@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "skcms.h"
+#include "src/skcms_public.h"
 #include <stdio.h>
 
 void dump_profile(const skcms_ICCProfile* profile, FILE* fp);
