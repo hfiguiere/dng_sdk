@@ -267,14 +267,15 @@ tag_encoded_text::tag_encoded_text (uint16 code,
 	if (fText.IsASCII ())
 		{
 	
-		fCount = 8 + fText.Length ();
+		fCount = SafeUint32Add (8, fText.Length ());
 		
 		}
 		
 	else
 		{
 		
-		fCount = 8 + fText.Get_UTF16 (fUTF16) * 2;
+		fCount = SafeUint32Add (8,
+					SafeUint32Mult (fText.Get_UTF16 (fUTF16), 2));
 		
 		}
 	
@@ -1965,7 +1966,12 @@ range_tag_set::range_tag_set (dng_tiff_directory &directory,
 	{
 	
 	const dng_image &rawImage (negative.RawImage ());
-	
+
+	if (rawImage.Planes () > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
 	const dng_linearization_info *rangeInfo = negative.GetLinearizationInfo ();
 	
 	if (rangeInfo)
@@ -3472,7 +3478,7 @@ static void EncodeDelta8 (uint8 *dPtr,
 						  uint32 channels)
 	{
 	
-	const uint32 dRowStep = cols * channels;
+	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
 	for (uint32 row = 0; row < rows; row++)
 		{
@@ -3503,7 +3509,7 @@ static void EncodeDelta16 (uint16 *dPtr,
 						   uint32 channels)
 	{
 	
-	const uint32 dRowStep = cols * channels;
+	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
 	for (uint32 row = 0; row < rows; row++)
 		{
@@ -3534,7 +3540,7 @@ static void EncodeDelta32 (uint32 *dPtr,
 						   uint32 channels)
 	{
 	
-	const uint32 dRowStep = cols * channels;
+	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
 	for (uint32 row = 0; row < rows; row++)
 		{
@@ -3649,7 +3655,7 @@ static void EncodeFPDelta (uint8 *buffer,
 						   int32 bytesPerSample)
 	{
 	
-	int32 rowIncrement = cols * channels;
+	int32 rowIncrement = SafeInt32Mult (cols, channels);
 	
 	if (bytesPerSample == 2)
 		{
@@ -3879,9 +3885,16 @@ void dng_image_writer::EncodePredictor (dng_host &host,
 void dng_image_writer::ByteSwapBuffer (dng_host & /* host */,
 									   dng_pixel_buffer &buffer)
 	{
-	
-	uint32 pixels = buffer.fRowStep * buffer.fArea.H ();
-	
+
+	// This currently expects/required buffer.fRowStep to be positive
+	// unless the buffer has zero height.
+
+	DNG_REQUIRE (buffer.fArea.H () == 0 || buffer.fRowStep > 0,
+				 "buffer.fRowStep");
+
+	uint32 pixels = SafeUint32Mult ((uint32) buffer.fRowStep,
+									buffer.fArea.H ());
+
 	switch (buffer.fPixelSize)
 		{
 		
@@ -3926,13 +3939,18 @@ void dng_image_writer::ReorderSubTileBlocks (const dng_ifd &ifd,
 	uint32 rowBlocks = buffer.fArea.H () / blockRows;
 	uint32 colBlocks = buffer.fArea.W () / blockCols;
 	
-	int32 rowStep = buffer.fRowStep * buffer.fPixelSize;
-	int32 colStep = buffer.fColStep * buffer.fPixelSize;
+	int32 rowStep = SafeInt32Mult (buffer.fRowStep,
+								   (int32) buffer.fPixelSize);
 	
-	int32 rowBlockStep = rowStep * blockRows;
-	int32 colBlockStep = colStep * blockCols;
+	int32 colStep = SafeInt32Mult (buffer.fColStep,
+								   (int32) buffer.fPixelSize);
 	
-	uint32 blockColBytes = blockCols * buffer.fPlanes * buffer.fPixelSize;
+	int32 rowBlockStep = SafeInt32Mult (rowStep, (int32) blockRows);
+	int32 colBlockStep = SafeInt32Mult (colStep, (int32) blockCols);
+	
+	uint32 blockColBytes = SafeUint32Mult (blockCols,
+										   buffer.fPlanes,
+										   buffer.fPixelSize);
 	
 	const uint8 *s0 = uncompressedBuffer->Buffer_uint8 ();
 		  uint8 *d0 = subTileBlockBuffer->Buffer_uint8 ();
@@ -4443,6 +4461,12 @@ void dng_image_writer::WriteData (dng_host &host,
 								  bool usingMultipleThreads)
 	{
 
+	// This currently expects/required buffer.fRowStep to be positive
+	// unless the buffer has zero height.
+
+	DNG_REQUIRE (buffer.fArea.H () == 0 || buffer.fRowStep > 0,
+				 "buffer.fRowStep");
+
 	(void) usingMultipleThreads;
 	
 	switch (ifd.fCompression)
@@ -4457,8 +4481,8 @@ void dng_image_writer::WriteData (dng_host &host,
 			if (ifd.fBitsPerSample [0] == 8 && buffer.fPixelType == ttShort)
 				{
 				
-				uint32 count = buffer.fRowStep *
-							   buffer.fArea.H ();
+				uint32 count = SafeUint32Mult ((uint32) buffer.fRowStep,
+											   buffer.fArea.H ());
 							   
 				const uint16 *sPtr = (const uint16 *) buffer.fData;
 				
@@ -4485,9 +4509,10 @@ void dng_image_writer::WriteData (dng_host &host,
 			
 				// Write the bytes.
 				
-				stream.Put (buffer.fData, buffer.fRowStep *
-										  buffer.fArea.H () *
-										  buffer.fPixelSize);
+				stream.Put (buffer.fData,
+							SafeUint32Mult ((uint32) buffer.fRowStep,
+											buffer.fArea.H (),
+											buffer.fPixelSize));
 										  
 				}
 			
@@ -4513,9 +4538,9 @@ void dng_image_writer::WriteData (dng_host &host,
 			
 			// Run the compression algorithm.
 				
-			uint32 sBytes = buffer.fRowStep *
-							buffer.fArea.H () *
-							buffer.fPixelSize;
+			uint32 sBytes = SafeUint32Mult ((uint32) buffer.fRowStep,
+											buffer.fArea.H (),
+											buffer.fPixelSize);
 				
 			uint8 *sBuffer = (uint8 *) buffer.fData;
 				
@@ -5063,7 +5088,9 @@ void dng_image_writer::WriteTile (dng_host &host,
 			uint32 *srcPtr = (uint32 *) buffer.fData;
 			uint16 *dstPtr = (uint16 *) buffer.fData;
 			
-			uint32 pixels = tileArea.W () * tileArea.H () * buffer.fPlanes;
+			uint32 pixels = SafeUint32Mult (tileArea.W (),
+											tileArea.H (),
+											buffer.fPlanes);
 			
 			for (uint32 j = 0; j < pixels; j++)
 				{
@@ -5082,7 +5109,9 @@ void dng_image_writer::WriteTile (dng_host &host,
 			uint32 *srcPtr = (uint32 *) buffer.fData;
 			uint8  *dstPtr = (uint8	 *) buffer.fData;
 			
-			uint32 pixels = tileArea.W () * tileArea.H () * buffer.fPlanes;
+			uint32 pixels = SafeUint32Mult (tileArea.W (),
+											tileArea.H (),
+											buffer.fPlanes);
 			
 			if (stream.BigEndian () || ifd.fPredictor == cpFloatingPoint   ||
 									   ifd.fPredictor == cpFloatingPointX2 ||
@@ -8164,7 +8193,12 @@ void dng_image_writer::WriteDNGWithMetadata (dng_host &host,
 	// Get the raw image we are writing.
 
 	const dng_image &rawImage (negative.RawImage ());
-	
+
+	if (rawImage.Planes () > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
 	// Create a dng_ifd record for the raw image.
 	
 	dng_ifd info;
@@ -9162,6 +9196,11 @@ void dng_image_writer::WriteDNGWithMetadata (dng_host &host,
 		enhancedInfo->fImageLength = negative.Stage3Image ()->Bounds ().H ();
 	
 		enhancedInfo->fSamplesPerPixel = negative.Stage3Image ()->Planes ();
+
+		if (enhancedInfo->fSamplesPerPixel > kMaxColorPlanes)
+			{
+			ThrowBadFormat ();
+			}
 
 		const bool isEnhancedFloat =
 			(negative.Stage3Image ()->PixelType () == ttFloat);

@@ -134,6 +134,12 @@ class dng_fingerprint
 
 		bool FromUtf8HexString (const dng_string &inputStr);
 
+		/// Convert fingerprint to UTF-8 string in UUID format (with possibly
+		/// a few bits modified to conform to the UUID format rules) and
+		/// return result as a dng_string.
+
+		dng_string ToUtf8ClosestUUIDString () const;
+
 	};
 
 /*****************************************************************************/

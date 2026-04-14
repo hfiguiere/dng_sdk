@@ -150,24 +150,12 @@ class dng_pixel_buffer
 
 			#else
 
-			#if qDNG64Bit
-			
 			return (void *)
 				   (((uint8 *) fData) + (int64) fPixelSize *
-					(fRowStep	* (int64) (row	 - fArea.t) +
-					 fColStep	* (int64) (col	 - fArea.l) +
-					 fPlaneStep * (int64) (plane - fPlane )));
+					(fRowStep	* (row	 - (int64) fArea.t) +
+					 fColStep	* (col	 - (int64) fArea.l) +
+					 fPlaneStep * (plane - (int64) fPlane )));
 			
-			#else
-
-			return (void *)
-				   (((uint8 *) fData) + (int32) fPixelSize *
-					(fRowStep	* (int32) (row	 - fArea.t) +
-					 fColStep	* (int32) (col	 - fArea.l) +
-					 fPlaneStep * (int32) (plane - fPlane )));
-
-			#endif
-
 			#endif
 
 			}

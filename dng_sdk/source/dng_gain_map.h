@@ -21,6 +21,7 @@
 #include "dng_fingerprint.h"
 #include "dng_memory.h"
 #include "dng_misc_opcodes.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_tag_types.h"
 #include "dng_uncopyable.h"
 
@@ -94,9 +95,11 @@ class dng_gain_map: private dng_uncopyable
 			{
 			
 			return *(fBuffer->Buffer_real32 () +
-					 rowIndex * fRowStep +
-					 colIndex * fPlanes	 +
-					 plane);
+					 SafeUint32Add (
+						SafeUint32Add (
+							SafeUint32Mult (rowIndex, fRowStep),
+							SafeUint32Mult (colIndex, fPlanes)),
+						plane));
 			
 			}
 			
@@ -109,9 +112,11 @@ class dng_gain_map: private dng_uncopyable
 			{
 			
 			return *(fBuffer->Buffer_real32 () +
-					 rowIndex * fRowStep +
-					 colIndex * fPlanes	 +
-					 plane);
+					 SafeUint32Add (
+						SafeUint32Add (
+							SafeUint32Mult (rowIndex, fRowStep),
+							SafeUint32Mult (colIndex, fPlanes)),
+						plane));
 			
 			}
 			
@@ -273,9 +278,11 @@ class dng_gain_table_map: private dng_uncopyable
 			{
 			
 			return *(fBuffer->Buffer_real32 () +
-					 rowIndex * fRowStep +
-					 colIndex * fColStep +
-					 tableIndex);
+					 SafeUint32Add (
+						SafeUint32Add (
+							SafeUint32Mult (rowIndex, fRowStep),
+							SafeUint32Mult (colIndex, fColStep)),
+						tableIndex));
 			
 			}
 			
@@ -288,9 +295,11 @@ class dng_gain_table_map: private dng_uncopyable
 			{
 			
 			return *(fBuffer->Buffer_real32 () +
-					 rowIndex * fRowStep +
-					 colIndex * fColStep +
-					 tableIndex);
+					 SafeUint32Add (
+						SafeUint32Add (
+							SafeUint32Mult (rowIndex, fRowStep),
+							SafeUint32Mult (colIndex, fColStep)),
+						tableIndex));
 			
 			}
 

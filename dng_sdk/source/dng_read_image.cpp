@@ -46,7 +46,7 @@ static void DecodeDelta8 (uint8 *dPtr,
 						  uint32 channels)
 	{
 	
-	const uint32 dRowStep = cols * channels;
+	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
 	for (uint32 row = 0; row < rows; row++)
 		{
@@ -77,7 +77,7 @@ static void DecodeDelta16 (uint16 *dPtr,
 						   uint32 channels)
 	{
 	
-	const uint32 dRowStep = cols * channels;
+	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
 	for (uint32 row = 0; row < rows; row++)
 		{
@@ -108,7 +108,7 @@ static void DecodeDelta32 (uint32 *dPtr,
 						   uint32 channels)
 	{
 	
-	const uint32 dRowStep = cols * channels;
+	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
 	for (uint32 row = 0; row < rows; row++)
 		{
@@ -241,9 +241,11 @@ static void DecodeFPDelta (uint8 *input,
 						   int32 bytesPerSample)
 	{
 	
-	DecodeDeltaBytes (input, cols * bytesPerSample, channels);
+	DecodeDeltaBytes (input,
+					  SafeInt32Mult (cols, bytesPerSample),
+					  channels);
 	
-	int32 rowIncrement = cols * channels;
+	int32 rowIncrement = SafeInt32Mult (cols, channels);
 	
 	if (bytesPerSample == 2)
 		{
@@ -541,32 +543,24 @@ bool dng_lzw_expander::GetCodeWord (int32 &code)
 		if (fByteOffset >= fSrcCount)
 			return false;
 
-		// Buffer a long word
-		
+		// Buffer up to 4 bytes, zero-filling past end.
+
 		const uint8 *ptr = fSrcPtr + fByteOffset;
 
-		#if qDNGBigEndian
+		uint32 avail = fSrcCount - fByteOffset;
 
-		fBitBuffer = *((const uint32 *) ptr);
+		uint32 b0 = (avail > 0) ? ptr [0] : 0;
+		uint32 b1 = (avail > 1) ? ptr [1] : 0;
+		uint32 b2 = (avail > 2) ? ptr [2] : 0;
+		uint32 b3 = (avail > 3) ? ptr [3] : 0;
 
-		#else
-		
-			{
-			
-			uint32 b0 = ptr [0];
-			uint32 b1 = ptr [1];
-			uint32 b2 = ptr [2];
-			uint32 b3 = ptr [3];
-			
-			fBitBuffer = (((((b0 << 8) | b1) << 8) | b2) << 8) | b3;
-			
-			}
-
-		#endif
+		fBitBuffer = (((((b0 << 8) | b1) << 8) | b2) << 8) | b3;
 
 		fBitBufferCount = 32;
-		
-		fByteOffset += 4;
+
+		uint32 consumed = Min_uint32 (avail, 4);
+
+		fByteOffset += consumed;
 
 		// Number of additional bits we need
 		
@@ -829,13 +823,18 @@ static void ReorderSubTileBlocks (dng_host &host,
 	uint32 rowBlocks = buffer.fArea.H () / blockRows;
 	uint32 colBlocks = buffer.fArea.W () / blockCols;
 	
-	int32 rowStep = buffer.fRowStep * buffer.fPixelSize;
-	int32 colStep = buffer.fColStep * buffer.fPixelSize;
-	
-	int32 rowBlockStep = rowStep * blockRows;
-	int32 colBlockStep = colStep * blockCols;
-	
-	uint32 blockColBytes = blockCols * buffer.fPlanes * buffer.fPixelSize;
+	int32 rowStep = SafeInt32Mult (buffer.fRowStep,
+								   (int32) buffer.fPixelSize);
+
+	int32 colStep = SafeInt32Mult (buffer.fColStep,
+								   (int32) buffer.fPixelSize);
+
+	int32 rowBlockStep = SafeInt32Mult (rowStep, (int32) blockRows);
+	int32 colBlockStep = SafeInt32Mult (colStep, (int32) blockCols);
+
+	uint32 blockColBytes = SafeUint32Mult (blockCols,
+										   buffer.fPlanes,
+										   buffer.fPixelSize);
 	
 	const uint8 *s0 = (const uint8 *) buffer.fData;
 		  uint8 *d0 = tempBuffer->Buffer_uint8 ();
@@ -957,9 +956,12 @@ dng_image_spooler::dng_image_spooler (dng_host &host,
 	
 	{
 	
-	uint32 bytesPerRow = fTileArea.W () * fPlanes * (uint32) sizeof (uint16);
+	uint32 bytesPerRow = SafeUint32Mult (fTileArea.W (),
+										 fPlanes,
+										 (uint32) sizeof (uint16));
 
-	DNG_REQUIRE (bytesPerRow > 0, "Bad bytesPerRow in dng_image_spooler");
+	DNG_REQUIRE (bytesPerRow > 0,
+				 "Bad bytesPerRow in dng_image_spooler");
 	
 	uint32 stripLength = Pin_uint32 (ifd.fSubTileBlockRows,
 									 fBlock.LogicalSize () / bytesPerRow,
@@ -974,7 +976,7 @@ dng_image_spooler::dng_image_spooler (dng_host &host,
 	fBuffer = (uint8 *) fBlock.Buffer ();
 	
 	fBufferCount = 0;
-	fBufferSize	 = bytesPerRow * stripLength;
+	fBufferSize	 = SafeUint32Mult (bytesPerRow, stripLength);
 				  
 	}
 
@@ -1044,9 +1046,10 @@ void dng_image_spooler::Spool (const void *data,
 			
 			fBufferCount = 0;
 			
-			fBufferSize = fTileStrip.W () *
-						  fTileStrip.H () *
-						  fPlanes * (uint32) sizeof (uint16);
+			fBufferSize = SafeUint32Mult (fTileStrip.W (),
+										  fTileStrip.H (),
+										  fPlanes,
+										  (uint32) sizeof (uint16));
 	
 			}
 
@@ -1177,14 +1180,15 @@ bool dng_read_image::ReadUncompressed (dng_host &host,
 		
 		pixelType = ttShort;
 		
-		stream.Get (uncompressedBuffer->Buffer (), samplesPerTile * 2);
+		stream.Get (uncompressedBuffer->Buffer (),
+					SafeUint32Mult (samplesPerTile, 2));
 		
 		if (stream.SwapBytes ())
 			{
 			
 			DoSwapBytes16 ((uint16 *) uncompressedBuffer->Buffer (),
 						   samplesPerTile);
-						
+					
 			}
 				
 		}
@@ -1194,14 +1198,15 @@ bool dng_read_image::ReadUncompressed (dng_host &host,
 		
 		pixelType = image.PixelType ();
 		
-		stream.Get (uncompressedBuffer->Buffer (), samplesPerTile * 4);
+		stream.Get (uncompressedBuffer->Buffer (),
+					SafeUint32Mult (samplesPerTile, 4));
 		
 		if (stream.SwapBytes ())
 			{
 			
 			DoSwapBytes32 ((uint32 *) uncompressedBuffer->Buffer (),
 						   samplesPerTile);
-						
+					
 			}
 				
 		}
@@ -2057,7 +2062,10 @@ void dng_read_image::ByteSwapBuffer (dng_host & /* host */,
 									 dng_pixel_buffer &buffer)
 	{
 	
-	uint32 pixels = buffer.fRowStep * buffer.fArea.H ();
+	DNG_REQUIRE (buffer.fArea.H () == 0 || buffer.fRowStep > 0,
+				 "buffer.fRowStep");
+
+	uint32 pixels = SafeUint32Mult ((uint32) buffer.fRowStep, buffer.fArea.H ());
 	
 	switch (buffer.fPixelSize)
 		{
@@ -3027,15 +3035,17 @@ void dng_interleave_task::Start (uint32 threadCount,
 								 dng_abort_sniffer * /* sniffer */)
 	{
 	
-	uint32 srcBufferSize = ((tileSize.h + fColFactor - 1) / fColFactor) *
-						   ((tileSize.v + fRowFactor - 1) / fRowFactor) *
-						   fDstImage.PixelSize () *
-						   fDstImage.Planes ();
-						   
-	uint32 dstBufferSize = tileSize.h *
-						   tileSize.v *
-						   fDstImage.PixelSize () *
-						   fDstImage.Planes ();
+	uint32 srcBufferSize =
+		SafeUint32Mult ((tileSize.h + fColFactor - 1) / fColFactor,
+						(tileSize.v + fRowFactor - 1) / fRowFactor,
+						fDstImage.PixelSize (),
+						fDstImage.Planes ());
+
+	uint32 dstBufferSize =
+		SafeUint32Mult ((uint32) tileSize.h,
+						(uint32) tileSize.v,
+						fDstImage.PixelSize (),
+						fDstImage.Planes ());
 	
 	for (uint32 threadIndex = 0; threadIndex < threadCount; threadIndex++)
 		{
@@ -3062,7 +3072,8 @@ void dng_interleave_task::Process (uint32 threadIndex,
 	dstBuffer.fPlanes    = fDstImage.Planes ();
 	dstBuffer.fPlaneStep = 1;
 	dstBuffer.fColStep   = dstBuffer.fPlaneStep * dstBuffer.fPlanes;
-	dstBuffer.fRowStep   = dstBuffer.fColStep * dstBuffer.fArea.W ();
+	dstBuffer.fRowStep   = SafeInt32Mult (dstBuffer.fColStep,
+										  (int32) dstBuffer.fArea.W ());
 	dstBuffer.fPixelType = fDstImage.PixelType ();
 	dstBuffer.fPixelSize = fDstImage.PixelSize ();
 	dstBuffer.fData      = fDstBuffer [threadIndex]->Buffer ();
@@ -3098,7 +3109,8 @@ void dng_interleave_task::Process (uint32 threadIndex,
 			srcBuffer.fArea.b = srcBuffer.fArea.t + (tile.H () - rOffset + fRowFactor - 1) / fRowFactor;
 			srcBuffer.fArea.r = srcBuffer.fArea.l + (tile.W () - cOffset + fColFactor - 1) / fColFactor;
 			
-			srcBuffer.fRowStep = srcBuffer.fColStep * srcBuffer.fArea.W ();
+			srcBuffer.fRowStep = SafeInt32Mult (srcBuffer.fColStep,
+												(int32) srcBuffer.fArea.W ());
 			
 			if (!fEncode)
 				{
@@ -3112,8 +3124,8 @@ void dng_interleave_task::Process (uint32 threadIndex,
 			tmpBuffer.fData = dstBuffer.DirtyPixel (tile.t + rOffset,
 													tile.l + cOffset);
 													
-			tmpBuffer.fRowStep *= fRowFactor;
-			tmpBuffer.fColStep *= fColFactor;
+			tmpBuffer.fRowStep = SafeInt32Mult (tmpBuffer.fRowStep, fRowFactor);
+			tmpBuffer.fColStep = SafeInt32Mult (tmpBuffer.fColStep, fColFactor);
 			
 			if (fEncode)
 				{

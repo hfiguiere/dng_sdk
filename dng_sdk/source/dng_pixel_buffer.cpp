@@ -11,6 +11,7 @@
 #include "dng_bottlenecks.h"
 #include "dng_exceptions.h"
 #include "dng_flags.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
 #include "dng_utils.h"
@@ -560,7 +561,6 @@ dng_pixel_buffer & dng_pixel_buffer::operator= (const dng_pixel_buffer &buffer)
 	fPlaneStep	= buffer.fPlaneStep;
 	fPixelType	= buffer.fPixelType;
 	fPixelSize	= buffer.fPixelSize;
-	fPixelType	= buffer.fPixelType;
 	fData		= buffer.fData;
 	fDirty		= buffer.fDirty;
 	
@@ -717,7 +717,7 @@ void dng_pixel_buffer::SetConstant (const dng_rect &area,
 			if (rows == 1 && cols == 1 && dPlaneStep == 1 && value == 0)
 				{
 				
-				DoZeroBytes (dPtr, planes << 1);
+				DoZeroBytes (dPtr, SafeUint32Mult (planes, 2));
 				
 				}
 				
@@ -745,7 +745,7 @@ void dng_pixel_buffer::SetConstant (const dng_rect &area,
 			if (rows == 1 && cols == 1 && dPlaneStep == 1 && value == 0)
 				{
 				
-				DoZeroBytes (dPtr, planes << 2);
+				DoZeroBytes (dPtr, SafeUint32Mult (planes, 4));
 				
 				}
 				
@@ -906,7 +906,7 @@ void dng_pixel_buffer::CopyArea (const dng_pixel_buffer &src,
 			
 			DoCopyBytes (sPtr,
 						 dPtr, 
-						 planes * fPixelSize);
+						 SafeUint32Mult (planes, fPixelSize));
 			
 			}
 			

@@ -61,6 +61,14 @@ additional dependencies:
 
 Release Notes / Changelog:
 
+1.7.1 2536 April 14, 2026
+
+    - Vulnerability issue fixes.
+
+    - Low-temperature WB work.
+
+    - Minor fixes and cleanups.
+
 1.7.1 2502 March 3, 2026
 
     - Vulnerability issue fixes.

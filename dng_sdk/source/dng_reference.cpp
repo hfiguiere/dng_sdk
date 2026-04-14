@@ -1593,10 +1593,12 @@ void RefBaselineHueSatMap (const real32 *sPtrR,
 			real32 hScaled = h * hScale;
 			real32 sScaled = s * sScale;
 			
-			int32 hIndex0 = (int32) hScaled;
-			int32 sIndex0 = (int32) sScaled;
-			
-			sIndex0 = Min_int32 (sIndex0, maxSatIndex0);
+			// Pin indices: NaN cast to int32 yields INT32_MIN on x86/ARM,
+			// so upper-bound-only checks on the result do not suffice.
+			// Instead use of Pin_int32 on integers is unaffected by NaN.
+
+			int32 hIndex0 = Pin_int32 (0, (int32) hScaled, maxHueIndex0);
+			int32 sIndex0 = Pin_int32 (0, (int32) sScaled, maxSatIndex0);
 			
 			int32 hIndex1 = hIndex0 + 1;
 			
@@ -1656,12 +1658,13 @@ void RefBaselineHueSatMap (const real32 *sPtrR,
 			real32 sScaled = s		  * sScale;
 			real32 vScaled = vEncoded * vScale;
 			
-			int32 hIndex0 = (int32) hScaled;
-			int32 sIndex0 = (int32) sScaled;
-			int32 vIndex0 = (int32) vScaled;
-			
-			sIndex0 = Min_int32 (sIndex0, maxSatIndex0);
-			vIndex0 = Min_int32 (vIndex0, maxValIndex0);
+			// Pin indices: NaN cast to int32 yields INT32_MIN on x86/ARM,
+			// so upper-bound-only checks on the result do not suffice.
+			// Instead use of Pin_int32 on integers is unaffected by NaN.
+
+			int32 hIndex0 = Pin_int32 (0, (int32) hScaled, maxHueIndex0);
+			int32 sIndex0 = Pin_int32 (0, (int32) sScaled, maxSatIndex0);
+			int32 vIndex0 = Pin_int32 (0, (int32) vScaled, maxValIndex0);
 			
 			int32 hIndex1 = hIndex0 + 1;
 			
@@ -2593,7 +2596,7 @@ void RefVignette32 (real32 *sPtr,
 		
 		blackOffset2 = ((real32) blackLevel) / 65535.0f;
 		blackScale2	 = 1.0f - blackOffset2;
-		blackScale1	 = (blackScale2 != 0.0) ? 1.0f / blackScale2 : 0.0;
+		blackScale1	 = (blackScale2 != 0.0f) ? 1.0f / blackScale2 : 0.0f;
 		blackOffset1 = 1.0f - blackScale1;
  
 		for (uint32 plane = 0; plane < planes; plane++)
@@ -3009,7 +3012,7 @@ void RefBaselineMapPoly32 (real32 *dPtr,
 		
 		blackOffset2 = ((real32) blackLevel) / 65535.0f;
 		blackScale2	 = 1.0f - blackOffset2;
-		blackScale1	 = (blackScale2 != 0.0) ? 1.0f / blackScale2 : 0.0;
+		blackScale1	 = (blackScale2 != 0.0f) ? 1.0f / blackScale2 : 0.0f;
 		blackOffset1 = 1.0f - blackScale1;
 		
 		}
@@ -3384,9 +3387,12 @@ void RefBaselineProfileGainTableMap (const real32 *rSrcPtr,
 
 		weight = weight * exposureWeightGain;
 
-		// Clamp the weight to [0,1].
+		// Clamp the weight to [0,1]. Use std::isfinite to handle NaN: all
+		// float comparisons with NaN return false, so Pin_real32 alone does
+		// not sanitize NaN inputs.
 
-		weight = Pin_real32 (0.0f, weight, 1.0f);
+		weight = std::isfinite (weight) ? Pin_real32 (0.0f, weight, 1.0f)
+										: 0.0f;
 
 		// Apply the gamma parameter.
 
@@ -3394,11 +3400,12 @@ void RefBaselineProfileGainTableMap (const real32 *rSrcPtr,
 			weight = powf (weight, gamma);
 
 		// Scale the weight by the table size and compute the table indices
-		// and fractional weight.
+		// and fractional weight. Pin_int32 clamps correctly even if
+		// weightScaled is NaN (INT32_MIN cast result is clamped to 0).
 
 		real32 weightScaled = weight * tableSize;
 
-		int32 w0 = Min_int32 ((int32) weightScaled, tableLimit);
+		int32 w0 = Pin_int32 (0, (int32) weightScaled, tableLimit);
 		int32 w1 = Min_int32 (w0 + 1, tableLimit);
 
 		real32 wf = weightScaled - (real32) w0;
@@ -3624,9 +3631,13 @@ void RefRGBtoRGBTable3D (real32 *rPtr,
 			real32 gScaled = g * scale;
 			real32 bScaled = b * scale;
 
-			int32 rIndex = Min_int32 ((int32) rScaled, maxIndex);
-			int32 gIndex = Min_int32 ((int32) gScaled, maxIndex);
-			int32 bIndex = Min_int32 ((int32) bScaled, maxIndex);
+			// Pin indices: NaN cast to int32 yields INT32_MIN on x86/ARM,
+			// which passes Min_int32-only upper-bound checks. Pin_int32 uses
+			// integer comparisons that are unaffected by NaN.
+
+			int32 rIndex = Pin_int32 (0, (int32) rScaled, maxIndex);
+			int32 gIndex = Pin_int32 (0, (int32) gScaled, maxIndex);
+			int32 bIndex = Pin_int32 (0, (int32) bScaled, maxIndex);
 
 			real32 rFract = rScaled - (real32) rIndex;
 			real32 gFract = gScaled - (real32) gIndex;

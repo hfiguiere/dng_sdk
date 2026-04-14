@@ -276,10 +276,42 @@ bool dng_fingerprint::FromUtf8HexString (const char inputStr [2 * kDNGFingerprin
 
 /******************************************************************************/
 
+dng_string dng_fingerprint::ToUtf8ClosestUUIDString () const
+	{
+
+	// Set version 3 (name-based MD5) and RFC 4122 variant bits.
+
+	uint8 d [kDNGFingerprintSize];
+
+	memcpy (d, data, kDNGFingerprintSize);
+
+	d [6] = (d [6] & 0x0F) | 0x30;   // version = 3
+	d [8] = (d [8] & 0x3F) | 0x80;   // variant = 10xx xxxx
+
+	char buf [37];
+
+	snprintf (buf, sizeof (buf),
+			  "%02x%02x%02x%02x-"
+			  "%02x%02x-"
+			  "%02x%02x-"
+			  "%02x%02x-"
+			  "%02x%02x%02x%02x%02x%02x",
+			  d [0],  d [1],  d [2],  d [3],
+			  d [4],  d [5],
+			  d [6],  d [7],
+			  d [8],  d [9],
+			  d [10], d [11], d [12], d [13], d [14], d [15]);
+
+	return dng_string (buf);
+
+	}
+
+/******************************************************************************/
+
 bool dng_fingerprint::FromUtf8HexString (const dng_string &inputStr)
 	{
 	
-	if (inputStr.Length () < kDNGFingerprintSize)
+	if (inputStr.Length () < kDNGFingerprintSize * 2)
 		{
 		return false;
 		}

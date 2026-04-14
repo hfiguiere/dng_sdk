@@ -82,6 +82,14 @@ int64 SafeInt64Add(int64 arg1, int64 arg2) {
 	return SafeAdd<int64>(arg1, arg2);
 }
 
+int32 SafeInt32Add(int32 arg1, int32 arg2, int32 arg3) {
+	return SafeInt32Add (SafeInt32Add (arg1, arg2), arg3);
+}
+
+int64 SafeInt64Add(int64 arg1, int64 arg2, int64 arg3) {
+	return SafeInt64Add (SafeInt64Add (arg1, arg2), arg3);
+}
+
 bool SafeUint32Add(uint32 arg1, uint32 arg2,
 				   uint32 *result) {
 	try {
@@ -98,6 +106,14 @@ uint32 SafeUint32Add(uint32 arg1, uint32 arg2) {
 
 uint64 SafeUint64Add(uint64 arg1, uint64 arg2) {
 	return SafeAdd<uint64>(arg1, arg2);
+}
+
+uint32 SafeUint32Add(uint32 arg1, uint32 arg2, uint32 arg3) {
+	return SafeUint32Add (SafeUint32Add (arg1, arg2), arg3);
+}
+
+uint64 SafeUint64Add(uint64 arg1, uint64 arg2, uint64 arg3) {
+	return SafeUint64Add (SafeUint64Add (arg1, arg2), arg3);
 }
 
 bool SafeInt32Sub(int32 arg1, int32 arg2, int32 *result) {

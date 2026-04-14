@@ -3058,17 +3058,17 @@ bool dng_ifd::ParseTag (dng_host &host,
 				return false;
 			
 			fJXLDistance = (real32) stream.TagValue_real64 (tagType);
+
+			if (!std::isfinite (fJXLDistance) || fJXLDistance < 0.0f)
+				{
+				ThrowBadFormat ("Invalid JXL distance");
+				}
 			
 			#if qDNGValidate
 
 			if (fCompression != ccJXL)
 				{
 				ReportWarning ("JXL compression expected");
-				}
-				
-			if (fJXLDistance < 0.0f)
-				{
-				ReportWarning ("Invalid JXL distance");
 				}
 				
 			if (gVerbose)
@@ -4400,7 +4400,7 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 	uint32 tilesWide = SafeUint32DivideUp (fImageWidth,	 fTileWidth);
 	uint32 tilesHigh = SafeUint32DivideUp (fImageLength, fTileLength);
 	
-	uint32 tileCount = tilesWide * tilesHigh;
+	uint32 tileCount = SafeUint32Mult (tilesWide, tilesHigh);
 	
 	if (fTileOffsetsCount != tileCount)
 		{
@@ -4584,8 +4584,11 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 	
 	real64 maxWhite = fLinearizationTableCount ? 65535.0
 											   : (real64) defaultWhite;
-		
-	for (j = 0; j < fSamplesPerPixel; j++)
+
+	// Only validate planes that were stored; ParseTag caps fills at
+	// kMaxColorPlanes so we must not read beyond that index.
+
+	for (j = 0; j < fSamplesPerPixel && j < kMaxColorPlanes; j++)
 		{
 		
 		if (fWhiteLevel [j] < 1.0 || (fWhiteLevel [j] > maxWhite && !isFloatingPoint))
@@ -5060,12 +5063,14 @@ uint32 dng_ifd::TilesDown () const
 uint32 dng_ifd::TilesPerImage () const
 	{
 	
-	uint32 total = TilesAcross () * TilesDown ();
+	uint32 total = SafeUint32Mult (TilesAcross (),
+								   TilesDown ());
 	
 	if (fPlanarConfiguration == pcPlanar)
 		{
 		
-		total *= fSamplesPerPixel;
+		total = SafeUint32Mult (total,
+								fSamplesPerPixel);
 		
 		}
 		
@@ -5204,9 +5209,15 @@ void dng_ifd::FindTileSize (uint32 bytesPerTile,
 							uint32 cellV)
 	{
 	
-	uint32 bytesPerSample = fSamplesPerPixel *
-							((fBitsPerSample [0] + 7) >> 3);
-								
+	uint32 bytesPerSample =
+		SafeUint32Mult (fSamplesPerPixel,
+						((fBitsPerSample [0] + 7) >> 3));
+
+	if (bytesPerSample == 0)
+		{
+		ThrowBadFormat ("zero bytesPerSample in FindTileSize");
+		}
+
 	uint32 samplesPerTile = bytesPerTile / bytesPerSample;
 	
 	uint32 tileSide = Round_uint32 (sqrt ((real64) samplesPerTile));

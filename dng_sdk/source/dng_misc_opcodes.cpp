@@ -226,6 +226,9 @@ dng_rect dng_area_spec::Overlap (const dng_rect &tile) const
 	if (overlap.NotEmpty ())
 		{
 		
+		DNG_ASSERT (overlap.t >= fArea.t && overlap.l >= fArea.l,
+					"Overlap outside area");
+
 		overlap.t = fArea.t +
 			ConvertUint32ToInt32 (RoundUpUint32ToMultiple
 								  (static_cast<uint32> (overlap.t - fArea.t),
@@ -525,14 +528,16 @@ void dng_opcode_MapTable::Prepare (dng_negative &negative,
 			if (x < 0.0)
 				{
 				
-				y = srcTable [0] * 2.0 - (real64) srcTable [Round_uint32 (-x)];
+				uint32 idx = Min_uint32 (Round_uint32 (-x), 0xFFFF);
+				y = srcTable [0] * 2.0 - (real64) srcTable [idx];
 				
 				}
 				
 			else
 				{
 				
-				y = srcTable [Round_uint32 (x)];
+				uint32 idx = Min_uint32 (Round_uint32 (x), 0xFFFF);
+				y = srcTable [idx];
 				
 				}
 				

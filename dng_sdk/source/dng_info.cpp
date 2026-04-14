@@ -378,10 +378,17 @@ bool dng_info::ValidateIFD (dng_stream &stream,
 	{
 	
 	bool isBigTIFF = (fMagic == magicBigTIFF);
+
+	const uint64 kCountBytes	= isBigTIFF ? 8 : 2;
+	const uint64 kHeaderBytes	= isBigTIFF ? 8 : 2;
+	const uint64 kEntryBytes	= isBigTIFF ? 20 : 12;
+	const uint64 kNextIFDBytes	= isBigTIFF ? 8 : 4;
+	const uint64 kMaxUint64		= ~uint64 (0);
 	
 	// Make sure we have a count.
 	
-	if (ifdOffset + (isBigTIFF ? 8 : 2) > stream.Length ())
+	if (ifdOffset > stream.Length () ||
+		kCountBytes > stream.Length () - ifdOffset)
 		{
 		return false;
 		}
@@ -399,9 +406,16 @@ bool dng_info::ValidateIFD (dng_stream &stream,
 		}
 		
 	// Make sure we have room for all entries and next IFD link.
+
+	if (ifdEntries > (kMaxUint64 - kHeaderBytes - kNextIFDBytes) / kEntryBytes)
+		{
+		return false;
+		}
+
+	const uint64 ifdSpan = kHeaderBytes + ifdEntries * kEntryBytes + kNextIFDBytes;
 		
-	if (ifdOffset + (isBigTIFF ? 8 + ifdEntries * 20 + 8
-							   : 2 + ifdEntries * 12 + 4) > stream.Length ())
+	if (ifdOffset > stream.Length () ||
+		ifdSpan > stream.Length () - ifdOffset)
 		{
 		return false;
 		}
@@ -411,8 +425,7 @@ bool dng_info::ValidateIFD (dng_stream &stream,
 	for (uint64 tag_index = 0; tag_index < ifdEntries; tag_index++)
 		{
 		
-		stream.SetReadPosition (isBigTIFF ? ifdOffset + 8 + tag_index * 20
-										  : ifdOffset + 2 + tag_index * 12);
+		stream.SetReadPosition (ifdOffset + kHeaderBytes + tag_index * kEntryBytes);
 		
 		stream.Skip (2);		// Ignore tag code.
 		
@@ -667,8 +680,13 @@ void dng_info::ParseIFD (dng_host &host,
 			#endif
 				
 			tagOffset += offsetDelta;
-			
-			localTag = ifdStream.DataInBuffer (tagCount * tag_type_size,
+
+			if (SafeUint64Add (tagOffset, tag_data_size) > stream.Length ())
+				{
+				ThrowBadFormat ("tag payload past stream end");
+				}
+
+			localTag = ifdStream.DataInBuffer (tag_data_size,
 											   tagOffset);
 				
 			if (localTag)
@@ -1227,7 +1245,12 @@ void dng_info::ParseMakerNote (dng_host &host,
 	
 	if (memcmp (firstBytes, "Nikon\000\002", 7) == 0)
 		{
-		
+
+		if (makerNoteCount < 18)
+			{
+			return;
+			}
+
 		stream.SetReadPosition (makerNoteOffset + 10);
 		
 		bool bigEndian = false;
@@ -2646,7 +2669,7 @@ void dng_info::Parse (dng_host &host,
 		
 		ParseMakerNote (host,
 						stream,
-						(uint32) (fTIFFBlockOffset + fShared->fMakerNoteCount),
+						fShared->fMakerNoteCount,
 						fShared->fMakerNoteOffset,
 						fTIFFBlockOffset,
 						0,

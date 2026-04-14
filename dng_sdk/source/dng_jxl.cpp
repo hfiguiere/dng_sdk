@@ -980,7 +980,7 @@ class jxl_image_chunk_reader
 			if (row_offset)
 				{
 				
-				*row_offset = size_t (buffer.fRowStep * buffer.fPixelSize);
+				*row_offset = (size_t) SafeUint32Mult ((uint32) buffer.fRowStep, buffer.fPixelSize);
 				
 				}
 
@@ -1191,7 +1191,7 @@ class jxl_buffer_chunk_reader
 			if (row_offset)
 				{
 				
-				*row_offset = size_t (buffer.fRowStep * buffer.fPixelSize);
+				*row_offset = (size_t) SafeUint32Mult ((uint32) buffer.fRowStep, buffer.fPixelSize);
 
 				}
 
@@ -1996,9 +1996,6 @@ static JxlEncoderPtr EncodeJXL_Common (dng_host &host,
 	previewPixelBuffer.fArea = dng_rect (200, 200); // TODO(erichan): 
 
 	previewPixelBuffer.fPlanes = planes;
-
-	DNG_REQUIRE (previewPixelBuffer.fArea.W () <= 0x7fffffff,
-				 "fArea.W too large");
 
 	previewPixelBuffer.fPlaneStep = 1;
 	previewPixelBuffer.fColStep   = (int32) planes;
@@ -3124,6 +3121,11 @@ void dng_jxl_decoder::Decode (dng_host &host,
 					
 					}
 
+				if (profile_size > 0xFFFFFFFF)
+					{
+					ThrowBadFormat ("ICC profile too large");
+					}
+
 				AutoPtr<dng_memory_block> profileBlock
 					(host.Allocate ((uint32) profile_size));
 
@@ -3645,6 +3647,11 @@ void dng_jxl_decoder::ProcessExifBox (dng_host &host,
 	if (fInfo && (data.size () > 4))
 		{
 
+		if (data.size () - 4 > 0xFFFFFFFF)
+			{
+			ThrowBadFormat ("Exif box too large");
+			}
+
 		dng_stream exifStream ((&data [0]) + 4,
 							   uint32 (data.size () - 4));
 
@@ -3665,6 +3672,11 @@ void dng_jxl_decoder::ProcessXMPBox (dng_host &host,
 	if (gVerbose)
 		{
 
+		if (data.size () > 0xFFFFFFFF)
+			{
+			ThrowBadFormat ("XMP box too large");
+			}
+
 		dng_memory_stream temp (host.Allocator ());
 
 		uint32 count = (uint32) data.size ();
@@ -3684,6 +3696,11 @@ void dng_jxl_decoder::ProcessXMPBox (dng_host &host,
 
 		try
 			{
+
+			if (data.size () > 0xFFFFFFFF)
+				{
+				ThrowBadFormat ("XMP box too large");
+				}
 
 			dng_xmp xmp (host.Allocator ());
 

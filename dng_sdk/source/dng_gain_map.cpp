@@ -95,8 +95,8 @@ dng_gain_map_interpolator::dng_gain_map_interpolator (const dng_gain_map &map,
 
 	:	fMap (map)
 	
-	,	fScale (1.0 / mapBounds.H (),
-				1.0 / mapBounds.W ())
+	,	fScale (mapBounds.H () > 0 ? 1.0 / mapBounds.H () : 0.0,
+				mapBounds.W () > 0 ? 1.0 / mapBounds.W () : 0.0)
 	
 	,	fOffset (0.5 - mapBounds.t,
 				 0.5 - mapBounds.l)
@@ -115,10 +115,23 @@ dng_gain_map_interpolator::dng_gain_map_interpolator (const dng_gain_map &map,
 	,	fValueIndex (0.0f)
 	
 	{
-	
+
+	if (!(fMap.Spacing ().v > 0.0) ||
+		!(fMap.Spacing ().h > 0.0))
+		{
+		ThrowBadFormat ("Invalid gain map spacing");
+		}
+
 	real64 rowIndexF = (fScale.v * (row + fOffset.v) -
 						fMap.Origin ().v) / fMap.Spacing ().v;
 	
+	// NaN fails both <= and >= comparisons, falling through to the
+	// cast at line below with undefined results. Treat NaN or infinite
+	// values as 0.
+
+	if (!std::isfinite (rowIndexF))
+		rowIndexF = 0.0;
+
 	if (rowIndexF <= 0.0)
 		{
 		
@@ -187,6 +200,13 @@ void dng_gain_map_interpolator::ResetColumn ()
 	real64 colIndexF = ((fScale.h * (fColumn + fOffset.h)) - 
 						fMap.Origin ().h) / fMap.Spacing ().h;
 	
+	// NaN fails both <= and >= comparisons, falling through to the
+	// cast at line below with undefined results. Treat NaN or infinite
+	// values as 0.
+
+	if (!std::isfinite (colIndexF))
+		colIndexF = 0.0;
+
 	if (colIndexF <= 0.0)
 		{
 		
@@ -297,7 +317,11 @@ real32 dng_gain_map::Interpolate (int32 row,
 uint32 dng_gain_map::PutStreamSize () const
 	{
 	
-	return 44 + fPoints.v * fPoints.h * fPlanes * 4;
+	return SafeUint32Add (44,
+						  SafeUint32Mult (fPoints.v,
+										  fPoints.h,
+										  fPlanes,
+										  4));
 	
 	}
 					  
@@ -397,10 +421,24 @@ dng_gain_map * dng_gain_map::GetStream (dng_host &host,
 		mapOrigin.h	 = 0.0;
 		}
 		
+	// Downcast spacing and origin to real32 for validation. Checking the
+	// real32 downcasts ensures both the real64 originals and any subsequent
+	// real32 uses of these values are free from NaN, infinity, and
+	// underflow-to-zero problems.
+
+	real32 mapSpacingV32 = (real32) mapSpacing.v;
+	real32 mapSpacingH32 = (real32) mapSpacing.h;
+	real32 mapOriginV32  = (real32) mapOrigin.v;
+	real32 mapOriginH32  = (real32) mapOrigin.h;
+
 	if (mapPoints.v < 1 ||
 		mapPoints.h < 1 ||
-		mapSpacing.v <= 0.0 ||
-		mapSpacing.h <= 0.0 ||
+		!std::isfinite (mapSpacingV32) ||
+		!std::isfinite (mapSpacingH32) ||
+		mapSpacingV32 <= 0.0f ||
+		mapSpacingH32 <= 0.0f ||
+		!std::isfinite (mapOriginV32) ||
+		!std::isfinite (mapOriginH32) ||
 		mapPlanes < 1)
 		{
 		ThrowBadFormat ();
@@ -497,7 +535,7 @@ dng_gain_table_map::dng_gain_table_map (dng_memory_allocator &allocator,
 	,	fOrigin	 (origin)
 	,	fNumTablePoints (numTablePoints)
 	
-	,	fRowStep (fNumTablePoints * points.h)
+	,	fRowStep (SafeUint32Mult (fNumTablePoints, points.h))
 	,	fColStep (fNumTablePoints)
 
 	,	fNumSamples (SafeUint32Mult (points.h,
@@ -566,7 +604,8 @@ uint32 dng_gain_table_map::RawTableNumBytes () const
 
 	// This is a real32 table.
 
-	return fNumSamples * sizeof (real32);
+	return SafeUint32Mult (fNumSamples,
+						   static_cast<uint32> (sizeof (real32)));
 
 	}
 
@@ -854,7 +893,11 @@ dng_gain_table_map * dng_gain_table_map::GetStream (dng_host &host,
 		gainMin  = stream.Get_real32 ();
 		gainMax  = stream.Get_real32 ();
 
-		if (gamma < kProfileGainTableMap_MinGamma ||
+		// NaN values bypass standard range comparisons (all comparisons
+		// with NaN return false). Check finiteness first.
+
+		if (!std::isfinite (gamma) ||
+			gamma < kProfileGainTableMap_MinGamma ||
 			gamma > kProfileGainTableMap_MaxGamma)
 			{
 			ThrowBadFormat ("Gamma out of range in ProfileGainTableMap2");
@@ -865,12 +908,14 @@ dng_gain_table_map * dng_gain_table_map::GetStream (dng_host &host,
 			ThrowBadFormat ("Unsupported DataType in ProfileGainTableMap2");
 			}
 		
-		if (gainMin < kProfileGainTableMap_MinGainValue)
+		if (!std::isfinite (gainMin) ||
+			gainMin < kProfileGainTableMap_MinGainValue)
 			{
 			ThrowBadFormat ("GainMin out of range in ProfileGainTableMap2");
 			}
 		
-		if (gainMax > kProfileGainTableMap_MaxGainValue)
+		if (!std::isfinite (gainMax) ||
+			gainMax > kProfileGainTableMap_MaxGainValue)
 			{
 			ThrowBadFormat ("GainMax out of range in ProfileGainTableMap2");
 			}
@@ -927,10 +972,24 @@ dng_gain_table_map * dng_gain_table_map::GetStream (dng_host &host,
 		mapOrigin.h	 = 0.0;
 		}
 		
+	// Downcast spacing and origin to real32 for validation. Checking the
+	// real32 downcasts ensures both the real64 originals and any subsequent
+	// real32 uses of these values are free from NaN, infinity, and
+	// underflow-to-zero problems.
+
+	real32 mapSpacingV32 = (real32) mapSpacing.v;
+	real32 mapSpacingH32 = (real32) mapSpacing.h;
+	real32 mapOriginV32  = (real32) mapOrigin.v;
+	real32 mapOriginH32  = (real32) mapOrigin.h;
+
 	if (mapPoints.v < 1 ||
 		mapPoints.h < 1 ||
-		mapSpacing.v <= 0.0 ||
-		mapSpacing.h <= 0.0 ||
+		!std::isfinite (mapSpacingV32) ||
+		!std::isfinite (mapSpacingH32) ||
+		mapSpacingV32 <= 0.0f ||
+		mapSpacingH32 <= 0.0f ||
+		!std::isfinite (mapOriginV32) ||
+		!std::isfinite (mapOriginH32) ||
 		numTablePoints < 1)
 		{
 		ThrowBadFormat ();
