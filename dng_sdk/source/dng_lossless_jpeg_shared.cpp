@@ -44,6 +44,7 @@
 #include "dng_assertions.h"
 #include "dng_exceptions.h"
 #include "dng_memory.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_simd_type.h"
 #include "dng_stream.h"
 #include "dng_tag_codes.h"
@@ -568,9 +569,14 @@ template <SIMDType simd>
 void dng_lossless_decoder<simd>::SkipVariable ()
 	{
 	
-	uint32 length = Get2bytes () - 2;
-	
-	fStream->Skip (length);
+	uint32 raw = Get2bytes ();
+
+	if (raw < 2)
+		{
+		ThrowBadFormat ();
+		}
+
+	fStream->Skip (raw - 2);
 
 	}
 
@@ -596,11 +602,23 @@ void dng_lossless_decoder<simd>::SkipVariable ()
 template <SIMDType simd>
 void dng_lossless_decoder<simd>::GetDht ()
 	{
-	
-	int32 length = Get2bytes () - 2;
-	
+
+	uint32 raw = Get2bytes ();
+
+	if (raw < 2)
+		{
+		ThrowBadFormat ();
+		}
+
+	int32 length = (int32) (raw - 2);
+
 	while (length > 0)
 		{
+
+		if (length < 1 + 16)
+			{
+			ThrowBadFormat ();
+			}
 
 		int32 index = GetJpegChar ();
 		
@@ -634,6 +652,11 @@ void dng_lossless_decoder<simd>::GetDht ()
 			}
 
 		if (count > 256) 
+			{
+			ThrowBadFormat ();
+			}
+
+		if (count > length - (1 + 16))
 			{
 			ThrowBadFormat ();
 			}
@@ -1780,14 +1803,23 @@ DNG_ALWAYS_INLINE int32 dng_lossless_decoder<simd>::HuffDecode (HuffmanTable *ht
 
 		// With garbage input we may reach the sentinel value l = 17.
 
-		if (l > 16) 
+		if (l > 16)
 			{
 			return 0;		// fake a zero as the safest result
 			}
 		else
 			{
-			return htbl->huffval [htbl->valptr [l] +
-								  ((int32) (code - htbl->mincode [l]))];
+
+			int32 idx = htbl->valptr [l] +
+						((int32) (code - htbl->mincode [l]));
+
+			if (idx < 0 || idx > 255)
+				{
+				return 0;
+				}
+
+			return htbl->huffval [idx];
+
 			}
 			
 		}
@@ -1813,30 +1845,24 @@ DNG_ALWAYS_INLINE int32 dng_lossless_decoder<simd>::HuffDecode (HuffmanTable *ht
  */
 
 template <SIMDType simd>
-DNG_ATTRIB_NO_SANITIZE("undefined")
 DNG_ALWAYS_INLINE void dng_lossless_decoder<simd>::HuffExtend (int32 &x, int32 s)
 	{
 
-	#if 1
-
-	// Predicate path.
-
-	int32 tt = (-1 << s) + 1;
-
-	tt = (x < (0x08000 >> (16 - s))) ? tt : 0;
-
-	x += tt;
-
-	#else
-
-	// Reference path.
-	
-	if (x < (0x08000 >> (16 - s)))
+	if (s < 0 || s > 16)
 		{
-		x += (-1 << s) + 1;
+		ThrowBadFormat ();
 		}
 
-	#endif
+	if (s > 0)
+		{
+		const int32 signThreshold = 1 << (s - 1);
+
+		if (x < signThreshold)
+			{
+			const int32 extendMask = (1 << s) - 1;
+			x -= extendMask;
+			}
+		}
 
 	}
 
@@ -1854,9 +1880,11 @@ void dng_lossless_decoder<simd>::PmPutRow (MCU *buf,
 	
 	uint16 *sPtr = &buf [0] [0];
 	
-	uint32 pixels = numCol * numComp;
+	uint32 pixels = SafeUint32Mult ((uint32) numCol,
+									(uint32) numComp);
 	
-	fSpooler->Spool (sPtr, pixels * (uint32) sizeof (uint16));
+	fSpooler->Spool (sPtr, SafeUint32Mult (pixels,
+										   (uint32) sizeof (uint16)));
 		
 	}
 
@@ -3159,13 +3187,28 @@ dng_lossless_encoder<simd>::dng_lossless_encoder (const uint16 *srcData,
 	// Maximum buffering for one row of output. Add one for carryover bits
 	// from previous row.
 
-	size_t streamBufferExtent = srcCols * srcChannels * ((srcBitDepth + 7) / 8) * 2 * 2 + 1;
+	uint32 streamBufferExtent32 = SafeUint32Mult (srcCols,
+												  srcChannels);
+
+	const uint32 bytesPerSample = SafeUint32Add (srcBitDepth, 7u) / 8u;
+
+	streamBufferExtent32 = SafeUint32Mult (streamBufferExtent32,
+										   bytesPerSample);
+
+	streamBufferExtent32 = SafeUint32Mult (streamBufferExtent32, 2u);
+	streamBufferExtent32 = SafeUint32Mult (streamBufferExtent32, 2u);
+	streamBufferExtent32 = SafeUint32Add  (streamBufferExtent32, 1u);
 
 	// Maximum output for header blocks and such.
 	// 296 is the DHT size, 64 is a round up of overhead.
 
-	streamBufferExtent = std::max<size_t>(streamBufferExtent, srcChannels * 296 + 64);
-	streamBuffer.resize(streamBufferExtent);
+	uint32 streamHeaderExtent32 = SafeUint32Mult (srcChannels, 296u);
+
+	streamHeaderExtent32 = SafeUint32Add (streamHeaderExtent32, 64u);
+
+	const size_t streamBufferExtent = std::max<size_t> (streamBufferExtent32,
+														streamHeaderExtent32);
+	streamBuffer.resize (streamBufferExtent);
 
 	}
 
@@ -3174,6 +3217,11 @@ dng_lossless_encoder<simd>::dng_lossless_encoder (const uint16 *srcData,
 template <SIMDType simd>
 inline void dng_lossless_encoder<simd>::EmitByte (uint8 value)
 	{
+
+	if (streamBufferOffset >= streamBuffer.size ())
+		{
+		ThrowProgramError ("Lossless JPEG output buffer overflow");
+		}
 	
 	streamBuffer[streamBufferOffset++] = value;
 	
@@ -3424,9 +3472,21 @@ inline int dng_lossless_encoder<simd>::EmitBitsToBuffer (int buffered_bits,
 	while (buffered_bits >= 8)
 			{
 		uint8 c = (uint8)(bit_buffer >> (buffered_bits - 8));
+
+		if (streamBufferOffset >= streamBuffer.size ())
+			{
+			ThrowProgramError ("Lossless JPEG output buffer overflow");
+			}
+
 		streamBuffer[streamBufferOffset++] = c;
 		if (c == 0xff)
 			{
+
+			if (streamBufferOffset >= streamBuffer.size ())
+				{
+				ThrowProgramError ("Lossless JPEG output buffer overflow");
+				}
+
 			streamBuffer[streamBufferOffset++] = 0x00;
 			}
 		buffered_bits -= 8;
@@ -4367,10 +4427,10 @@ void DecodeLosslessJPEG (dng_stream &stream,
 					   imageHeight,
 					   imageChannels);
 					   
-	uint32 decodedSize = imageWidth	   *
-						 imageHeight   *
-						 imageChannels *
-						 (uint32) sizeof (uint16);
+	uint32 decodedSize = SafeUint32Mult (imageWidth,
+										 imageHeight,
+										 imageChannels,
+										 (uint32) sizeof (uint16));
 					   
 	if (decodedSize < minDecodedSize ||
 		decodedSize > maxDecodedSize)

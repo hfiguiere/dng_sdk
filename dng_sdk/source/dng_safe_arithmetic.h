@@ -55,6 +55,12 @@ bool SafeInt32Add(int32 arg1, int32 arg2, int32 *result);
 int32 SafeInt32Add(int32 arg1, int32 arg2);
 int64 SafeInt64Add(int64 arg1, int64 arg2);
 
+// Returns the result of adding arg1 and arg2 and arg3 if it will fit in the
+// result type (without under-/overflow). Otherwise, throws a dng_exception with
+// error code dng_error_unknown.
+int32 SafeInt32Add(int32 arg1, int32 arg2, int32 arg3);
+int64 SafeInt64Add(int64 arg1, int64 arg2, int64 arg3);
+
 // If the result of adding arg1 and arg2 will fit in a uint32_t (without
 // wraparound), stores this result in *result and returns true. Otherwise,
 // returns false and leaves *result unchanged.
@@ -66,6 +72,12 @@ bool SafeUint32Add(uint32 arg1, uint32 arg2,
 // dng_error_unknown.
 uint32 SafeUint32Add(uint32 arg1, uint32 arg2);
 uint64 SafeUint64Add(uint64 arg1, uint64 arg2);
+
+// Returns the result of adding arg1 and arg2 and arg3 if it will fit in the
+// result type (without wraparound). Otherwise, throws a dng_exception with
+// error code dng_error_unknown.
+uint32 SafeUint32Add(uint32 arg1, uint32 arg2, uint32 arg3);
+uint64 SafeUint64Add(uint64 arg1, uint64 arg2, uint64 arg3);
 
 // If the subtraction of arg2 from arg1 will not result in an int32_t under- or
 // overflow, stores this result in *result and returns true. Otherwise,

@@ -3059,6 +3059,11 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 				
 			#endif
 			
+			if (tagCount > 1000)
+				{
+				ThrowBadFormat ("Too many ExtraCameraProfiles");
+				}
+
 			fExtraCameraProfiles.reserve (tagCount);
 			
 			for (uint32 index = 0; index < tagCount; index++)
@@ -3399,6 +3404,11 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			
 			uint32 count = tagCount >> 4;
 			
+			if (count > 10000)
+				{
+				ThrowBadFormat ("Too many BigTable entries");
+				}
+
 			fBigTableDigests.clear ();
 			fBigTableDigests.reserve (count);
 			
@@ -3520,8 +3530,9 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 				
 				fBigTableByteCounts [index] = (uint32) byteCount64;
 				
-				if (fBigTableByteCounts [index] +
-					fBigTableOffsets	[index] > stream.Length ())
+				if (fBigTableOffsets [index] > stream.Length () ||
+					fBigTableByteCounts [index] >
+						stream.Length () - fBigTableOffsets [index])
 					{
 					
 					DNG_REPORT ("Invalid big table byte count");

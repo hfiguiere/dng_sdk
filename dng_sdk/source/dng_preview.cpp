@@ -582,7 +582,12 @@ dng_raw_preview_tag_set::dng_raw_preview_tag_set (dng_tiff_directory &directory,
 						preview.SamplesPerPixel ())
 						
 	{
-									 
+
+	if (preview.SamplesPerPixel () > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
 	if (preview.fOpcodeList2Data.Get ())
 		{
 		

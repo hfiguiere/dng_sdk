@@ -1357,7 +1357,7 @@ DNG_ALWAYS_INLINE real32 ApplyCurveOverrange (const dng_1d_table &table,
 											  real32 x)
 	{
 	
-	if (x <= 1.0f)
+	if (!(x > 1.0f))  // NOTE: Negated '>' also catches NaN
 		return table.Interpolate (Max_real32 (x, 0.0f));
 
 	return slopeExtensionFunc.Evaluate (x);
@@ -2180,12 +2180,21 @@ dng_image * dng_render::Render ()
 			
 		}
 	
+	// Render requires a valid default crop area. An empty rect here means
+	// the negative has no crop metadata, which is a file format error in
+	// this context.
+
+	dng_rect srcBounds = fNegative.DefaultCropArea ();
+
+	if (srcBounds.IsEmpty ())
+		{
+		ThrowBadFormat ();
+		}
+
 	const dng_image *srcImage = fNegative.Stage3Image ();
  
 	const dng_image *srcMask = fNegative.TransparencyMask ();
 	
-	dng_rect srcBounds = fNegative.DefaultCropArea ();
- 
 	dng_point dstSize;
 	
 	dstSize.h =	fNegative.DefaultFinalWidth	 ();

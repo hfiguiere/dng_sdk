@@ -150,7 +150,9 @@ bool dng_warp_params::IsValid () const
 
 		}
 
-	if (fCenter.h < 0.0 || 
+	if (!std::isfinite (fCenter.h) ||
+		!std::isfinite (fCenter.v) ||
+		fCenter.h < 0.0 ||
 		fCenter.h > 1.0 ||
 		fCenter.v < 0.0 ||
 		fCenter.v > 1.0)
@@ -615,6 +617,11 @@ bool dng_warp_params_rectilinear::IsValid () const
 void dng_warp_params_rectilinear::PropagateToAllPlanes (uint32 totalPlanes)
 	{
 
+	if (totalPlanes > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
 	for (uint32 plane = fPlanes; plane < totalPlanes; plane++)
 		{
 
@@ -921,7 +928,12 @@ bool dng_warp_params_fisheye::IsValid () const
 
 void dng_warp_params_fisheye::PropagateToAllPlanes (uint32 totalPlanes)
 	{
-	
+
+	if (totalPlanes > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
 	for (uint32 plane = fPlanes; plane < totalPlanes; plane++)
 		{
 
@@ -1182,6 +1194,11 @@ dng_filter_warp::dng_filter_warp (const dng_image &srcImage,
 	DNG_ASSERT (negPlanes <= kMaxColorPlanes, "Too many planes.");
 
 	(void) negPlanes;
+
+	if (dstImage.Planes () > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
 	
 	// At least one set of params must do something interesting.
 
@@ -2391,7 +2408,9 @@ bool dng_vignette_radial_params::IsValid () const
 		return false;
 		}
 
-	if (fCenter.h < 0.0 || 
+	if (!std::isfinite (fCenter.h) ||
+		!std::isfinite (fCenter.v) ||
+		fCenter.h < 0.0 ||
 		fCenter.h > 1.0 ||
 		fCenter.v < 0.0 ||
 		fCenter.v > 1.0)
@@ -2724,7 +2743,8 @@ void dng_opcode_FixVignetteRadial::Prepare (dng_negative &negative,
 	
 		fTableOutputBits = 15;
 	
-		while ((1 << fTableOutputBits) * maxScale > 65535.0)
+		while (fTableOutputBits > 0 &&
+			   (1 << fTableOutputBits) * maxScale > 65535.0)
 			{
 			fTableOutputBits--;
 			}

@@ -319,8 +319,17 @@ void dng_area_task::Perform (dng_area_task &task,
 		
 	task.Start (1, area, tileSize, allocator, sniffer);
 	
-	task.ProcessOnThread (0, area, tileSize, sniffer, progress);
-			
+	try
+		{
+		task.ProcessOnThread (0, area, tileSize, sniffer, progress);
+		}
+
+	catch (...)
+		{
+		task.Finish (1);
+		throw;
+		}
+
 	task.Finish (1);
 	
 	}

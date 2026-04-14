@@ -739,7 +739,9 @@ class dng_rgb_table : public dng_big_table
 				
 				fMonochrome = true;
 				
-				uint32 count = fDivisions * fDivisions * fDivisions;
+				uint32 count = SafeUint32Mult (fDivisions,
+											   fDivisions,
+											   fDivisions);
 
 				const uint16 * sample = fSamples.Buffer_uint16 ();
 				

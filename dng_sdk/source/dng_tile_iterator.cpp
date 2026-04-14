@@ -117,7 +117,17 @@ void dng_tile_iterator::Initialize (const dng_rect &tile,
 	
 	int32 tileHeight = tile.b - vOffset;
 	int32 tileWidth	 = tile.r - hOffset;
-	
+
+	if (tileWidth <= 0 || tileHeight <= 0)
+		{
+
+		fVerticalPage =  0;
+		fBottomPage	  = -1;
+
+		return;
+
+		}
+
 	fTileHeight = tileHeight;
 	fTileWidth	= tileWidth;
 	

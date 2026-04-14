@@ -121,7 +121,7 @@ void dng_hue_sat_map::SetDivisions (uint32 hueDivisions,
 	fValDivisions = valDivisions;
 	
 	fHueStep = satDivisions;
-	fValStep = hueDivisions * fHueStep;
+	fValStep = SafeUint32Mult (hueDivisions, fHueStep);
 
 	dng_safe_uint32 size (DeltasCount ());
 
@@ -155,9 +155,11 @@ void dng_hue_sat_map::GetDelta (uint32 hueDiv,
 		
 		}
 
-	int32 offset = valDiv * fValStep +
-				   hueDiv * fHueStep +
-				   satDiv;
+	uint32 offset = SafeUint32Add (
+						SafeUint32Add (
+							SafeUint32Mult (valDiv, fValStep),
+							SafeUint32Mult (hueDiv, fHueStep)),
+						satDiv);
 
 	const HSBModify *deltas = GetConstDeltas ();
 
@@ -189,9 +191,11 @@ void dng_hue_sat_map::SetDeltaKnownWriteable (uint32 hueDiv,
 		
 	// Set this entry.
 		
-	int32 offset = valDiv * fValStep +
-				   hueDiv * fHueStep +
-				   satDiv;
+	uint32 offset = SafeUint32Add (
+						SafeUint32Add (
+							SafeUint32Mult (valDiv, fValStep),
+							SafeUint32Mult (hueDiv, fHueStep)),
+						satDiv);
 
 	SafeGetDeltas () [offset] = modify;
 	

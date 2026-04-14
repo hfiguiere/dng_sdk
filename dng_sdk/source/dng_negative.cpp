@@ -1809,9 +1809,9 @@ dng_fingerprint dng_negative::FindImageDigest (dng_host &host,
 		
 		image.Get (buffer);
 		
-		uint32 count = buffer.fArea.H () *
-					   buffer.fRowStep *
-					   buffer.fPixelSize;
+		uint32 count = SafeUint32Mult (buffer.fArea.H (),
+									   (uint32) buffer.fRowStep,
+									   buffer.fPixelSize);
 					   
 		#if qDNGBigEndian
 		
@@ -1962,7 +1962,7 @@ class dng_find_new_raw_image_digest_task : public dng_area_task
 			fTilesAcross = (fImage.Bounds ().W () + fUnitCell.h - 1) / fUnitCell.h;
 			fTilesDown	 = (fImage.Bounds ().H () + fUnitCell.v - 1) / fUnitCell.v;
 			
-			fTileCount = fTilesAcross * fTilesDown;
+			fTileCount = SafeUint32Mult (fTilesAcross, fTilesDown);
 						 
 			fTileHash.Reset (fTileCount);
 			
@@ -2004,9 +2004,9 @@ class dng_find_new_raw_image_digest_task : public dng_area_task
 			
 			fImage.Get (buffer);
 			
-			uint32 count = buffer.fPlaneStep *
-						   buffer.fPlanes *
-						   buffer.fPixelSize;
+			uint32 count = SafeUint32Mult ((uint32) buffer.fPlaneStep,
+										   buffer.fPlanes,
+										   buffer.fPixelSize);
 			
 			#if qDNGBigEndian
 			
@@ -2561,13 +2561,22 @@ dng_rect dng_negative::DefaultCropArea () const
 			result.l -= result.r - imageSize.h;
 			result.r  = imageSize.h;
 			}
-			
+
+		// Clamp left/top to zero: if the crop size exceeds the image size
+		// the slide-back above can produce a negative origin, which would
+		// cause Trim() to shift the pixel buffer pointer before the
+		// allocation.
+
+		result.l = Max_int32 (0, result.l);
+
 		if (result.b > imageSize.v)
 			{
 			result.t -= result.b - imageSize.v;
 			result.b  = imageSize.v;
 			}
-			
+
+		result.t = Max_int32 (0, result.t);
+
 		}
 		
 	return result;
@@ -5841,7 +5850,12 @@ dng_image * EncodeImageForCompression (dng_host &host,
 		{
 		return nullptr;
 		}
-  
+
+	if (srcImage.Planes () > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
 	real64 lower [kMaxColorPlanes];
 	real64 upper [kMaxColorPlanes];
 	
@@ -6687,7 +6701,16 @@ void dng_negative::ConvertToProxy (dng_host &host,
 								   uint32 proxySize,
 								   uint64 proxyCount)
 	{
-	
+
+	// ConvertToProxy requires a valid default crop area. An empty rect here
+	// means the negative has no crop metadata, which is a file format error
+	// in this context.
+
+	if (DefaultCropArea ().IsEmpty ())
+		{
+		ThrowBadFormat ();
+		}
+
 	if (!proxySize)
 		{
 		proxySize = kMaxImageSide;
@@ -6885,6 +6908,16 @@ void dng_negative::ConvertToProxy (dng_host &host,
 	const dng_rect defaultCropArea = DefaultCropArea ();
 
 	const dng_rect originalStage3Bounds = Stage3Image ()->Bounds ();
+
+	// Validate that the crop area is contained within the stage 3 image.
+	// A mismatch here indicates malformed file metadata (e.g. a large
+	// DefaultCropSize from the primary IFD applied to a smaller enhanced
+	// image), which is a file format error.
+
+	if (!originalStage3Bounds.Contains (defaultCropArea))
+		{
+		ThrowBadFormat ();
+		}
 
 	if (!rawImageOK)
 		{

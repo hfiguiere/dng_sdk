@@ -288,7 +288,9 @@ void dng_stream::Get (void *data, uint32 count, uint32 maxOverRead)
 		
 		// See if the request is totally inside buffer.
 		
-		if (fPosition >= fBufferStart && fPosition + count <= fBufferEnd)
+		if (fPosition >= fBufferStart &&
+			count <= fBufferEnd &&
+			fPosition <= fBufferEnd - count)
 			{
 			
 			memcpy (data,
@@ -329,7 +331,8 @@ void dng_stream::Get (void *data, uint32 count, uint32 maxOverRead)
 		if (count > fBufferSize)
 			{
 			DNG_ASSERT(maxOverRead == 0, "Over-read of large size unexpected");
-			if (fPosition + count > Length ())
+			if (fPosition > Length () ||
+				count > Length () - fPosition)
 				{
 				
 				ThrowEndOfFile ();
@@ -982,8 +985,15 @@ void dng_stream::Get_CString (char *data, uint32 maxLength)
 void dng_stream::Put_CString (const char *data)
 	{
 
-	Put (data, (uint32) strlen (data) + 1);
-	
+	size_t len = strlen (data);
+
+	if (len >= 0xFFFFFFFF)
+		{
+		ThrowProgramError ("string too long in Put_CString");
+		}
+
+	Put (data, (uint32) len + 1);
+
 	}
 
 /*****************************************************************************/

@@ -10,6 +10,7 @@
 
 #include "dng_1d_table.h"
 #include "dng_bottlenecks.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_abort_sniffer.h"
 #include "dng_color_space.h"
 #include "dng_globals.h"
@@ -2111,7 +2112,9 @@ bool dng_look_table::GetStream (dng_stream &stream)
 		data.fMinAmount = stream.Get_real64 ();
 		data.fMaxAmount = stream.Get_real64 ();
 
-		if (data.fMinAmount < 0.0 || data.fMinAmount > 1.0 || data.fMaxAmount < 1.0)
+		if (!std::isfinite (data.fMinAmount) ||
+			!std::isfinite (data.fMaxAmount) ||
+			data.fMinAmount < 0.0 || data.fMinAmount > 1.0 || data.fMaxAmount < 1.0)
 			{
 			ThrowBadFormat ("Invalid min/max amount for look table");
 			}
@@ -2311,7 +2314,9 @@ void dng_rgb_table::Set (uint32 dimensions,
 
 			}
 
-		if (samples.LogicalSize () != divisions * 4 * sizeof (uint16))
+		if (samples.LogicalSize () !=
+			SafeUint32Mult (divisions, 4,
+							(uint32) sizeof (uint16)))
 			{
 
 			ThrowProgramError ("Bad 1D sample count");
@@ -2331,9 +2336,9 @@ void dng_rgb_table::Set (uint32 dimensions,
 
 			}
 
-		if (samples.LogicalSize () != divisions *
-									  divisions *
-									  divisions * 4 * sizeof (uint16))
+		if (samples.LogicalSize () !=
+			SafeUint32Mult (divisions, divisions, divisions,
+							4 * (uint32) sizeof (uint16)))
 			{
 
 			ThrowProgramError ("Bad 3D sample count");
@@ -2445,9 +2450,10 @@ bool dng_rgb_table::GetStream (dng_stream &stream)
 	else
 		{
 
-		data.fSamples.Allocate (data.fDivisions *
-								data.fDivisions *
-								data.fDivisions * 4 * sizeof (uint16));
+		data.fSamples.Allocate (SafeUint32Mult (data.fDivisions,
+												data.fDivisions,
+												data.fDivisions,
+												4 * (uint32) sizeof (uint16)));
 
 		uint16 *samples = data.fSamples.Buffer_uint16 ();
 
@@ -2505,7 +2511,9 @@ bool dng_rgb_table::GetStream (dng_stream &stream)
 	data.fMinAmount = stream.Get_real64 ();
 	data.fMaxAmount = stream.Get_real64 ();
 
-	if (data.fMinAmount < 0.0 || data.fMinAmount > 1.0 || data.fMaxAmount < 1.0)
+	if (!std::isfinite (data.fMinAmount) ||
+		!std::isfinite (data.fMaxAmount) ||
+		data.fMinAmount < 0.0 || data.fMinAmount > 1.0 || data.fMaxAmount < 1.0)
 		{
 		ThrowBadFormat ("Invalid min/max amount for RGB table");
 		}

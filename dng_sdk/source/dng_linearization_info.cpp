@@ -1018,7 +1018,12 @@ dng_linearize_image::dng_linearize_image (dng_host &host,
 	,	fActiveArea (info.fActiveArea)
 	
 	{
-	
+
+	if (srcImage.Planes () > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
 	// Build linearization table for each plane.
 	
 	for (uint32 plane = 0; plane < srcImage.Planes (); plane++)
@@ -1508,6 +1513,11 @@ void dng_linearization_info::Linearize (dng_host &host,
 										const dng_image &srcImage,
 										dng_image &dstImage)
 	{
+
+	if (srcImage.Planes () > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
 
 	bool allowPreserveBlackLevels = negative.SupportsPreservedBlackLevels (host);
 

@@ -109,7 +109,7 @@ class tiff_tag: private dng_uncopyable
 		
 		uint32 Size () const
 			{
-			return TagTypeSize (Type ()) * Count ();
+			return SafeUint32Mult (TagTypeSize (Type ()), Count ());
 			}
 	
 		virtual void SetBigTIFF (bool /* isBigTIFF */)
@@ -450,6 +450,8 @@ class tag_big_uints: public tiff_tag
 		void Set (uint32 index,
 				  uint64 value)
 			{
+			DNG_REQUIRE (index < Count (),
+						 "tag_big_uints::Set index out of range");
 			fData.Buffer_uint64 () [index] = value;
 			}
 	
@@ -647,7 +649,8 @@ class tag_cfa_pattern: public tiff_tag
 						 uint32 cols,
 						 const uint8 *pattern)
 					   
-			:	tiff_tag (code, ttUndefined, 4 + rows * cols)
+			:	tiff_tag (code, ttUndefined,
+						 SafeUint32Add (4, SafeUint32Mult (rows, cols)))
 			
 			,	fRows	 (rows	 )
 			,	fCols	 (cols	 )

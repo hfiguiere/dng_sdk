@@ -1663,9 +1663,10 @@ void dng_camera_profile::Parse (dng_stream &stream,
 
 		stream.SetReadPosition (profileInfo.fHueSatDeltas3Offset);
 
-		bool skipSat0 = (profileInfo.fHueSatDeltas3Count == profileInfo.fProfileHues *
-														   (profileInfo.fProfileSats - 1) *
-															profileInfo.fProfileVals * 3);
+		bool skipSat0 = (profileInfo.fHueSatDeltas3Count ==
+						 SafeUint32Mult (profileInfo.fProfileHues,
+										 SafeUint32Sub (profileInfo.fProfileSats, 1),
+										 profileInfo.fProfileVals, 3));
 
 		ReadHueSatMap (stream,
 					   fHueSatDeltas3,

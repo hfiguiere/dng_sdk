@@ -204,14 +204,29 @@ dng_file_stream::~dng_file_stream ()
 uint64 dng_file_stream::DoGetLength ()
 	{
 	
-	if (fseek (fFile, 0, SEEK_END) != 0)
+	#if qWinOS
+
+	if (_fseeki64 (fFile, 0, SEEK_END) != 0)
 		{
-		
+
 		ThrowReadFile ();
 
 		}
-	
-	return (uint64) ftell (fFile);
+
+	return (uint64) _ftelli64 (fFile);
+
+	#else
+
+	if (fseeko (fFile, 0, SEEK_END) != 0)
+		{
+
+		ThrowReadFile ();
+
+		}
+
+	return (uint64) ftello (fFile);
+
+	#endif
 	
 	}
 		
@@ -222,7 +237,15 @@ void dng_file_stream::DoRead (void *data,
 							  uint64 offset)
 	{
 	
-	if (fseek (fFile, (long) offset, SEEK_SET) != 0)
+	#if qWinOS
+
+	if (_fseeki64 (fFile, (int64) offset, SEEK_SET) != 0)
+
+	#else
+
+	if (fseeko (fFile, (off_t) offset, SEEK_SET) != 0)
+
+	#endif
 		{
 		
 		ThrowReadFile ();
@@ -247,7 +270,15 @@ void dng_file_stream::DoWrite (const void *data,
 							   uint64 offset)
 	{
 	
-	if (fseek (fFile, (uint32) offset, SEEK_SET) != 0)
+	#if qWinOS
+
+	if (_fseeki64 (fFile, (int64) offset, SEEK_SET) != 0)
+
+	#else
+
+	if (fseeko (fFile, (off_t) offset, SEEK_SET) != 0)
+
+	#endif
 		{
 		
 		ThrowWriteFile ();

@@ -255,13 +255,14 @@ class dng_stream: private dng_uncopyable
 			SetReadPosition (Position () + delta);
 			}
 		
-		/// Quick check to see if data range in completely buffered.
+		/// Quick check to see if data range is completely buffered.
 
 		bool DataInBuffer (uint64 count,
 						   uint64 offset)
 			{
-			return (offset		   >= fBufferStart &&
-					offset + count <= fBufferEnd);
+			return (offset >= fBufferStart &&
+					count  <= fBufferEnd   &&
+					offset <= fBufferEnd - count);
 			}
 		
 		/// Get data from stream. Exception is thrown and no data is read if 
