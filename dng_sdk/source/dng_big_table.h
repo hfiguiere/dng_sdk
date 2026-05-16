@@ -165,6 +165,8 @@ class dng_big_table
 			return true;
 			}
 
+		virtual uint32 MaxCompressedDecodedStreamSize () const;
+
 		virtual bool GetStream (dng_stream &stream) = 0;
 
 		virtual void PutStream (dng_stream &stream,
@@ -1365,7 +1367,8 @@ class dng_masked_rgb_table: private dng_uncopyable
 		void Validate () const;
 		
 		void GetStream (dng_host &host,
-						dng_stream &stream);
+						dng_stream &stream,
+						uint64 tagEnd);
 		
 		void PutStream (dng_stream &stream) const;
 
@@ -1450,7 +1453,8 @@ class dng_masked_rgb_tables: private dng_uncopyable
 
 		static dng_masked_rgb_tables * GetStream (dng_host &host,
 												  dng_stream &stream,
-												  bool isDraft);
+												  bool isDraft,
+												  uint32 tagCount);
 
 		composite_method CompositeMethod () const
 			{

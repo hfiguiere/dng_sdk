@@ -28,6 +28,10 @@
 
 #define qLogDNGUpdateMetadata (qDNGDebug && 0)
 
+static const uint32 kMaxUpdateBigTableEntries = 10000;
+static const uint32 kMaxUpdateBigTableGroupFingerprints =
+	kMaxUpdateBigTableEntries * 2;
+
 #if qLogDNGUpdateMetadata
 #include "cr_logging.h"
 #endif
@@ -522,6 +526,13 @@ bool dng_tag_updater::GetArray_uint64 (dng_file_updater &updater,
 
 		uint32 count32 = (uint32) fTagCount;
 
+		if ((fTagCode == tcBigTableOffsets ||
+			 fTagCode == tcBigTableByteCounts) &&
+			count32 > kMaxUpdateBigTableEntries)
+			{
+			ThrowBadFormat ("Too many BigTable entries");
+			}
+
 		values.reserve (count32);
 		
 		if (TagSize () <= updater.InlineLimit ())
@@ -583,6 +594,20 @@ bool dng_tag_updater::GetArray_Fingerprint (dng_file_updater &updater,
 			}
 
 		uint32 count = (uint32) count64;
+
+		uint32 maxCount = kMaxUpdateBigTableEntries;
+
+		if (fTagCode == tcBigTableGroupIndex)
+			{
+			maxCount = kMaxUpdateBigTableGroupFingerprints;
+			}
+
+		if ((fTagCode == tcBigTableDigests ||
+			 fTagCode == tcBigTableGroupIndex) &&
+			count > maxCount)
+			{
+			ThrowBadFormat ("Too many BigTable entries");
+			}
 		
 		values.reserve (count);
 		
@@ -1957,9 +1982,11 @@ void dng_ifd_updater::UpdateAdobeData (dng_file_updater &updater,
 		stream.SetReadPosition (adobeData.fTagOffset);
 			
 		uint64 nextOffset = stream.Position ();
-		uint64 lastOffset = nextOffset + adobeData.TagSize ();
+		uint64 lastOffset = SafeUint64Add (nextOffset,
+										   adobeData.TagSize ());
 	
-		while (nextOffset + 12 <= lastOffset)
+		while (nextOffset <= lastOffset &&
+			   12 <= lastOffset - nextOffset)
 			{
 			
 			stream.SetReadPosition (nextOffset);
@@ -1979,6 +2006,14 @@ void dng_ifd_updater::UpdateAdobeData (dng_file_updater &updater,
 				{
 			
 				uint32 tagNameCount = stream.Get_uint8 ();
+
+				const uint32 tagNamePad = (tagNameCount & 1) == 0 ? 1 : 0;
+
+				if (lastOffset - stream.Position () <
+					(uint64) tagNameCount + tagNamePad + 4)
+					{
+					return;
+					}
 			
 				stream.Get (tagName, tagNameCount);
 			
@@ -1997,14 +2032,30 @@ void dng_ifd_updater::UpdateAdobeData (dng_file_updater &updater,
 			
 			// Check validity of size.
 			
-			if (stream.Position () + tagSize > lastOffset)
+			if ((uint64) tagSize > lastOffset - stream.Position ())
 				{
 				return;
 				}
 			
 			// Find next offset.
-			
-			nextOffset = stream.Position () + RoundUp2 (tagSize);
+
+			if (tagSize == 0xFFFFFFFFu)
+				{
+				return;
+				}
+
+			const uint32 paddedTagSize = RoundUp2 (tagSize);
+
+			uint64 newOffset = SafeUint64Add (stream.Position (),
+											  paddedTagSize);
+
+			if (newOffset <= nextOffset ||
+				newOffset > lastOffset)
+				{
+				return;
+				}
+
+			nextOffset = newOffset;
 			
 			if (tagSignature == DNG_CHAR4 ('8', 'B', 'I', 'M') &&
 				tagID == 1061 &&

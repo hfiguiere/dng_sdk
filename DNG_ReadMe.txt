@@ -61,11 +61,19 @@ additional dependencies:
 
 Release Notes / Changelog:
 
+1.7.1 2573 May 12, 2026
+
+    - Hasselblad FFF format fixes.
+
+    - TIFF c2pa tag parsing fixes.
+
+    - Vulnerability issue fixes.
+
 1.7.1 2536 April 14, 2026
 
     - Vulnerability issue fixes.
 
-    - Low-temperature WB work.
+    - Low-temperature White Balance work.
 
     - Minor fixes and cleanups.
 

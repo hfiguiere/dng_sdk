@@ -2333,12 +2333,12 @@ int32 dng_string::Compare (const dng_string &s,
 			while (*aPtr || *bPtr)
 				{
 				
-				if (!bPtr)
+				if (!*bPtr)
 					{
 					return 1;
 					}
 	
-				else if (!aPtr)
+				else if (!*aPtr)
 					{
 					return -1;
 					}

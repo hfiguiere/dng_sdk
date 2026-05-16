@@ -1698,7 +1698,8 @@ class dng_image_stats
 
 		bool operator== (const dng_image_stats &src) const;
 
-		void Parse (dng_stream &stream);
+		void Parse (dng_stream &stream,
+					uint32 tagByteCount);
 
 		#if qDNGValidate
 		void Dump () const;

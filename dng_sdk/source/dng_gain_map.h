@@ -354,7 +354,8 @@ class dng_gain_table_map: private dng_uncopyable
 
 		static dng_gain_table_map * GetStream (dng_host &host,
 											   dng_stream &stream,
-											   bool useVersion2 = false);
+											   bool useVersion2,
+											   uint32 tagByteCount);
 
 		/// APIs to support ProfileGainTableMap2.
 

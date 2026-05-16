@@ -274,6 +274,55 @@ static void FixHuffTbl (HuffmanTable *htbl)
 
 /*****************************************************************************/
 
+// Validates the Huffman-table properties the decoder relies on in its
+// hot per-sample helpers. We still keep a rare slow-path guard in
+// HuffDecode because malformed scan data can land in an unused code gap
+// even when the table shape itself is valid.
+
+static void ValidateDecoderHuffTbl (const HuffmanTable *htbl)
+	{
+
+	int32 totalCodes = 0;
+	int32 openSlots  = 1;
+
+	for (int32 l = 1; l <= 16; l++)
+		{
+
+		totalCodes += htbl->bits [l];
+
+		if (totalCodes > 256)
+			{
+			ThrowBadFormat ();
+			}
+
+		openSlots = (openSlots << 1) - htbl->bits [l];
+
+		if (openSlots < 0)
+			{
+			ThrowBadFormat ();
+			}
+
+		}
+
+	if (totalCodes == 0)
+		{
+		ThrowBadFormat ();
+		}
+
+	for (int32 p = 0; p < totalCodes; p++)
+		{
+
+		if (htbl->huffval [p] > 16)
+			{
+			ThrowBadFormat ();
+			}
+
+		}
+
+	}
+
+/*****************************************************************************/
+
 /*
  * The following structure stores basic information about one component.
  */
@@ -1369,11 +1418,18 @@ void dng_lossless_decoder<simd>::HuffDecoderInit ()
 			ThrowBadFormat ();
 			}
 
+		HuffmanTable *htbl = info.dcHuffTblPtrs [compptr->dcTblNo];
+
+		// Validate the table invariants once so HuffExtend can stay
+		// branch-free in the per-sample decode path.
+
+		ValidateDecoderHuffTbl (htbl);
+
 		// Compute derived values for Huffman tables.
 		// We may do this more than once for same table, but it's not a
 		// big deal
 
-		FixHuffTbl (info.dcHuffTblPtrs [compptr->dcTblNo]);
+		FixHuffTbl (htbl);
 
 		}
 
@@ -1810,15 +1866,18 @@ DNG_ALWAYS_INLINE int32 dng_lossless_decoder<simd>::HuffDecode (HuffmanTable *ht
 		else
 			{
 
-			int32 idx = htbl->valptr [l] +
-						((int32) (code - htbl->mincode [l]));
+			const int32 offset = (int32) (code - htbl->mincode [l]);
 
-			if (idx < 0 || idx > 255)
+			// Valid-but-incomplete tables can leave unused code gaps at a
+			// given length. Reject those malformed-data cases here while
+			// keeping the common path to one range check.
+
+			if ((uint32) offset >= (uint32) htbl->bits [l])
 				{
 				return 0;
 				}
 
-			return htbl->huffval [idx];
+			return htbl->huffval [htbl->valptr [l] + offset];
 
 			}
 			
@@ -1848,21 +1907,16 @@ template <SIMDType simd>
 DNG_ALWAYS_INLINE void dng_lossless_decoder<simd>::HuffExtend (int32 &x, int32 s)
 	{
 
-	if (s < 0 || s > 16)
-		{
-		ThrowBadFormat ();
-		}
+	// s is validated once in HuffDecoderInit for the scan's active DC
+	// tables. Keep this path branch-free, but use only defined unsigned
+	// arithmetic so we preserve the hardening from the earlier fix.
 
-	if (s > 0)
-		{
-		const int32 signThreshold = 1 << (s - 1);
+	const uint32 shift		 = (uint32) s;
+	const int32 signThreshold = (int32) (0x08000u >> (16 - shift));
+	const uint32 extendMask	 = (1u << shift) - 1u;
+	const uint32 needsExtend  = (x < signThreshold) ? 0xffffffffu : 0u;
 
-		if (x < signThreshold)
-			{
-			const int32 extendMask = (1 << s) - 1;
-			x -= extendMask;
-			}
-		}
+	x -= (int32) (needsExtend & extendMask);
 
 	}
 

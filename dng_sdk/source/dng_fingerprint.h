@@ -113,7 +113,12 @@ class dng_fingerprint
 		/// Convert fingerprint to UTF-8 string and return result as a dng_string.
 
 		dng_string ToUtf8HexString () const;
+		
+		/// Utility function to convert hex char to a numbrer.
+		/// Returns -1 if invalid hex charactor.
 
+		static int HexCharToNum (char hexChar);
+		
 		/// Convert UTF-8 string to fingerprint. Returns true on success, false on
 		/// failure.
 		///

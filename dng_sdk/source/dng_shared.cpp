@@ -1402,7 +1402,8 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 			fProfileGainTableMap.reset
 				(dng_gain_table_map::GetStream (host,
 												stream,
-												useVersion2format));
+												useVersion2format,
+												tagCount));
 
 			auto pgtm = fProfileGainTableMap;
 			
@@ -1427,7 +1428,8 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 
 			#endif	// qDNGValidate
 			
-			if (stream.Position () > tagOffset + (uint64) tagCount)
+			if (stream.Position () > SafeUint64Add (tagOffset,
+													(uint64) tagCount))
 				ThrowBadFormat ("tcProfileGainTableMap2 parse error");
 			
 			break;
@@ -1518,7 +1520,8 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 
 			fMaskedRGBTables.reset (dng_masked_rgb_tables::GetStream (host,
 																	  stream,
-																	  isDraft));
+																	  isDraft,
+																	  tagCount));
 
 			#if qDNGValidate
 
@@ -1543,7 +1546,8 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 
 			#endif	// qDNGValidate
 			
-			if (stream.Position () > tagOffset + (uint64) tagCount)
+			if (stream.Position () > SafeUint64Add (tagOffset,
+													(uint64) tagCount))
 				{
 				
 				ThrowBadFormat ("tcRGBTables parse error");
@@ -1840,6 +1844,28 @@ bool dng_shared::ParseTag (dng_stream &stream,
 
 		}
 		
+	if (parentCode == 0 ||
+		(parentCode >= tcFirstChainedIFD &&
+		 parentCode <= tcLastChainedIFD))
+		{
+
+		// Parse tags allowed to appear in IFD0 or any IFD in the main chain.
+
+		if (Parse_main_chain_ifd (stream,
+								  exif,
+								  parentCode,
+								  tagCode,
+								  tagType,
+								  tagCount,
+								  tagOffset))
+			{
+
+			return true;
+
+			}
+
+		}
+
 	return false;
 		
 	}
@@ -2069,33 +2095,6 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			
 			}
 			
-		case tcC2PAManifest:
-			{
-		
-			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
-			
-			fC2PAManifestOffset = stream.Position ();
-			fC2PAManifestCount  = tagCount;
-			
-			#if qDNGValidate
-			
-			if (gVerbose)
-				{
-				
-				printf ("C2PAManifest: offset = %llu, count = %u\n",
-						(unsigned long long) fC2PAManifestOffset,
-						(unsigned) 			 fC2PAManifestCount);
-						
-				DumpHexAscii (stream, fC2PAManifestCount);
-				
-				}
-				
-			#endif
-				
-			break;
-				
-			}
-
 		case tcDNGVersion:
 			{
 			
@@ -3680,23 +3679,62 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 
 			char *ptr = &buf [0];
 
+			const uint64 startPosition = stream.Position ();
+
+			if (startPosition > 0xFFFFFFFFFFFFFFFFull - tagCount)
+				{
+				ThrowBadFormat ("Invalid ImageSequenceInfo tag count");
+				}
+
+			const uint64 endPosition = startPosition + tagCount;
+
+			auto getString = [&] ()
+				{
+
+				memset (ptr, 0, tagCount + 1);
+
+				uint32 index = 0;
+
+				while (stream.Position () < endPosition)
+					{
+
+					char c = (char) stream.Get_uint8 ();
+
+					if (index + 1 < tagCount)
+						ptr [index++] = c;
+
+					if (c == 0)
+						return;
+
+					}
+
+				ThrowBadFormat ("Unterminated ImageSequenceInfo string");
+
+				};
+
 			// Read sequence ID.
 
-			stream.Get_CString (ptr, tagCount);
+			getString ();
 
 			info.fSequenceID.Set (ptr);
 
 			// Read sequence type.
 			
-			stream.Get_CString (ptr, tagCount);
+			getString ();
 
 			info.fSequenceType.Set (ptr);
 
 			// Read frame info.
 
-			stream.Get_CString (ptr, tagCount);
+			getString ();
 
 			info.fFrameInfo.Set (ptr);
+
+			if (stream.Position () > endPosition ||
+				9 > endPosition - stream.Position ())
+				{
+				ThrowBadFormat ("Truncated ImageSequenceInfo fields");
+				}
 
 			// Get index, count, and final fields.
 
@@ -3706,6 +3744,8 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 			info.fCount = stream.Get_uint32 ();
 			
 			info.fIsFinal = stream.Get_uint8 ();
+
+			stream.SetReadPosition (endPosition);
 
 			#if qDNGValidate
 
@@ -4454,4 +4494,67 @@ bool dng_shared::IsValidDNG ()
 	
 	}
 	
+/*****************************************************************************/
+
+// Parses tags that may appear in any IFD in the main IFD chain
+// (IFD 0 or any chained IFD reached via the NextIFD pointer).
+// If a tag appears in more than one IFD then data from the last
+// occurrence will overwrite that of any previous occurrence.
+//
+// tcC2PAManifest:
+// Per the C2PA specification, the C2PA manifest tag shall be located
+// within the last IFD of the main-IFD chain.  For TIFF assets with a
+// single IFD, it resides in IFD 0.  For assets with more than one IFD,
+// it shall be in the last chained IFD.  Because any main-chain IFD is
+// a conformant location, we accept the tag from all of them and let
+// the last occurrence win (matching the C2PA spec's placement intent).
+
+bool dng_shared::Parse_main_chain_ifd (dng_stream &stream,
+									   dng_exif & /* exif */,
+									   uint32 parentCode,
+									   uint32 tagCode,
+									   uint32 tagType,
+									   uint32 tagCount,
+									   uint64 /* tagOffset */)
+	{
+
+	switch (tagCode)
+		{
+
+		case tcC2PAManifest:
+			{
+
+			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
+
+			fC2PAManifestOffset = stream.Position ();
+			fC2PAManifestCount  = tagCount;
+
+			#if qDNGValidate
+
+			if (gVerbose)
+				{
+
+				printf ("C2PAManifest: offset = %llu, count = %u\n",
+						(unsigned long long) fC2PAManifestOffset,
+						(unsigned) 			 fC2PAManifestCount);
+
+				DumpHexAscii (stream, fC2PAManifestCount);
+
+				}
+
+			#endif
+
+			break;
+
+			}
+
+		default:
+			return false;
+
+		}
+
+	return true;
+
+	}
+
 /*****************************************************************************/

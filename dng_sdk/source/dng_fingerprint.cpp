@@ -222,7 +222,7 @@ dng_string dng_fingerprint::ToUtf8HexString () const
 
 /******************************************************************************/
 
-static int HexCharToNum (char hexChar)
+int dng_fingerprint::HexCharToNum (char hexChar)
 	{
 	
 	if (hexChar >= '0' && hexChar <= '9')

@@ -1157,6 +1157,13 @@ bool dng_ifd::ParseTag (dng_host &host,
 			{
 			
 			CheckTagType (parentCode, tagCode, tagType, ttUndefined);
+
+			const uint32 kMaxJPEGTablesBytes = 64u * 1024u * 1024u;
+
+			if (tagCount > kMaxJPEGTablesBytes)
+				{
+				ThrowBadFormat ("JPEGTables tag too large");
+				}
 			
 			fJPEGTablesCount  = tagCount;
 			fJPEGTablesOffset = tagOffset;
@@ -2769,7 +2776,8 @@ bool dng_ifd::ParseTag (dng_host &host,
 			std::shared_ptr<dng_gain_table_map> pgtm
 				(dng_gain_table_map::GetStream (host,
 												stream,
-												useVersion2format));
+												useVersion2format,
+												tagCount));
 
 			// If both PGTM and PGTM2 tags are present, then the latter
 			// supersedes the former.
@@ -2809,7 +2817,8 @@ bool dng_ifd::ParseTag (dng_host &host,
 
 			#endif	// qDNGValidate
 			
-			if (stream.Position () > tagOffset + (uint64) tagCount)
+			if (stream.Position () > SafeUint64Add (tagOffset,
+													(uint64) tagCount))
 				{
 
 				if (useVersion2format)
@@ -3038,7 +3047,8 @@ bool dng_ifd::ParseTag (dng_host &host,
 			
 			CheckRawIFD (parentCode, tagCode, fPhotometricInterpretation);
 
-			fImageStats.Parse (stream);
+			fImageStats.Parse (stream,
+							   tagCount);
 
 			#if qDNGValidate
 

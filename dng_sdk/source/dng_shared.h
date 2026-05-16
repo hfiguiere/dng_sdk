@@ -324,6 +324,14 @@ class dng_shared
 									  uint32 tagCount,
 									  uint64 tagOffset);
 	
+		virtual bool Parse_main_chain_ifd (dng_stream &stream,
+										   dng_exif &exif,
+										   uint32 parentCode,
+										   uint32 tagCode,
+										   uint32 tagType,
+										   uint32 tagCount,
+										   uint64 tagOffset);
+
 	};
 	
 /*****************************************************************************/

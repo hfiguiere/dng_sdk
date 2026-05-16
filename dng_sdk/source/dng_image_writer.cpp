@@ -3263,23 +3263,35 @@ big_table_tag_set::big_table_tag_set (dng_host &host,
 	if (!fDictionary.IsEmpty ())
 		{
 		
-		uint32 count = (uint32) fDictionary.Map ().size ();
+		const size_t count64 = fDictionary.Map ().size ();
+
+		if (count64 > size_t (0xFFFFFFFFu))
+			{
+			ThrowProgramError ("Too many BigTable entries");
+			}
+
+		uint32 count = (uint32) count64;
+
+		const uint32 digestBytes = SafeUint32Mult (count, 16);
 		
-		fDigestsBuffer.Reset (host.Allocate (count * 16));
+		fDigestsBuffer.Reset (host.Allocate (digestBytes));
 		
-		fBigTableDigests.SetCount (count * 16);
+		fBigTableDigests.SetCount (digestBytes);
 		fBigTableDigests.SetData  (fDigestsBuffer->Buffer_uint8 ());
 		
 		directory.Add (&fBigTableDigests);
+
+		const uint32 indexBytes = SafeUint32Mult (count,
+												  (uint32) sizeof (uint32));
 		
-		fOffsetsBuffer.Reset (host.Allocate (count * sizeof (uint32)));
+		fOffsetsBuffer.Reset (host.Allocate (indexBytes));
 		
 		fBigTableOffsets.SetCount (count);
 		fBigTableOffsets.SetData  (fOffsetsBuffer->Buffer_uint32 ());
 		
 		directory.Add (&fBigTableOffsets);
 		
-		fByteCountsBuffer.Reset (host.Allocate (count * sizeof (uint32)));
+		fByteCountsBuffer.Reset (host.Allocate (indexBytes));
 		
 		fBigTableByteCounts.SetCount (count);
 		fBigTableByteCounts.SetData	 (fByteCountsBuffer->Buffer_uint32 ());
@@ -3291,11 +3303,18 @@ big_table_tag_set::big_table_tag_set (dng_host &host,
 		if (!groupIndex.IsEmpty ())
 			{
 
-			const uint32 groups = (uint32) groupIndex.Map ().size ();
+			const size_t groupCount64 = groupIndex.Map ().size ();
+
+			if (groupCount64 > size_t (0xFFFFFFFFu))
+				{
+				ThrowProgramError ("Too many BigTable groups");
+				}
+
+			const uint32 groups = (uint32) groupCount64;
 
 			constexpr uint32 bytesPerGroup = 2 * 16;
 
-			const uint32 totalBytes = groups * bytesPerGroup;
+			const uint32 totalBytes = SafeUint32Mult (groups, bytesPerGroup);
 			
 			fGroupBuffer.Reset (host.Allocate (totalBytes));
 
