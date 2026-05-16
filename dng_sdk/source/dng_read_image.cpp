@@ -3567,11 +3567,15 @@ void dng_read_image::Read (dng_host &host,
 						{
 						tilesInOrder = false;
 						}
-						
-					totalTileBytes += thisByteCount;
+
+					const uint64 tileEnd = SafeUint64Add (thisOffset,
+														  thisByteCount);
+
+					totalTileBytes = SafeUint64Add (totalTileBytes,
+													thisByteCount);
 					
 					minFileOffset = Min_uint64 (minFileOffset, thisOffset);
-					maxFileOffset = Max_uint64 (maxFileOffset, thisOffset + thisByteCount);
+					maxFileOffset = Max_uint64 (maxFileOffset, tileEnd);
 					
 					tileIndex++;
 					
@@ -3598,8 +3602,11 @@ void dng_read_image::Read (dng_host &host,
 			// And are going to read at least 90% of the bytes in the range?
 			
 			uint64 totalFileBytes = maxFileOffset - minFileOffset;
+
+			uint64 threshold = (totalFileBytes / 10) * 9 +
+							   ((totalFileBytes % 10) * 9) / 10;
 			
-			if (totalTileBytes >= totalFileBytes * 9 / 10)
+			if (totalTileBytes >= threshold)
 				{
 				
 				contiguousByteCount = totalFileBytes;

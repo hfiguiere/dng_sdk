@@ -508,6 +508,14 @@ class dng_jxl_io_buffer
 						size_t remaining)
 			{
 
+			if (stream.Position () > stream.Length () ||
+				fIndex > fMaxBufferSize				 ||
+				fDataSize > fMaxBufferSize			 ||
+				remaining > fDataSize)
+				{
+				ThrowBadFormat ("Invalid JXL IO buffer state");
+				}
+
 			size_t bytes_remaining_in_stream =
 				(size_t) (stream.Length () - stream.Position ());
 
@@ -533,22 +541,46 @@ class dng_jxl_io_buffer
 
 			// Update our pointer past the previously-consumed bytes.
 
+			if (prev_read_size > fMaxBufferSize - fIndex)
+				{
+				ThrowBadFormat ("Invalid JXL IO buffer state");
+				}
+
 			fIndex += prev_read_size;
 
-			// If reading the next chunk would spill beyond the end of our
-			// buffer, then reset to the beginning of our buffer. We need to
-			// move the remaining data. If our internal buffer is much larger
-			// than the chunk size, then this will be relatively rare.
+			if (remaining > fMaxBufferSize - fIndex)
+				{
+				ThrowBadFormat ("Invalid JXL IO buffer state");
+				}
 
-			if (fIndex + next_read_size > fMaxBufferSize)
+			// If reading the next chunk would spill beyond the end of our
+			// buffer, then reset to the beginning of our buffer. We need to move
+			// the remaining data. If our internal buffer is much larger than the
+			// chunk size, then this will be relatively rare.
+
+			size_t bytes_available_in_buffer = fMaxBufferSize - fIndex - remaining;
+
+			if (next_read_size > bytes_available_in_buffer && fIndex != 0)
 				{
 
 				memmove (fBlock->Buffer (),
 						 fBlock->Buffer_uint8 () + fIndex,
 						 remaining);
-						 
+
 				fIndex = 0;
-				
+
+				bytes_available_in_buffer = fMaxBufferSize - remaining;
+
+				}
+
+			if (next_read_size > bytes_available_in_buffer)
+				{
+				next_read_size = bytes_available_in_buffer;
+				}
+
+			if (next_read_size == 0)
+				{
+				ThrowBadFormat ("JXL decoder retained too much input");
 				}
 
 			// Read from the stream.
@@ -719,8 +751,10 @@ class jxl_data_writer2
 
 		AutoPtr<dng_memory_block> fBlock;
 
+		size_t fBufferSize = 0ULL;
+
 		size_t fPosition = 0ULL;
-		
+
 		size_t fFinalizedPosition = 0ULL;
 
 		size_t fStartPosition = 0ULL;
@@ -785,7 +819,9 @@ class jxl_data_writer2
 
 			fStartPosition = fPosition;
 
-			*size = (size_t) fBlock->LogicalSize ();
+			fBufferSize = (size_t) fBlock->LogicalSize ();
+
+			*size = fBufferSize;
 
 			return fBlock->Buffer ();
 
@@ -800,9 +836,19 @@ class jxl_data_writer2
 					int (written_bytes));
 
 			#endif
-			
+
+			if (written_bytes > fBufferSize)
+				{
+				ThrowBadFormat ("Invalid JXL output buffer state");
+				}
+
+			if (written_bytes > size_t (-1) - fPosition)
+				{
+				ThrowOverflow ("JXL output position overflow");
+				}
+
 			fPosition += written_bytes;
-			
+
 			}
 		
 		void set_finalized_position (size_t finalized_position)
@@ -815,15 +861,26 @@ class jxl_data_writer2
 					int (finalized_position));
 
 			#endif
-			
+
 			fFinalizedPosition = finalized_position;
-			
-			if (finalized_position > fStartPosition &&
-				(finalized_position < fStartPosition + kMaxSize))
+
+			if (finalized_position < fStartPosition)
+				{
+				ThrowBadFormat ("Invalid JXL finalized position");
+				}
+
+			size_t finalizedBytes = finalized_position - fStartPosition;
+
+			if (finalizedBytes > fBufferSize)
+				{
+				ThrowBadFormat ("Invalid JXL finalized byte count");
+				}
+
+			if (finalizedBytes > 0)
 				{
 
 				fStream.Put (fBlock->Buffer (),
-							 uint32 (finalized_position - fStartPosition));
+							 uint32 (finalizedBytes));
 
 				}
 			
@@ -2237,6 +2294,14 @@ static void EncodeJXL (dng_host &host,
 
 class dng_jxl_box_reader
 	{
+
+	private:
+
+		enum
+			{
+			kInitialJXLBoxBufferSize = 4096,
+			kMaxJXLBoxDataSize	   = 128 * 1024 * 1024
+			};
 		
 	public:
 
@@ -2316,11 +2381,12 @@ class dng_jxl_box_reader
 
 				}
 
-			// This check might be a problem for large gain maps.
+			// Apply the same metadata-box size policy before requesting
+			// decompressed output from libjxl.
 
 			#if 1
 
-			else if (size > 128 * 1024 * 1024)
+			else if (size > kMaxJXLBoxDataSize)
 				 {
 
 				 #if qLogJXL
@@ -2343,7 +2409,7 @@ class dng_jxl_box_reader
 
 				if (fData.empty ())
 					{
-					fData.resize (4096);
+					fData.resize (kInitialJXLBoxBufferSize);
 					}
 
 				CheckResult (JxlDecoderSetBoxBuffer (fDec,
@@ -2363,9 +2429,31 @@ class dng_jxl_box_reader
 		
 			size_t remaining = JxlDecoderReleaseBoxBuffer (fDec);
 
+			if (fData.empty () ||
+				remaining > fData.size ())
+				{
+				ThrowBadFormat ("Invalid JXL box buffer state");
+				}
+
 			fIndex = fData.size () - remaining;
 
-			size_t newSize = 2 * fData.size ();
+			if (fData.size () >= kMaxJXLBoxDataSize)
+				{
+				ThrowBadFormat ("JXL box too large");
+				}
+
+			size_t newSize = fData.size () * 2;
+
+			if (newSize <= fData.size () ||
+				newSize > kMaxJXLBoxDataSize)
+				{
+				newSize = kMaxJXLBoxDataSize;
+				}
+
+			if (newSize <= fIndex)
+				{
+				ThrowBadFormat ("JXL box too large");
+				}
 
 			fData.resize (newSize);
 
@@ -2391,6 +2479,11 @@ class dng_jxl_box_reader
 				{
 
 				size_t remaining = JxlDecoderReleaseBoxBuffer (fDec);
+
+				if (remaining > fData.size ())
+					{
+					ThrowBadFormat ("Invalid JXL box buffer state");
+					}
 
 				fData.resize (fData.size () - remaining);
 

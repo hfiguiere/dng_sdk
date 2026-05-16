@@ -252,7 +252,7 @@ class dng_stream: private dng_uncopyable
 
 		void Skip (uint64 delta)
 			{
-			SetReadPosition (Position () + delta);
+			SetReadPosition (SafeUint64Add (Position (), delta));
 			}
 		
 		/// Quick check to see if data range is completely buffered.

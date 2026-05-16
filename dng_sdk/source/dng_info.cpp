@@ -683,7 +683,44 @@ void dng_info::ParseIFD (dng_host &host,
 
 			if (SafeUint64Add (tagOffset, tag_data_size) > stream.Length ())
 				{
-				ThrowBadFormat ("tag payload past stream end");
+
+				// Throw unless this is a known case to ignore bad tags:
+				// 1. EXIF IFD — vendor cameras may write proprietary
+				//    tags with over-declared sizes here.
+				// 2. IFD 0 tag 50457 (0xC519) — Phocus may write
+				//    this with an inflated byte count past EOF for
+				//    some FFF files.
+
+				if (parentCode != tcExifIFD &&
+					!(parentCode == 0 && tagCode == 0xC519))
+					{
+
+					ThrowBadFormat ("tag payload past stream end");
+
+					}
+
+				#if qDNGValidate
+
+					{
+
+					char message [256];
+
+					snprintf (message,
+							  256,
+							  "%s %s payload extends past stream end (offset=%llu, size=%llu); skipping",
+							  LookupParentCode (parentCode),
+							  LookupTagCode (parentCode, tagCode),
+							  (unsigned long long) tagOffset,
+							  (unsigned long long) tag_data_size);
+
+					ReportWarning (message);
+
+					}
+
+				#endif
+
+				continue;
+
 				}
 
 			localTag = ifdStream.DataInBuffer (tag_data_size,
@@ -1870,6 +1907,40 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 		
 		uint32 section_key	 = stream.Get_uint32 ();
 		uint32 section_count = stream.Get_uint32 ();
+
+		const uint32 section_data_offset = SafeUint32Add (section_offset, 8);
+
+		if (section_data_offset > fShared->fDNGPrivateDataCount ||
+			section_count > fShared->fDNGPrivateDataCount - section_data_offset)
+			{
+			ThrowBadFormat ("DNGPrivateData section extends past tag data");
+			}
+
+		const uint32 section_end_offset =
+			SafeUint32Add (section_data_offset, section_count);
+
+		const uint64 section_data_start =
+			SafeUint64Add (fShared->fDNGPrivateDataOffset,
+						   section_data_offset);
+
+		const uint64 section_end =
+			SafeUint64Add (fShared->fDNGPrivateDataOffset,
+						   section_end_offset);
+
+		const auto requireSectionRange =
+			[section_data_start,
+			 section_end] (uint64 range_offset,
+						   uint64 range_count)
+			{
+
+			if (range_offset < section_data_start ||
+				range_offset > section_end ||
+				range_count > section_end - range_offset)
+				{
+				ThrowBadFormat ("DNGPrivateData section read out of bounds");
+				}
+
+			};
 		
 		if (section_key == DNG_CHAR4 ('M','a','k','N') && section_count > 6)
 			{
@@ -1883,6 +1954,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				
 			#endif
 				
+			requireSectionRange (stream.Position (), 6);
+
 			uint16 order_mark = stream.Get_uint16 ();
 			int64 old_offset  = stream.Get_uint32 ();
 
@@ -1922,10 +1995,15 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				
 			#endif
 			
+			requireSectionRange (stream.Position (), 6);
+
 			uint16 order_mark = stream.Get_uint16 ();
 			uint64 old_offset = stream.Get_uint32 ();
 
-			uint64 new_offset = fShared->fDNGPrivateDataOffset + section_offset + 14;
+			uint64 new_offset =
+				SafeUint64Add (fShared->fDNGPrivateDataOffset,
+							   (uint64) section_offset,
+							   14ull);
 			
 			TempBigEndian sr2_order (stream, order_mark == byteOrderMM);
 			
@@ -1949,6 +2027,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				
 			#endif
 			
+			requireSectionRange (stream.Position (), 6);
+
 			uint16 order_mark = stream.Get_uint16 ();
 			
 			uint32 tagCount = stream.Get_uint32 ();
@@ -1959,6 +2039,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				{
 				
 				TempBigEndian raf_order (stream, order_mark == byteOrderMM);
+
+				requireSectionRange (tagOffset, tagCount);
 				
 				ParseTag (host,
 						  stream,
@@ -1976,6 +2058,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				
 				}
 			
+			requireSectionRange (stream.Position (), 4);
+
 			tagCount = stream.Get_uint32 ();
 			
 			tagOffset = stream.Position ();
@@ -1984,6 +2068,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				{
 				
 				TempBigEndian raf_order (stream, order_mark == byteOrderMM);
+
+				requireSectionRange (tagOffset, tagCount);
 				
 				ParseTag (host,
 						  stream,
@@ -2001,6 +2087,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				
 				}
 			
+			requireSectionRange (stream.Position (), 4);
+
 			tagCount = stream.Get_uint32 ();
 			
 			tagOffset = stream.Position ();
@@ -2009,6 +2097,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				{
 				
 				TempBigEndian raf_order (stream, order_mark == byteOrderMM);
+
+				requireSectionRange (tagOffset, tagCount);
 				
 				ParseTag (host,
 						  stream,
@@ -2040,6 +2130,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				
 			#endif
 			
+			requireSectionRange (stream.Position (), 6);
+
 			uint16 order_mark = stream.Get_uint16 ();
 			
 			uint32 tagCount	 = stream.Get_uint32 ();
@@ -2050,6 +2142,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				{
 				
 				TempBigEndian contax_order (stream, order_mark == byteOrderMM);
+
+				requireSectionRange (tagOffset, tagCount);
 				
 				ParseTag (host,
 						  stream,
@@ -2079,6 +2173,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 				
 			#endif
 				
+			requireSectionRange (stream.Position (), 4);
+
 			uint16 order_mark = stream.Get_uint16 ();
 			uint32 entries	  = stream.Get_uint16 ();
 			
@@ -2091,6 +2187,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 			
 				for (uint32 index = 0; index < entries; index++)
 					{
+
+					requireSectionRange (stream.Position (), 6);
 					
 					uint32 tagCode = stream.Get_uint16 ();
 											 
@@ -2105,6 +2203,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 						{
 				
 						TempBigEndian tag_order (stream, order_mark == byteOrderMM);
+
+						requireSectionRange (tagOffset, tagCount);
 					
 						ParseTag (host,
 								  stream,
@@ -2117,10 +2217,12 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 								  tagCount,
 								  tagOffset,
 								  0);
-								  
+
 						}
 					
-					stream.SetReadPosition (tagOffset + tagCount);
+					requireSectionRange (tagOffset, tagCount);
+
+					stream.SetReadPosition (SafeUint64Add (tagOffset, tagCount));
 					
 					}
 					
@@ -2189,11 +2291,20 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 					
 				#endif
 				
+				requireSectionRange (stream.Position (), 4);
+
 				uint16 order_mark = stream.Get_uint16 ();
 				uint32 entries	  = stream.Get_uint16 ();
 				
 				for (uint32 index = 0; index < entries; index++)
 					{
+
+					const uint32 entryHeaderSize =
+						SafeUint32Add (code32 ? 4u : 2u,
+									   hasType ? 2u : 0u,
+									   4u);
+
+					requireSectionRange (stream.Position (), entryHeaderSize);
 					
 					uint32 tagCode = code32 ? stream.Get_uint32 ()
 											: stream.Get_uint16 ();
@@ -2206,6 +2317,8 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 					uint32 tagSize = SafeUint32Mult (tagCount, TagTypeSize (tagType));
 					
 					uint64 tagOffset = stream.Position ();
+
+					requireSectionRange (tagOffset, tagSize);
 					
 					TempBigEndian tag_order (stream, order_mark == byteOrderMM);
 				
@@ -2229,11 +2342,15 @@ void dng_info::ParseDNGPrivateData (dng_host &host,
 			
 			}
 		
-		section_offset = SafeUint32Add (section_offset, 8);
-		section_offset = SafeUint32Add (section_offset, section_count);
+		section_offset = section_end_offset;
 		
 		if (section_offset & 1)
 			{
+			if (section_offset >= fShared->fDNGPrivateDataCount)
+				{
+				break;
+				}
+
 			section_offset = SafeUint32Add (section_offset, 1);
 			}
 		
@@ -2431,8 +2548,8 @@ void dng_info::Parse (dng_host &host,
 			
 		ParseIFD (host,
 				  stream,
-				  NULL,
-				  NULL,
+				  fExif.Get (),
+				  fShared.Get (),
 				  fChainedIFD [ChainedIFDCount () - 1],
 				  fTIFFBlockOffset + next_offset,
 				  fTIFFBlockOffset,

@@ -17,6 +17,7 @@
 #include "dng_flags.h"
 #include "dng_memory.h"
 #include "dng_rect.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_tag_types.h"
 #include "dng_assertions.h"
 
@@ -212,15 +213,24 @@ dng_memory_block * dng_stream::AsMemoryBlock (dng_memory_allocator &allocator,
 	
 	uint64 len64 = Length ();
 	
-	if (len64 + uint64 (numLeadingZeroBytes) > 0xFFFFFFFF)
+	if (len64 > 0xFFFFFFFF)
 		{
 		ThrowProgramError ();
 		}
 	
 	uint32 len = (uint32) len64;
+
+	uint32 blockSize = 0;
+
+	if (!SafeUint32Add (len,
+						numLeadingZeroBytes,
+						&blockSize))
+		{
+		ThrowProgramError ();
+		}
 	
 	AutoPtr<dng_memory_block> block
-		(allocator.Allocate (len + numLeadingZeroBytes));
+		(allocator.Allocate (blockSize));
 	
 	if (len)
 		{
@@ -455,6 +465,11 @@ void dng_stream::Put (const void *data,
 	
 	// See if we can replace or append to the existing buffer.
 	
+	if (count > 0xFFFFFFFFFFFFFFFFull - fPosition)
+		{
+		ThrowProgramError ("stream write position overflow");
+		}
+
 	uint64 endPosition = fPosition + count;
 	
 	if (fBufferDirty				&&
@@ -1537,7 +1552,7 @@ dng_stream_contiguous_read_hint::dng_stream_contiguous_read_hint
 	
 	// Don't bother changing buffer size if only a small change.
 	
-	if (count > fOldBufferSize * 4)
+	if (count > uint64 (fOldBufferSize) * 4)
 		{
 		
 		// Round contiguous size up and down to stream blocks.
@@ -1546,7 +1561,9 @@ dng_stream_contiguous_read_hint::dng_stream_contiguous_read_hint
 		
 		uint64 blockMask  = ~((int64) blockRound);
 		
-		count = (count + (offset & blockRound) + blockRound) & blockMask;
+		count = SafeUint64Add (count,
+							   offset & blockRound,
+							   blockRound) & blockMask;
 		
 		// Limit to maximum buffer size.
 		
@@ -1555,13 +1572,16 @@ dng_stream_contiguous_read_hint::dng_stream_contiguous_read_hint
 		// To avoid reading too many bytes with the final read, adjust buffer
 		// size the to make an exact number of buffers fit.
 		
-		uint64 numBuffers = (count + newBufferSize - 1) / newBufferSize;
+		uint64 numBuffers = SafeUint64Add (count,
+										   newBufferSize - 1) / newBufferSize;
 		
-		newBufferSize = (count + numBuffers - 1) / numBuffers;
+		newBufferSize = SafeUint64Add (count,
+									   numBuffers - 1) / numBuffers;
 		
 		// Finally round up to a block size.
 		
-		newBufferSize = (newBufferSize + blockRound) & blockMask;
+		newBufferSize = SafeUint64Add (newBufferSize,
+									   blockRound) & blockMask;
 		
 		// Change the buffer size.
 		

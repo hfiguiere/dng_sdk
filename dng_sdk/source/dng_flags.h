@@ -27,8 +27,8 @@
 
 #define kDNGSDK_VersionString "1.7.1"
 
-#define kDNGSDK_BuildVersion 2536
-#define kDNGSDK_BuildString  "2536"
+#define kDNGSDK_BuildVersion 2573
+#define kDNGSDK_BuildString  "2573"
 
 #define kDNGSDK_GetInfoVersion	"1.7.1 (" kDNGSDK_BuildString ")"
 

@@ -49,6 +49,12 @@
 
 /*****************************************************************************/
 
+static const uint32 kMaxEmbeddedMakerNoteBlockSize	= 128u * 1024u * 1024u;
+static const uint32 kMaxEmbeddedIPTCBlockSize		= 128u * 1024u * 1024u;
+static const uint32 kMaxEmbeddedXMPBlockSize		= 128u * 1024u * 1024u;
+
+/*****************************************************************************/
+
 void dng_semantic_mask::CalcMaskSubArea (dng_point &origin,
 										 dng_rect &wholeImageArea) const
 	{
@@ -3989,6 +3995,11 @@ void dng_negative::PostParse (dng_host &host,
 			if (IsMakerNoteSafe () && info.fTIFFBlockOriginalOffset != kDNGStreamInvalidOffset)
 				{
 
+				if (shared.fMakerNoteCount > kMaxEmbeddedMakerNoteBlockSize)
+					{
+					ThrowBadFormat ("MakerNote block too large");
+					}
+
 				AutoPtr<dng_memory_block> block (host.Allocate (shared.fMakerNoteCount));
 				
 				stream.SetReadPosition (shared.fMakerNoteOffset + info.fTIFFBlockOriginalOffset -
@@ -4006,6 +4017,11 @@ void dng_negative::PostParse (dng_host &host,
 		
 		if (shared.fIPTC_NAA_Count)
 			{
+
+			if (shared.fIPTC_NAA_Count > kMaxEmbeddedIPTCBlockSize)
+				{
+				ThrowBadFormat ("IPTC block too large");
+				}
 			
 			AutoPtr<dng_memory_block> block (host.Allocate (shared.fIPTC_NAA_Count));
 			
@@ -4026,6 +4042,11 @@ void dng_negative::PostParse (dng_host &host,
 		
 		if (shared.fXMPCount)
 			{
+
+			if (shared.fXMPCount > kMaxEmbeddedXMPBlockSize)
+				{
+				ThrowBadFormat ("XMP block too large");
+				}
 			
 			AutoPtr<dng_memory_block> block (host.Allocate (shared.fXMPCount));
 			

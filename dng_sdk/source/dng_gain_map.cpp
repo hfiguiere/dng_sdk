@@ -853,8 +853,16 @@ void dng_gain_table_map::PutStream (dng_stream &stream,
 
 dng_gain_table_map * dng_gain_table_map::GetStream (dng_host &host,
 													dng_stream &stream,
-													const bool useVersion2)
+													const bool useVersion2,
+													uint32 tagByteCount)
 	{
+
+	const uint32 headerByteCount = useVersion2 ? 80u : 64u;
+
+	if (tagByteCount < headerByteCount)
+		{
+		ThrowBadFormat ("ProfileGainTableMap tag is truncated");
+		}
 	
 	dng_point mapPoints;
 	
@@ -993,6 +1001,32 @@ dng_gain_table_map * dng_gain_table_map::GetStream (dng_host &host,
 		numTablePoints < 1)
 		{
 		ThrowBadFormat ();
+		}
+
+	uint32 bytesPerEntry = 4;
+
+	if (dataType == 0)
+		{
+		bytesPerEntry = 1;
+		}
+
+	else if (dataType <= 2)
+		{
+		bytesPerEntry = 2;
+		}
+
+	const uint32 dataByteCount =
+		SafeUint32Mult ((uint32) mapPoints.v,
+						(uint32) mapPoints.h,
+						numTablePoints,
+						bytesPerEntry);
+
+	const uint32 requiredByteCount =
+		SafeUint32Add (headerByteCount, dataByteCount);
+
+	if (requiredByteCount > tagByteCount)
+		{
+		ThrowBadFormat ("ProfileGainTableMap table data is truncated");
 		}
 
 	// Read the weights.
@@ -1330,8 +1364,47 @@ dng_opcode_GainMap::dng_opcode_GainMap (dng_host &host,
 	uint32 byteCount = stream.Get_uint32 ();
 	
 	uint64 startPosition = stream.Position ();
+
+	if (startPosition > 0xFFFFFFFFFFFFFFFFull - byteCount)
+		{
+		ThrowBadFormat ("Invalid GainMap opcode byte count");
+		}
+
+	const uint64 endPosition = startPosition + byteCount;
 	
 	fAreaSpec.GetData (stream);
+
+	if (stream.Position () > endPosition ||
+		44 > endPosition - stream.Position ())
+		{
+		ThrowBadFormat ("Truncated GainMap opcode data");
+		}
+
+	const uint64 gainMapPosition = stream.Position ();
+
+	const uint32 mapPointsV = stream.Get_uint32 ();
+	const uint32 mapPointsH = stream.Get_uint32 ();
+
+	(void) stream.Get_real64 ();
+	(void) stream.Get_real64 ();
+	(void) stream.Get_real64 ();
+	(void) stream.Get_real64 ();
+
+	const uint32 mapPlanes = stream.Get_uint32 ();
+
+	const uint32 gainMapBytes =
+		SafeUint32Add (44,
+					   SafeUint32Mult (mapPointsV,
+										mapPointsH,
+										mapPlanes,
+										(uint32) sizeof (real32)));
+
+	if (gainMapBytes > endPosition - gainMapPosition)
+		{
+		ThrowBadFormat ("Invalid GainMap opcode payload size");
+		}
+
+	stream.SetReadPosition (gainMapPosition);
 	
 	fGainMap.Reset (dng_gain_map::GetStream (host, stream));
 	
