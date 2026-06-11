@@ -272,7 +272,19 @@ void dng_resample_weights::Initialize (real64 scale,
 				}
 				
 			// Scale 32 bit weights so total of weights is 1.0.
-				
+			//
+			// CR-4208475 M-L3: Guard against a zero weight sum. A
+			// pathological kernel that returns 0 for every sample (or
+			// produces NaN/Inf) would otherwise yield 1.0 / 0 = +Inf
+			// and propagate Inf / NaN into the weight table, which is
+			// later cast to int16.
+
+			if (!(t32 > 0.0))
+				{
+				ThrowProgramError ("dng_resample: zero or non-finite "
+								   "1D kernel weight sum");
+				}
+
 			real32 s32 = (real32) (1.0 / t32);
 				
 			for (j = 0; j < width; j++)
@@ -460,7 +472,16 @@ void dng_resample_weights_2d::Initialize (const dng_resample_function &kernel,
 					}
 				
 				// Scale 32 bit weights so total of weights is 1.0.
-				
+				//
+				// CR-4208475 M-L3: Mirror the 1D guard above for the
+				// 2D weight builder.
+
+				if (!(t32 > 0.0))
+					{
+					ThrowProgramError ("dng_resample: zero or non-finite "
+									   "2D kernel weight sum");
+					}
+
 				const real32 s32 = (real32) (1.0 / t32);
 				
 				for (uint32 i = 0; i < widthSqr; i++)

@@ -278,7 +278,7 @@ class dng_metadata
 		
 		bool fXMPisNewer;
 		
-		// Source file mimi-type, if known.
+		// Source file mime-type, if known.
 		
 		dng_string fSourceMIME;
 		
@@ -1081,7 +1081,7 @@ class dng_negative
 			
 		/// Getter for metadata
 			
-		dng_metadata &Metadata ()
+		dng_metadata & Metadata ()
 			{
 			return fMetadata;
 			}
@@ -1123,7 +1123,7 @@ class dng_negative
 		
 		#if qMetadataOnConst
 			
-		const dng_metadata &Metadata () const
+		const dng_metadata & Metadata () const
 			{
 			return fMetadata;
 			}
@@ -2465,13 +2465,18 @@ class dng_negative
 			
 		#endif	// qDNGUseXMP
 		
-		// API for source MIME type.
+		// Routines to set and get the source file MIME type.
 		
 		void SetSourceMIME (const char *s)
 			{
 			Metadata ().SetSourceMIME (s);
 			}
 		
+		const dng_string & SourceMIME () const
+			{
+			return fMetadata.SourceMIME ();
+			}
+
 		// API for linearization information:
 			
 		const dng_linearization_info * GetLinearizationInfo () const

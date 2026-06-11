@@ -1409,9 +1409,17 @@ dng_memory_block* dng_big_table::EncodeAsBinary (dng_memory_allocator &allocator
 
 		uint32 uncompressedSize = block1->LogicalSize ();
 
-		uint32 safeCompressedSize = uncompressedSize + (uncompressedSize >> 8) + 64;
+		// CR-4208475 N-L13: route the zlib destination sizing through
+		// SafeUint32Add so pathological in-memory big-table sizes cannot
+		// wrap and under-allocate the compress2 destination buffer.
 
-		block2.Reset (allocator.Allocate (safeCompressedSize + 4));
+		uint32 safeCompressedSize =
+			SafeUint32Add (SafeUint32Add (uncompressedSize,
+										  uncompressedSize >> 8),
+						   64u);
+
+		block2.Reset (allocator.Allocate (SafeUint32Add (safeCompressedSize,
+														 4u)));
 
 		// Store uncompressed size in first four bytes of compressed block.
 
@@ -1435,7 +1443,16 @@ dng_memory_block* dng_big_table::EncodeAsBinary (dng_memory_allocator &allocator
 			ThrowMemoryFull ();
 			}
 
-		compressedSize = (uint32) dCount + 4;
+		// CR-4208475 N-L13: dCount is uLongf (>= 32 bits). Require it fits
+		// in uint32 before narrowing, and route the + 4 through
+		// SafeUint32Add so the header-byte addition cannot wrap.
+
+		if (dCount > 0xFFFFFFFFu)
+			{
+			ThrowProgramError ("compress2 output too large for uint32");
+			}
+
+		compressedSize = SafeUint32Add (static_cast<uint32> (dCount), 4u);
 
 		block1.Reset ();
 
@@ -1477,10 +1494,16 @@ dng_memory_block* dng_big_table::EncodeAsString (dng_memory_allocator &allocator
 			"*?`'|()[]{"
 			"}@%$#";
 
-		uint32 safeEncodedSize = compressedSize +
-								 (compressedSize >> 2) +
-								 (compressedSize >> 6) +
-								 16;
+		// CR-4208475 N-L12: writer-side counterpart to the G-L1 ASCIItoBinary
+		// fix. Route the encoded-size accumulation through SafeUint32Add so
+		// a pathological compressedSize cannot wrap and under-allocate the
+		// destination buffer before the encode loop writes into it.
+
+		uint32 safeEncodedSize =
+			SafeUint32Add (SafeUint32Add (compressedSize,
+										  compressedSize >> 2),
+						   SafeUint32Add (compressedSize >> 6,
+										  16u));
 
 		block3.Reset (allocator.Allocate (safeEncodedSize));
 

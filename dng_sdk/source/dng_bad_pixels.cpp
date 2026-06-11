@@ -696,8 +696,20 @@ void dng_opcode_FixBadPixelsList::PutData (dng_stream &stream) const
 	
 	uint32 pCount = fList->PointCount ();
 	uint32 rCount = fList->RectCount  ();
-	
-	stream.Put_uint32 (12 + pCount * 8 + rCount * 16);
+
+	// CR-4208475 M-L5: Mirror the parser-side SafeUint32Add /
+	// SafeUint32Mult preflight used by GetData on the same payload
+	// layout (12 + pCount * 8 + rCount * 16). The write path
+	// previously used raw uint32 arithmetic, so a list whose
+	// (pCount, rCount) wrapped uint32 would have written a truncated
+	// size header that no longer matched the bytes actually emitted.
+
+	uint32 payloadSize =
+		SafeUint32Add (12,
+					   SafeUint32Add (SafeUint32Mult (pCount, 8),
+									  SafeUint32Mult (rCount, 16)));
+
+	stream.Put_uint32 (payloadSize);
 	
 	stream.Put_uint32 (fBayerPhase);
 	

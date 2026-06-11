@@ -47,7 +47,19 @@ void dng_1d_table::SubDivide (const dng_1d_function &function,
 							  uint32 upper,
 							  real32 maxDelta)
 	{
-	
+
+	// CR-4208475 M-L8: Reject a zero-width range. Current call sites
+	// (Initialize and recursive SubDivide gated by range > 2) cannot
+	// produce range == 0, but the linear-fill else branch below
+	// otherwise divides (y1 - y0) by range and yields 0.0 / 0.0 = NaN
+	// in the unused delta. Bail early to keep the helper safe under
+	// any future caller.
+
+	if (upper <= lower)
+		{
+		return;
+		}
+
 	uint32 range = upper - lower;
 		
 	bool subDivide = (range > (fTableCount >> 8));

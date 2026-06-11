@@ -37,7 +37,12 @@ dng_stream::dng_stream (dng_abort_sniffer *sniffer,
 	,	fBufferSize			  (Max_uint32 (bufferSize, gDNGStreamBlockSize * 2))
 	,	fBufferStart		  (0)
 	,	fBufferEnd			  (0)
-	,	fBufferLimit		  (bufferSize)
+		// CR-4208475 N-L3: initialize fBufferLimit from the same clamped
+		// expression as fBufferSize so the Put buffered-write fast path
+		// stays consistent with the actual allocation. The initialization
+		// list cannot reference fBufferSize directly (order-of-init varies
+		// with member order), so repeat the clamp here.
+	,	fBufferLimit		  (Max_uint32 (bufferSize, gDNGStreamBlockSize * 2))
 	,	fBufferDirty		  (false)
 	,	fSniffer			  (sniffer)
 	
@@ -525,8 +530,13 @@ void dng_stream::Put (const void *data,
 		
 		uint64 blockMask = ~((int64) blockRound);
 
+		// CR-4208475 K-L1: Check position arithmetic before block rounding
+		// so pathological write positions cannot wrap the buffer span.
+
+		uint64 bufferEnd = SafeUint64Add (fPosition, fBufferSize);
+
 		uint32 alignedSize = (uint32)
-							 (((fPosition + fBufferSize) & blockMask) - fPosition);
+							 ((bufferEnd & blockMask) - fPosition);
 			
 		// If write request will not fit in buffer, then write everything except
 		// for the final unaligned part of the data.
@@ -534,8 +544,10 @@ void dng_stream::Put (const void *data,
 		if (count > alignedSize)
 			{
 			
+			uint64 alignedEnd = SafeUint64Add (fPosition, count);
+
 			uint32 alignedCount = (uint32)
-								  (((fPosition + count) & blockMask) - fPosition);
+								  ((alignedEnd & blockMask) - fPosition);
 			
 			dng_abort_sniffer::SniffForAbort (fSniffer);
 			
@@ -973,26 +985,39 @@ void dng_stream::Put_real64 (real64 x)
 
 /*****************************************************************************/
 	
-void dng_stream::Get_CString (char *data, uint32 maxLength)
+void dng_stream::Get_CString (char *data,
+							  uint32 maxLength,
+							  uint32 maxStreamBytes)
 	{
 
 	memset (data, 0, maxLength);
-	
+
 	uint32 index = 0;
-	
+	uint32 streamBytes = 0;
+
 	while (true)
 		{
-		
+
+		// CR-4208475 N-L4: bound stream consumption so a malformed non-
+		// terminated string in a tag-local payload cannot keep reading
+		// into adjacent file bytes.
+
+		if (streamBytes >= maxStreamBytes)
+			{
+			ThrowBadFormat ();
+			}
+
 		char c = (char) Get_uint8 ();
-		
+		streamBytes++;
+
 		if (index + 1 < maxLength)
 			data [index++] = c;
-		
+
 		if (c == 0)
 			break;
-			
+
 		}
-	
+
 	}
 
 /*****************************************************************************/
@@ -1013,26 +1038,42 @@ void dng_stream::Put_CString (const char *data)
 
 /*****************************************************************************/
 	
-void dng_stream::Get_UString (char *data, uint32 maxLength)
+void dng_stream::Get_UString (char *data,
+							  uint32 maxLength,
+							  uint32 maxStreamBytes)
 	{
-	
+
 	memset (data, 0, maxLength);
-	
+
 	uint32 index = 0;
-	
+	uint32 streamBytes = 0;
+
 	while (true)
 		{
-		
+
+		// CR-4208475 N-L4: bound stream consumption (in bytes, not 16-bit
+		// code units) so a malformed non-terminated string cannot keep
+		// reading into adjacent file bytes. Test the remaining budget without
+		// subtracting from maxStreamBytes first, so tiny explicit budgets
+		// fail closed instead of underflowing the limit check.
+
+		if (streamBytes > maxStreamBytes ||
+			maxStreamBytes - streamBytes < 2)
+			{
+			ThrowBadFormat ();
+			}
+
 		char c = (char) Get_uint16 ();
-		
+		streamBytes += 2;
+
 		if (index + 1 < maxLength)
 			data [index++] = (char) c;
-		
+
 		if (c == 0)
 			break;
-			
+
 		}
-	
+
 	}
 		
 /*****************************************************************************/

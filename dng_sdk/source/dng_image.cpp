@@ -712,6 +712,18 @@ void dng_image::Get (dng_pixel_buffer &buffer,
 		
 		}
 
+	// CR-4208475 M-L4: repeatV and repeatH are uint32 but every downstream
+	// edge-fill site narrows them to int32 (e.g. fBounds.t + (int32)
+	// repeatV, fBounds.r - (int32) repeatH) and feeds them into dng_rect
+	// arithmetic. Values above INT32_MAX would wrap to negative on the
+	// cast and silently corrupt the edge rects. In normal use these are
+	// small constants (Bayer pattern dimensions, mosaic kernel sizes),
+	// so reject obviously out-of-range inputs up front.
+
+	DNG_REQUIRE (repeatV <= (uint32) INT32_MAX &&
+				 repeatH <= (uint32) INT32_MAX,
+				 "dng_image::Get repeat sizes exceed int32 range");
+
 	// See if we need to pad the edge values.
 	
 	if ((edgeOption != edge_none) && (overlap != buffer.fArea))

@@ -35,7 +35,12 @@ dng_memory_stream::dng_memory_stream (dng_memory_allocator &allocator,
 	,	fLengthLimit (0)
 	
 	{
-	
+
+	if (fPageSize == 0)
+		{
+		ThrowProgramError ("Invalid dng_memory_stream page size");
+		}
+
 	}
 		
 /*****************************************************************************/
@@ -134,8 +139,25 @@ void dng_memory_stream::DoSetLength (uint64 length)
 						 true);
 		
 		}
+
+	uint32 requiredPageCount = 0;
+
+	if (length > 0)
+		{
+
+		const uint64 requiredPageCount64 = ((length - 1) /
+											(uint64) fPageSize) + 1;
+
+		if (requiredPageCount64 > 0xFFFFFFFFull)
+			{
+			ThrowOverflow ("Too many pages in DoSetLength");
+			}
+
+		requiredPageCount = (uint32) requiredPageCount64;
+
+		}
 	
-	while (length > fPageCount * (uint64) fPageSize)
+	while (fPageCount < requiredPageCount)
 		{
 		
 		if (fPageCount == fPagesAllocated)

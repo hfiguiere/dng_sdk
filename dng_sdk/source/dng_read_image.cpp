@@ -272,10 +272,12 @@ static void DecodeFPDelta (uint8 *input,
 		
 	else if (bytesPerSample == 3)
 		{
+
+		const int32 rowIncrement2 = SafeInt32Mult (rowIncrement, 2);
 		
 		const uint8 *input0 = input;
 		const uint8 *input1 = input + rowIncrement;
-		const uint8 *input2 = input + rowIncrement * 2;
+		const uint8 *input2 = input + rowIncrement2;
 		
 		for (int32 col = 0; col < rowIncrement; ++col)
 			{
@@ -290,19 +292,25 @@ static void DecodeFPDelta (uint8 *input,
 			
 		}
 		
-	else
+	// CR-4209035: keep four-byte FP samples explicit so malformed integer
+	// semantic masks cannot fall into the historical default branch.
+
+	else if (bytesPerSample == 4)
 		{
+
+		const int32 rowIncrement2 = SafeInt32Mult (rowIncrement, 2);
+		const int32 rowIncrement3 = SafeInt32Mult (rowIncrement, 3);
 		
 		#if qDNGBigEndian
 		const uint8 *input0 = input;
 		const uint8 *input1 = input + rowIncrement;
-		const uint8 *input2 = input + rowIncrement * 2;
-		const uint8 *input3 = input + rowIncrement * 3;
+		const uint8 *input2 = input + rowIncrement2;
+		const uint8 *input3 = input + rowIncrement3;
 		#else
 		const uint8 *input3 = input;
 		const uint8 *input2 = input + rowIncrement;
-		const uint8 *input1 = input + rowIncrement * 2;
-		const uint8 *input0 = input + rowIncrement * 3;
+		const uint8 *input1 = input + rowIncrement2;
+		const uint8 *input0 = input + rowIncrement3;
 		#endif
 		
 		for (int32 col = 0; col < rowIncrement; ++col)
@@ -317,6 +325,13 @@ static void DecodeFPDelta (uint8 *input,
 				
 			}
 			
+		}
+
+	else
+		{
+
+		ThrowBadFormat ();
+
 		}
 		
 	}	
@@ -593,6 +608,11 @@ bool dng_lzw_expander::Expand (const uint8 *sPtr,
 		{
 		return false;
 		}
+
+	if (dCount == 0)
+		{
+		return true;
+		}
 	
 	void *dStartPtr = dPtr;
 	
@@ -623,8 +643,13 @@ bool dng_lzw_expander::Expand (const uint8 *sPtr,
 			}
 		while (code == kResetCode);
 		
-		if (code == kEndCode) 
-			return true;
+		// CR-4209034: EndCode is success only after the requested output has
+		// been produced; otherwise stale destination bytes can become pixels.
+
+		if (code == kEndCode)
+			{
+			return dCount == 0;
+			}
 		
 		if (code > kEndCode) 
 			return false;
@@ -648,8 +673,13 @@ bool dng_lzw_expander::Expand (const uint8 *sPtr,
 			if (code == kResetCode) 
 				break;
 			
-			if (code == kEndCode) 
-				return true;
+			// CR-4209034: the same full-output rule applies after the LZW
+			// table is active.
+
+			if (code == kEndCode)
+				{
+				return dCount == 0;
+				}
 			
 			const int32 inCode = code;
 
@@ -819,6 +849,17 @@ static void ReorderSubTileBlocks (dng_host &host,
 	
 	uint32 blockRows = ifd.fSubTileBlockRows;
 	uint32 blockCols = ifd.fSubTileBlockCols;
+
+	// CR-4209037: reordering copies the whole temp buffer back, so reject
+	// layouts that would leave clipped strip rows or block remainders unwritten.
+
+	if (blockRows == 0 ||
+		blockCols == 0 ||
+		(buffer.fArea.H () % blockRows) != 0 ||
+		(buffer.fArea.W () % blockCols) != 0)
+		{
+		ThrowBadFormat ();
+		}
 	
 	uint32 rowBlocks = buffer.fArea.H () / blockRows;
 	uint32 colBlocks = buffer.fArea.W () / blockCols;
@@ -962,11 +1003,21 @@ dng_image_spooler::dng_image_spooler (dng_host &host,
 
 	DNG_REQUIRE (bytesPerRow > 0,
 				 "Bad bytesPerRow in dng_image_spooler");
-	
+
+	// CR-4208475 N-M1: sibling of the CR-4209037 ReorderSubTileBlocks guard.
+	// Reject zero fSubTileBlockRows here so the rounding division below
+	// cannot trigger undefined behavior on read paths that bypass
+	// dng_ifd::IsValidDNG.
+
+	if (ifd.fSubTileBlockRows == 0)
+		{
+		ThrowBadFormat ();
+		}
+
 	uint32 stripLength = Pin_uint32 (ifd.fSubTileBlockRows,
 									 fBlock.LogicalSize () / bytesPerRow,
 									 fTileArea.H ());
-									
+
 	stripLength = stripLength / ifd.fSubTileBlockRows
 							  * ifd.fSubTileBlockRows;
 	
@@ -1076,6 +1127,42 @@ dng_read_image::~dng_read_image ()
 
 /*****************************************************************************/
 
+static uint8 ReverseBits8 (uint8 x)
+	{
+
+	x = (uint8) (((x & 0x55) << 1) | ((x & 0xAA) >> 1));
+	x = (uint8) (((x & 0x33) << 2) | ((x & 0xCC) >> 2));
+	x = (uint8) (((x & 0x0F) << 4) | ((x & 0xF0) >> 4));
+
+	return x;
+
+	}
+
+/*****************************************************************************/
+
+static void ApplyFillOrder (uint8 *data,
+							uint32 count,
+							uint32 fillOrder)
+	{
+
+	// CR-4208575: Some uncompressed TIFFs store samples with FillOrder=2.
+	// Normalize the byte stream before interpreting the samples so later
+	// rendering sees normal sample values instead of bit-reversed pixels.
+
+	if (fillOrder == 2)
+		{
+
+		for (uint32 j = 0; j < count; j++)
+			{
+			data [j] = ReverseBits8 (data [j]);
+			}
+
+		}
+
+	}
+
+/*****************************************************************************/
+
 bool dng_read_image::ReadUncompressed (dng_host &host,
 									   const dng_ifd &ifd,
 									   dng_stream &stream,
@@ -1124,6 +1211,10 @@ bool dng_read_image::ReadUncompressed (dng_host &host,
 		pixelType = ttByte;
 				
 		stream.Get (uncompressedBuffer->Buffer (), samplesPerTile);
+
+		ApplyFillOrder (uncompressedBuffer->Buffer_uint8 (),
+						samplesPerTile,
+						ifd.fFillOrder);
 		
 		}
 		
@@ -1179,9 +1270,15 @@ bool dng_read_image::ReadUncompressed (dng_host &host,
 		{
 		
 		pixelType = ttShort;
+
+		const uint32 byteCount = SafeUint32Mult (samplesPerTile, 2);
 		
 		stream.Get (uncompressedBuffer->Buffer (),
-					SafeUint32Mult (samplesPerTile, 2));
+					byteCount);
+
+		ApplyFillOrder (uncompressedBuffer->Buffer_uint8 (),
+						byteCount,
+						ifd.fFillOrder);
 		
 		if (stream.SwapBytes ())
 			{
@@ -1197,9 +1294,15 @@ bool dng_read_image::ReadUncompressed (dng_host &host,
 		{
 		
 		pixelType = image.PixelType ();
+
+		const uint32 byteCount = SafeUint32Mult (samplesPerTile, 4);
 		
 		stream.Get (uncompressedBuffer->Buffer (),
-					SafeUint32Mult (samplesPerTile, 4));
+					byteCount);
+
+		ApplyFillOrder (uncompressedBuffer->Buffer_uint8 (),
+						byteCount,
+						ifd.fFillOrder);
 		
 		if (stream.SwapBytes ())
 			{
@@ -1344,6 +1447,10 @@ bool dng_read_image::ReadUncompressed (dng_host &host,
 							 pixelType,
 							 ifd.fPlanarConfiguration, 
 							 uncompressedBuffer->Buffer ());
+
+	DecodePredictor (host,
+					 ifd,
+					 buffer);
 	
 	if (ifd.fSampleBitShift)
 		{
@@ -1754,11 +1861,18 @@ bool dng_read_image::ReadLosslessJPEG (dng_host &host,
 	dng_safe_uint32 bytesPerRow =
 		(dng_safe_uint32 (tileArea.W ()) * planes *
 		 static_cast<uint32> (sizeof (uint16)));
-	
+
+	// CR-4208475 N-M1: sibling of the CR-4209037 ReorderSubTileBlocks guard.
+
+	if (ifd.fSubTileBlockRows == 0)
+		{
+		ThrowBadFormat ();
+		}
+
 	uint32 rowsPerStrip = Pin_uint32 (ifd.fSubTileBlockRows,
 									  kImageBufferSize / bytesPerRow.Get (),
 									  tileArea.H ());
-									  
+
 	rowsPerStrip = rowsPerStrip / ifd.fSubTileBlockRows
 								* ifd.fSubTileBlockRows;
 									  
@@ -1901,11 +2015,57 @@ bool dng_read_image::CanReadTile (const dng_ifd &ifd)
 			
 			if (ifd.fSampleFormat [0] == sfFloatingPoint)
 				{
+
+				if (ifd.fPredictor != cpNullPredictor ||
+					ifd.fFillOrder != 1)
+					{
+					return false;
+					}
 				
 				return (ifd.fBitsPerSample [0] == 16 ||
 						ifd.fBitsPerSample [0] == 24 ||
 						ifd.fBitsPerSample [0] == 32);
 						
+				}
+
+			// CR-4208575: Some writers preserve horizontal predictor data in
+			// otherwise uncompressed TIFFs. Treat the predictor as part of the
+			// sample encoding instead of displaying the deltas as image data.
+
+			if (ifd.fPredictor != cpNullPredictor		   &&
+				ifd.fPredictor != cpHorizontalDifference   &&
+				ifd.fPredictor != cpHorizontalDifferenceX2 &&
+				ifd.fPredictor != cpHorizontalDifferenceX4)
+				{
+				return false;
+				}
+
+			if (ifd.fPredictor != cpNullPredictor &&
+				ifd.fBitsPerSample [0] != 8	 &&
+				ifd.fBitsPerSample [0] != 16 &&
+				ifd.fBitsPerSample [0] != 32)
+				{
+				return false;
+				}
+
+			if (ifd.fPredictor != cpNullPredictor &&
+				ifd.fPlanarConfiguration == pcRowInterleaved)
+				{
+				return false;
+				}
+
+			if (ifd.fFillOrder != 1 &&
+				ifd.fFillOrder != 2)
+				{
+				return false;
+				}
+
+			if (ifd.fFillOrder == 2 &&
+				ifd.fBitsPerSample [0] != 8	 &&
+				ifd.fBitsPerSample [0] != 16 &&
+				ifd.fBitsPerSample [0] != 32)
+				{
+				return false;
 				}
 				
 			return ifd.fBitsPerSample [0] >= 8 &&
@@ -2216,12 +2376,28 @@ void dng_read_image::ReadTile (dng_host &host,
 			// Figure out uncompressed size.
 
 			dng_safe_uint32 bytesPerSample = (ifd.fBitsPerSample [0] >> 3);
-			
+
+			const bool floatingPointPredictor =
+				ifd.fPredictor == cpFloatingPoint	||
+				ifd.fPredictor == cpFloatingPointX2 ||
+				ifd.fPredictor == cpFloatingPointX4;
+
+			// CR-4209035: FP predictor byte shuffling assumes float samples;
+			// reject mismatched integer encodings before decoding.
+
+			if (floatingPointPredictor &&
+				ifd.fSampleFormat [0] != sfFloatingPoint)
+				{
+				ThrowBadFormat ();
+				}
+
 			dng_safe_uint32 sampleCount = (dng_safe_uint32 (planes)		   * 
 										   dng_safe_uint32 (tileArea.W ()) * 
 										   dng_safe_uint32 (tileArea.H ()));
-			
+
 			dng_safe_uint32 uncompressedSize = sampleCount * bytesPerSample;
+
+			bool decodedFullTile = false;
 
 			// Setup pixel buffer to hold uncompressed data.
 			
@@ -2269,9 +2445,7 @@ void dng_read_image::ReadTile (dng_host &host,
 			// If we are using the floating point predictor, we need an extra
 			// buffer row.
 			
-			if (ifd.fPredictor == cpFloatingPoint	||
-				ifd.fPredictor == cpFloatingPointX2 ||
-				ifd.fPredictor == cpFloatingPointX4)
+			if (floatingPointPredictor)
 				{
 
 				bufferSize += (dng_safe_uint32 (dng_safe_int32 (buffer.fRowStep)) * 
@@ -2311,9 +2485,7 @@ void dng_read_image::ReadTile (dng_host &host,
 			
 			// If using floating point predictor, move buffer pointer to second row.
 			
-			if (ifd.fPredictor == cpFloatingPoint	||
-				ifd.fPredictor == cpFloatingPointX2 ||
-				ifd.fPredictor == cpFloatingPointX4)
+			if (floatingPointPredictor)
 				{
 				
 				buffer.fData = (uint8 *) buffer.fData +
@@ -2362,7 +2534,87 @@ void dng_read_image::ReadTile (dng_host &host,
 									  &dstLen,
 									  (const Bytef *) compressedBuffer->Buffer (),
 									  tileByteCount);
-									  
+
+				// CR-4209182: Some TIFF writers store a full-height
+				// compressed edge strip even though the visible strip area
+				// is clipped to the image bounds. Retry with the complete
+				// stored tile size, then copy only the visible area below.
+
+				if (err == Z_BUF_ERROR && !floatingPointPredictor)
+					{
+
+					dng_rect fullTileArea (tileArea);
+
+					fullTileArea.r = fullTileArea.l + ifd.fTileWidth;
+					fullTileArea.b = fullTileArea.t + ifd.fTileLength;
+
+					if (fullTileArea != tileArea)
+						{
+
+						dng_safe_uint32 fullSampleCount =
+							(dng_safe_uint32 (planes) *
+							 dng_safe_uint32 (fullTileArea.W ()) *
+							 dng_safe_uint32 (fullTileArea.H ()));
+
+						dng_safe_uint32 fullUncompressedSize =
+							fullSampleCount * bytesPerSample;
+
+						dng_pixel_buffer fullBuffer (fullTileArea,
+													 plane,
+													 planes,
+													 pixelType,
+													 pcInterleaved,
+													 NULL);
+
+						fullBuffer.fPixelSize = bytesPerSample.Get ();
+
+						dng_safe_uint32 fullBufferSize =
+							fullUncompressedSize;
+
+						if (fullBuffer.fPixelType == ttFloat)
+							{
+							fullBufferSize =
+								Max_uint32 (fullBufferSize.Get (),
+											(fullSampleCount * 4u).Get ());
+							}
+
+						if (uncompressedBuffer.Get () &&
+							uncompressedBuffer->LogicalSize () <
+								fullBufferSize.Get ())
+							{
+							uncompressedBuffer.Reset ();
+							}
+
+						if (uncompressedBuffer.Get () == NULL)
+							{
+							uncompressedBuffer.Reset (
+								host.Allocate (fullBufferSize.Get ()));
+							}
+
+						fullBuffer.fData = uncompressedBuffer->Buffer ();
+
+						uLongf fullDstLen = fullUncompressedSize.Get ();
+
+						err = uncompress ((Bytef *) fullBuffer.fData,
+										  &fullDstLen,
+										  (const Bytef *)
+											compressedBuffer->Buffer (),
+										  tileByteCount);
+
+						if (err == Z_OK &&
+							fullDstLen == fullUncompressedSize.Get ())
+							{
+							buffer = fullBuffer;
+							sampleCount = fullSampleCount;
+							uncompressedSize = fullUncompressedSize;
+							dstLen = fullDstLen;
+							decodedFullTile = true;
+							}
+
+						}
+
+					}
+
 				if (err != Z_OK)
 					{
 					
@@ -2395,9 +2647,7 @@ void dng_read_image::ReadTile (dng_host &host,
 				
 			// The floating point predictor is byte order independent.
 			
-			if (ifd.fPredictor == cpFloatingPoint	||
-				ifd.fPredictor == cpFloatingPointX2 ||
-				ifd.fPredictor == cpFloatingPointX4)
+			if (floatingPointPredictor)
 				{
 				
 				int32 xFactor = 1;
@@ -2518,6 +2768,11 @@ void dng_read_image::ReadTile (dng_host &host,
 				}
 			
 			// Save the data.
+
+			if (decodedFullTile)
+				{
+				buffer.fArea = tileArea;
+				}
 			
 			image.Put (buffer);
 			
@@ -3211,7 +3466,7 @@ void dng_read_image::Read (dng_host &host,
 		ThrowBadFormat ("dng_read_image::Read image too large");
 		
 		}
-	
+
 	uint32 tileIndex;
 
 	// Deal with both images that have row or column interleaving.
@@ -3347,14 +3602,22 @@ void dng_read_image::Read (dng_host &host,
 		
 		uint32 bytesPerPixel = TagTypeSize (ifd.PixelType ());
 		
-		uint32 bytesPerRow = SafeUint32Mult (ifd.fTileWidth, 
+		uint32 bytesPerRow = SafeUint32Mult (ifd.fTileWidth,
 											 innerSamples,
 											 bytesPerPixel);
-				
+
+		// CR-4208475 N-M1: sibling of the CR-4209037 ReorderSubTileBlocks
+		// guard.
+
+		if (ifd.fSubTileBlockRows == 0)
+			{
+			ThrowBadFormat ();
+			}
+
 		subTileLength = Pin_uint32 (ifd.fSubTileBlockRows,
-									kImageBufferSize / bytesPerRow, 
+									kImageBufferSize / bytesPerRow,
 									ifd.fTileLength);
-									
+
 		subTileLength = subTileLength / ifd.fSubTileBlockRows
 									  * ifd.fSubTileBlockRows;
 									  

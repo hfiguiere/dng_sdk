@@ -80,6 +80,7 @@ void ReportError (const char *message,
 
 /*****************************************************************************/
 
+// DNG_NO_RETURN
 void Throw_dng_error (dng_error_code err,
 					  const char *message,
 					  const char *sub_message,

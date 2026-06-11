@@ -316,9 +316,14 @@ inline dng_point_real64 operator* (const real64 scale,
 
 inline dng_point MakePerpendicular (const dng_point &pt)
 	{
-	
-	return dng_point (-pt.h, pt.v);
-	
+
+	// CR-4208475 N-L15: -INT32_MIN is signed-integer overflow. Route the
+	// negation through SafeInt32Sub (0, pt.h) so the failure is a clean
+	// throw on overflow. Mirrors the existing operator- pattern earlier
+	// in this header.
+
+	return dng_point (SafeInt32Sub (0, pt.h), pt.v);
+
 	}
 
 /*****************************************************************************/

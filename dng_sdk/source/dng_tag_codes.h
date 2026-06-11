@@ -454,6 +454,7 @@ enum
 	tcJXL,
 	tcAVIF,
 	tcWebP,
+	tcEXR,
 	
 	};
 

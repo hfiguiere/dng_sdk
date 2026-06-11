@@ -465,9 +465,20 @@ dng_gain_map * dng_gain_map::GetStream (dng_host &host,
 			
 			for (uint32 plane = 0; plane < mapPlanes; plane++)
 				{
-				
+
 				real32 x = stream.Get_real32 ();
-				
+
+				// CR-4208475 N-M3: reject NaN / Inf at the parser boundary so
+				// non-finite entries cannot reach downstream interpolation,
+				// Round_int32 (real32), or the writer Put path. Matches the
+				// finiteness discipline already applied to mapSpacing /
+				// mapOrigin above.
+
+				if (!std::isfinite (x))
+					{
+					ThrowBadFormat ();
+					}
+
 				map->Entry (rowIndex, colIndex, plane) = x;
 				
 				#if qDNGValidate

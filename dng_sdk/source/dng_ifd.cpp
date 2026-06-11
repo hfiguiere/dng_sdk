@@ -3013,6 +3013,11 @@ bool dng_ifd::ParseTag (dng_host &host,
 
 			CheckTagType (parentCode, tagCode, tagType, ttLong);
 
+			// CR-4208475 K-M2: MaskSubArea is a fixed four-long tag.
+
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 4))
+				return false;
+
 			fMaskSubArea [0] = stream.TagValue_uint32 (tagType);
 			fMaskSubArea [1] = stream.TagValue_uint32 (tagType);
 			fMaskSubArea [2] = stream.TagValue_uint32 (tagType);
@@ -3066,6 +3071,12 @@ bool dng_ifd::ParseTag (dng_host &host,
 			
 			if (!CheckTagType (parentCode, tagCode, tagType, ttFloat))
 				return false;
+
+			// CR-4208475 K-M2: JXL scalar tags must not borrow bytes from
+			// neighboring tag data when malformed.
+
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 1))
+				return false;
 			
 			fJXLDistance = (real32) stream.TagValue_real64 (tagType);
 
@@ -3097,6 +3108,12 @@ bool dng_ifd::ParseTag (dng_host &host,
 			
 			if (!CheckTagType (parentCode, tagCode, tagType, ttLong))
 				return false;
+
+			// CR-4208475 K-M2: JXL scalar tags must not borrow bytes from
+			// neighboring tag data when malformed.
+
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 1))
+				return false;
 			
 			fJXLEffort = stream.TagValue_int32 (tagType);
 			
@@ -3127,6 +3144,12 @@ bool dng_ifd::ParseTag (dng_host &host,
 			{
 			
 			if (!CheckTagType (parentCode, tagCode, tagType, ttLong))
+				return false;
+
+			// CR-4208475 K-M2: JXL scalar tags must not borrow bytes from
+			// neighboring tag data when malformed.
+
+			if (!CheckTagCount (parentCode, tagCode, tagCount, 1))
 				return false;
 			
 			fJXLDecodeSpeed = stream.TagValue_int32 (tagType);
@@ -4977,7 +5000,7 @@ bool dng_ifd::IsValidDNG (dng_shared &shared,
 	
 	if (fSubTileBlockRows != 1 || fSubTileBlockCols != 1)
 		{
-		
+
 		if (fSubTileBlockRows < 2 || fSubTileBlockRows > fTileLength ||
 			fSubTileBlockCols < 1 || fSubTileBlockCols > fTileWidth)
 			{
@@ -5158,17 +5181,34 @@ uint32 dng_ifd::TileByteCount (const dng_rect &tile) const
 uint64 dng_ifd::MaxImageDataByteCount () const
 	{
 	
-	uint64 bitsPerRow = (uint64) fTileWidth *
-						(uint64) fSamplesPerPixel *
-						(uint64) fBitsPerSample [0];
+	// CR-4208475 K-L3: Keep this conservative upper-bound estimate in
+	// checked arithmetic so malformed geometry cannot wrap a smaller size.
+
+	const auto safeMult = [] (uint64 lhs, uint64 rhs) -> uint64
+		{
+
+		if (lhs != 0 && rhs > ((uint64) -1) / lhs)
+			{
+
+			ThrowOverflow ();
+
+			}
+
+		return lhs * rhs;
+
+		};
+
+	uint64 bitsPerRow = safeMult (safeMult ((uint64) fTileWidth,
+											(uint64) fSamplesPerPixel),
+								  (uint64) fBitsPerSample [0]);
 						
-	uint64 bytesPerRow = (bitsPerRow + 7) >> 3;
+	uint64 bytesPerRow = SafeUint64Add (bitsPerRow, 7) >> 3;
 	
-	uint64 bytesPerTile = bytesPerRow * fTileLength;
+	uint64 bytesPerTile = safeMult (bytesPerRow, fTileLength);
 	
 	// Round up for TIFF format tile data alignment.
 	
-	if (bytesPerTile & 1) bytesPerTile++;
+	if (bytesPerTile & 1) bytesPerTile = SafeUint64Add (bytesPerTile, 1);
 	
 	// Deal with possible compression expansion.
 	
@@ -5180,7 +5220,9 @@ uint64 dng_ifd::MaxImageDataByteCount () const
 			
 			// ZLib says maximum is source size + 0.1% + 12 bytes.
 			
-			bytesPerTile += (bytesPerTile >> 8) + 12;
+			bytesPerTile = SafeUint64Add (bytesPerTile,
+										  bytesPerTile >> 8,
+										  12);
 			
 			}
 	
@@ -5189,13 +5231,15 @@ uint64 dng_ifd::MaxImageDataByteCount () const
 			
 			// Add a slop factor for compression expansion.
 		
-			bytesPerTile += (bytesPerTile >> 2) + 1024;
+			bytesPerTile = SafeUint64Add (bytesPerTile,
+										  bytesPerTile >> 2,
+										  1024);
 			
 			}
 			
 		}
 		
-	return bytesPerTile * TilesPerImage ();
+	return safeMult (bytesPerTile, TilesPerImage ());
 	
 	}
 		
@@ -5270,29 +5314,51 @@ void dng_ifd::FindTileSize (uint32 bytesPerTile,
 void dng_ifd::FindStripSize (uint32 bytesPerStrip,
 							 uint32 cellV)
 	{
-	
-	uint32 bytesPerSample = fSamplesPerPixel *
-							((fBitsPerSample [0] + 7) >> 3);
-								
+
+	// CR-4208475 M-M4: Mirror the validation pattern already used in
+	// FindTileSize. The raw uint32 multiply and the chained divisions by
+	// fTileWidth, TilesDown(), and cellV were all unchecked and could
+	// produce division by zero or wrap on attacker-controlled IFD shape.
+
+	uint32 bytesPerSample =
+		SafeUint32Mult (fSamplesPerPixel,
+						((fBitsPerSample [0] + 7) >> 3));
+
+	if (bytesPerSample == 0)
+		{
+		ThrowBadFormat ("zero bytesPerSample in FindStripSize");
+		}
+
 	uint32 samplesPerStrip = bytesPerStrip / bytesPerSample;
-	
+
 	fTileWidth = fImageWidth;
-		
+
+	if (fTileWidth == 0)
+		{
+		ThrowBadFormat ("zero fTileWidth in FindStripSize");
+		}
+
 	fTileLength = Pin_uint32 (1,
 							  samplesPerStrip / fTileWidth,
 							  fImageLength);
-								  
+
 	uint32 down = TilesDown ();
-								 
+
+	DNG_REQUIRE (down > 0,
+				 "Bad number of tiles down in dng_ifd::FindStripSize");
+
+	DNG_REQUIRE (cellV > 0,
+				 "Bad cellV in dng_ifd::FindStripSize");
+
 	fTileLength = (fImageLength + down - 1) / down;
-		
+
 	fTileLength = ((fTileLength + cellV - 1) / cellV) * cellV;
-		
+
 	fTileLength = Min_uint32 (fTileLength, fImageLength);
-	
+
 	fUsesTiles	= false;
 	fUsesStrips = true;
-		
+
 	}
 		
 /*****************************************************************************/

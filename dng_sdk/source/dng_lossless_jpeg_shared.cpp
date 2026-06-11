@@ -1252,9 +1252,12 @@ void dng_lossless_decoder<simd>::DecoderStructInit ()
 	
 	int32 ci;
 	
+	bool isVerifiedSamplingFactorSpecialCase = false;
+
 	#if qSupportCanon_sRAW
 	
 	bool canon_sRAW = (info.numComponents == 3) &&
+					  (info.compsInScan   == 3) &&
 					  (info.compInfo [0].hSampFactor == 2) &&
 					  (info.compInfo [1].hSampFactor == 1) &&
 					  (info.compInfo [2].hSampFactor == 1) &&
@@ -1264,8 +1267,9 @@ void dng_lossless_decoder<simd>::DecoderStructInit ()
 					  (info.dataPrecision == 15) &&
 					  (info.Ss == 1) &&
 					  ((info.imageWidth & 1) == 0);
-					  
+
 	bool canon_sRAW2 = (info.numComponents == 3) &&
+					   (info.compsInScan   == 3) &&
 					   (info.compInfo [0].hSampFactor == 2) &&
 					   (info.compInfo [1].hSampFactor == 1) &&
 					   (info.compInfo [2].hSampFactor == 1) &&
@@ -1277,11 +1281,17 @@ void dng_lossless_decoder<simd>::DecoderStructInit ()
 					   ((info.imageWidth  & 1) == 0) &&
 					   ((info.imageHeight & 1) == 0);
 	
+	if (canon_sRAW || canon_sRAW2)
+		{
+		isVerifiedSamplingFactorSpecialCase = true;
+		}
+
 	#endif
 	
 	#if qSupportSony_sRAW
 		
 	bool sony_sRAW = (info.numComponents == 3) &&
+					 (info.compsInScan   == 3) &&
 					 (info.compInfo [0].hSampFactor == 2) &&
 					 (info.compInfo [1].hSampFactor == 1) &&
 					 (info.compInfo [2].hSampFactor == 1) &&
@@ -1292,8 +1302,9 @@ void dng_lossless_decoder<simd>::DecoderStructInit ()
 					 (info.Ss == 1) &&
 					 ((info.imageWidth  & 1) == 0) &&
 					 ((info.imageHeight & 1) == 0);
-	
+
 	bool sony_sRAW2 = (info.numComponents == 3) &&
+					 (info.compsInScan   == 3) &&
 					 (info.compInfo [0].hSampFactor == 2) &&
 					 (info.compInfo [1].hSampFactor == 1) &&
 					 (info.compInfo [2].hSampFactor == 1) &&
@@ -1305,10 +1316,14 @@ void dng_lossless_decoder<simd>::DecoderStructInit ()
 					 ((info.imageWidth  & 1) == 0) &&
 					 ((info.imageHeight & 1) == 0);
 					   
-	if (!canon_sRAW && !canon_sRAW2 && !sony_sRAW && !sony_sRAW2)
+	if (sony_sRAW || sony_sRAW2)
+		{
+		isVerifiedSamplingFactorSpecialCase = true;
+		}
 	
 	#endif
 	
+	if (!isVerifiedSamplingFactorSpecialCase)
 		{
 	
 		// Check sampling factor validity.
@@ -2149,14 +2164,15 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 	// Canon sRAW support and Sony sRAW.
 	
 	if (info.compInfo [0].hSampFactor == 2 &&
-		info.compInfo [0].vSampFactor == 1)
+		info.compInfo [0].vSampFactor == 1 &&
+		compsInScan >= 3)
 		{
-	
+
 		for (int32 row = 0; row < numROW; row++)
 			{
-			
+
 			// Initialize predictors.
-			
+
 			int32 p0;
 			int32 p1;
 			int32 p2;
@@ -2324,12 +2340,13 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 		}
 	
 	if (info.compInfo [0].hSampFactor == 2 &&
-		info.compInfo [0].vSampFactor == 2)
+		info.compInfo [0].vSampFactor == 2 &&
+		compsInScan >= 3)
 		{
-	
+
 		for (int32 row = 0; row < numROW; row += 2)
 			{
-			
+
 			// Sony sRaw.
 			
 			if (sony_sRAW)
@@ -2792,7 +2809,12 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 	
 	#if qSupportHasselblad_3FR
 	
-	if (info.Ss == 8 && (numCOL & 1) == 0)
+	// CR-4209036: the 3FR path only writes component 0, so restrict it to
+	// single-component scans before PmPutRow spools the row.
+
+	if (info.Ss == 8 &&
+		compsInScan == 1 &&
+		(numCOL & 1) == 0)
 		{
 		
 		fHasselblad3FR = true;

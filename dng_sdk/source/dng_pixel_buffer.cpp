@@ -1532,7 +1532,17 @@ void dng_pixel_buffer::RepeatSubArea (const dng_rect subArea,
 									  uint32 repeatV,
 									  uint32 repeatH)
 	{
-	
+
+	// CR-4208475 N-L8: dng_rect ctors below narrow (int32 + uint32) results
+	// back to int32; values above INT32_MAX would wrap silently. Mirrors the
+	// M-L4 guard in dng_image::Get for the same shape. Existing callers
+	// pass small Bayer-phase repeats, so this is defense-in-depth at the
+	// public API boundary.
+
+	DNG_REQUIRE (repeatV <= (uint32) 0x7FFFFFFF &&
+				 repeatH <= (uint32) 0x7FFFFFFF,
+				 "Invalid repeat in dng_pixel_buffer::RepeatSubArea");
+
 	if (fArea.t < subArea.t)
 		{
 		

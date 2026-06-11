@@ -21,6 +21,17 @@
 
 /*****************************************************************************/
 
+static uint32 DeltaScaleTableDataSize (uint32 count)
+	{
+
+	return SafeUint32Add (dng_area_spec::kDataSize,
+						  4u,
+						  SafeUint32Mult (count, 4u));
+
+	}
+
+/*****************************************************************************/
+
 dng_opcode_TrimBounds::dng_opcode_TrimBounds (const dng_rect &bounds)
 
 	:	dng_opcode (dngOpcode_TrimBounds,
@@ -127,7 +138,15 @@ void dng_area_spec::GetData (dng_stream &stream)
 		{
 		ThrowBadFormat ();
 		}
-		
+
+	// CR-4208475 L-L1: Keep opcode plane intervals representable before
+	// ProcessArea loops use Plane() + Planes() as an exclusive end.
+
+	if (fPlane > 0xFFFFFFFFu - fPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
 	if (fRowPitch < 1 || fColPitch < 1)
 		{
 		ThrowBadFormat ();
@@ -657,16 +676,26 @@ dng_opcode_MapPolynomial::dng_opcode_MapPolynomial (dng_stream &stream)
 			
 	for (uint32 j = 0; j <= kMaxDegree; j++)
 		{
-		
+
 		if (j <= fDegree)
 			{
+
 			fCoefficient [j] = stream.Get_real64 ();
+
+			// CR-4208475 N-M3: reject NaN / Inf coefficients before they
+			// propagate through DoBaselineMapPoly evaluations.
+
+			if (!std::isfinite (fCoefficient [j]))
+				{
+				ThrowBadFormat ();
+				}
+
 			}
 		else
 			{
 			fCoefficient [j] = 0.0;
 			}
-			
+
 		}
 	
 	#if qDNGValidate
@@ -883,7 +912,7 @@ dng_opcode_DeltaPerRow::dng_opcode_DeltaPerRow (dng_host &host,
 		ThrowBadFormat ();
 		}
 		
-	if (dataSize != dng_area_spec::kDataSize + 4 + deltas * 4)
+	if (dataSize != DeltaScaleTableDataSize (deltas))
 		{
 		ThrowBadFormat ();
 		}
@@ -896,7 +925,17 @@ dng_opcode_DeltaPerRow::dng_opcode_DeltaPerRow (dng_host &host,
 	
 	for (uint32 j = 0; j < deltas; j++)
 		{
+
 		table [j] = stream.Get_real32 ();
+
+		// CR-4208475 N-M3: reject NaN / Inf at the parser boundary so
+		// non-finite deltas cannot propagate into per-pixel scale loops.
+
+		if (!std::isfinite (table [j]))
+			{
+			ThrowBadFormat ();
+			}
+
 		}
 		
 	#if qDNGValidate
@@ -930,7 +969,7 @@ void dng_opcode_DeltaPerRow::PutData (dng_stream &stream) const
 	uint32 deltas = SafeUint32DivideUp (fAreaSpec.Area ().H (),
 										fAreaSpec.RowPitch ());
 	
-	stream.Put_uint32 (dng_area_spec::kDataSize + 4 + deltas * 4);
+	stream.Put_uint32 (DeltaScaleTableDataSize (deltas));
 	
 	fAreaSpec.PutData (stream);
 	
@@ -1107,7 +1146,7 @@ dng_opcode_DeltaPerColumn::dng_opcode_DeltaPerColumn (dng_host &host,
 		ThrowBadFormat ();
 		}
 		
-	if (dataSize != dng_area_spec::kDataSize + 4 + deltas * 4)
+	if (dataSize != DeltaScaleTableDataSize (deltas))
 		{
 		ThrowBadFormat ();
 		}
@@ -1120,7 +1159,17 @@ dng_opcode_DeltaPerColumn::dng_opcode_DeltaPerColumn (dng_host &host,
 	
 	for (uint32 j = 0; j < deltas; j++)
 		{
+
 		table [j] = stream.Get_real32 ();
+
+		// CR-4208475 N-M3: reject NaN / Inf at the parser boundary so
+		// non-finite deltas cannot propagate into per-pixel scale loops.
+
+		if (!std::isfinite (table [j]))
+			{
+			ThrowBadFormat ();
+			}
+
 		}
 		
 	#if qDNGValidate
@@ -1154,7 +1203,7 @@ void dng_opcode_DeltaPerColumn::PutData (dng_stream &stream) const
 	uint32 deltas = SafeUint32DivideUp (fAreaSpec.Area ().W (),
 										fAreaSpec.ColPitch ());
 	
-	stream.Put_uint32 (dng_area_spec::kDataSize + 4 + deltas * 4);
+	stream.Put_uint32 (DeltaScaleTableDataSize (deltas));
 	
 	fAreaSpec.PutData (stream);
 	
@@ -1329,7 +1378,7 @@ dng_opcode_ScalePerRow::dng_opcode_ScalePerRow (dng_host &host,
 		ThrowBadFormat ();
 		}
 		
-	if (dataSize != dng_area_spec::kDataSize + 4 + scales * 4)
+	if (dataSize != DeltaScaleTableDataSize (scales))
 		{
 		ThrowBadFormat ();
 		}
@@ -1342,7 +1391,17 @@ dng_opcode_ScalePerRow::dng_opcode_ScalePerRow (dng_host &host,
 	
 	for (uint32 j = 0; j < scales; j++)
 		{
+
 		table [j] = stream.Get_real32 ();
+
+		// CR-4208475 N-M3: reject NaN / Inf at the parser boundary so
+		// non-finite scales cannot propagate into per-pixel scale loops.
+
+		if (!std::isfinite (table [j]))
+			{
+			ThrowBadFormat ();
+			}
+
 		}
 		
 	#if qDNGValidate
@@ -1376,7 +1435,7 @@ void dng_opcode_ScalePerRow::PutData (dng_stream &stream) const
 	uint32 scales = SafeUint32DivideUp (fAreaSpec.Area ().H (),
 										fAreaSpec.RowPitch ());
 	
-	stream.Put_uint32 (dng_area_spec::kDataSize + 4 + scales * 4);
+	stream.Put_uint32 (DeltaScaleTableDataSize (scales));
 	
 	fAreaSpec.PutData (stream);
 	
@@ -1524,7 +1583,7 @@ dng_opcode_ScalePerColumn::dng_opcode_ScalePerColumn (dng_host &host,
 		ThrowBadFormat ();
 		}
 		
-	if (dataSize != dng_area_spec::kDataSize + 4 + scales * 4)
+	if (dataSize != DeltaScaleTableDataSize (scales))
 		{
 		ThrowBadFormat ();
 		}
@@ -1537,7 +1596,17 @@ dng_opcode_ScalePerColumn::dng_opcode_ScalePerColumn (dng_host &host,
 	
 	for (uint32 j = 0; j < scales; j++)
 		{
+
 		table [j] = stream.Get_real32 ();
+
+		// CR-4208475 N-M3: reject NaN / Inf at the parser boundary so
+		// non-finite scales cannot propagate into per-pixel scale loops.
+
+		if (!std::isfinite (table [j]))
+			{
+			ThrowBadFormat ();
+			}
+
 		}
 		
 	#if qDNGValidate
@@ -1571,7 +1640,7 @@ void dng_opcode_ScalePerColumn::PutData (dng_stream &stream) const
 	uint32 scales = SafeUint32DivideUp (fAreaSpec.Area ().W (),
 										fAreaSpec.ColPitch ());
 	
-	stream.Put_uint32 (dng_area_spec::kDataSize + 4 + scales * 4);
+	stream.Put_uint32 (DeltaScaleTableDataSize (scales));
 	
 	fAreaSpec.PutData (stream);
 	

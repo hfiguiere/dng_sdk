@@ -152,7 +152,68 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 	real64 scale = 1.0 / minRange;
 	
 	fScale = (real32) scale;
-		
+
+	// CR-4209079 defense-in-depth: re-assert the black-level invariants
+	// that the loops below rely on. dng_ifd::IsValidDNG already enforces
+	// these for the main IFD parsed from a DNG file:
+	//	 - fBlackLevelDeltaHCount == fActiveArea.W () (dng_ifd.cpp:4584).
+	//	 - fBlackLevelDeltaVCount == fActiveArea.H () (dng_ifd.cpp:4601).
+	//	 - fBlackLevelRepeatRows / Cols are in [1, kMaxBlackPattern]
+	//	   (dng_ifd.cpp:4567 and at parse time dng_ifd.cpp:1622).
+	// Upstream / AOSP DNG SDK forks (which lack one or more of these
+	// upstream checks) are vulnerable to a heap OOB read past the
+	// fBlackDeltaH / fBlackDeltaV memory blocks when the active-area
+	// dimensions exceed the allocated delta-entry counts.
+	// This guard re-asserts the same invariants at the consumer so any
+	// caller that delivers inconsistent state (internal cr_sdk vendor
+	// readers via SetColumnBlacks / SetRowBlacks / SetActiveArea, future
+	// parser regressions, etc.) fails closed rather than walking past
+	// the delta block. Bounds enforced here use the actual LogicalSize ()
+	// of each block with a ">= width / height" check (strictly weaker
+	// than the parser's exact-equality), so no valid file is affected.
+	// ThrowBadFormat matches the failure mode already used at line 149
+	// for the WhiteLevel / BlackLevel range check.
+
+	if (info.fBlackDeltaH.Get ())
+		{
+
+		const uint32 entries =
+			info.fBlackDeltaH->LogicalSize () / (uint32) sizeof (real64);
+
+		if (entries < info.fActiveArea.W ())
+			{
+
+			ThrowBadFormat ();
+
+			}
+
+		}
+
+	if (info.fBlackDeltaV.Get ())
+		{
+
+		const uint32 entries =
+			info.fBlackDeltaV->LogicalSize () / (uint32) sizeof (real64);
+
+		if (entries < info.fActiveArea.H ())
+			{
+
+			ThrowBadFormat ();
+
+			}
+
+		}
+
+	if (info.fBlackLevelRepeatRows < 1 ||
+		info.fBlackLevelRepeatRows > kMaxBlackPattern ||
+		info.fBlackLevelRepeatCols < 1 ||
+		info.fBlackLevelRepeatCols > kMaxBlackPattern)
+		{
+
+		ThrowBadFormat ();
+
+		}
+
 	// Calculate two-dimensional black pattern, if any.
 	
 	if (info.fBlackDeltaH.Get ())
@@ -345,7 +406,7 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 				
 				// Apply linearization table, if any.
 				
-				if (lut)
+				if (lut && lutEntries)
 					{
 					
 					x = Min_uint32 (x, lutEntries - 1);
@@ -405,7 +466,7 @@ dng_linearize_plane::dng_linearize_plane (dng_host &host,
 				
 				// Apply linearization table, if any.
 				
-				if (lut)
+				if (lut && lutEntries)
 					{
 					
 					x = Min_uint32 (x, lutEntries - 1);

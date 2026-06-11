@@ -61,6 +61,16 @@ additional dependencies:
 
 Release Notes / Changelog:
 
+1.7.1 2611 June 9, 2026
+
+    - TIFF and ARW read fixes.
+
+    - EXR support items.
+
+    - JXL c2pa manifest detection fixes.
+
+    - Vulnerability issue fixes.
+
 1.7.1 2573 May 12, 2026
 
     - Hasselblad FFF format fixes.

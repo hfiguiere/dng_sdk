@@ -158,9 +158,15 @@ void dng_compressed_image_tiles::EncodeTiles (dng_host &host,
 	
 	uint32 tilesAcross = ifd.TilesAcross ();
 	uint32 tilesDown   = ifd.TilesDown	 ();
-	
-	uint32 tileCount = tilesAcross * tilesDown;
-	
+
+	// CR-4208475 M-M3: Mirror the SafeUint32Mult preflight used in the
+	// dng_image_writer encode path (Phase L-M5). A pathological IFD with
+	// huge TilesAcross / TilesDown could otherwise wrap the uint32 tile
+	// count and under-size the fData vector before the worker pool writes
+	// per-tile buffers into it.
+
+	uint32 tileCount = SafeUint32Mult (tilesAcross, tilesDown);
+
 	fData.resize (tileCount);
 	
 	uint32 threadCount = Min_uint32 (tileCount,
