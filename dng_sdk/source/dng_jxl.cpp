@@ -2321,24 +2321,39 @@ class dng_jxl_box_reader
 
 		dng_jxl_decoder &fDecoder;
 
+		// Accumulated stream offset of the current box (advances after each
+		// box completes). Initialized to the stream position at decode start.
+
+		uint64 fCurrentOffset = 0;
+
+		// Raw on-disk size of the current box (header + payload), as reported
+		// by JxlDecoderGetBoxSizeRaw. Used to advance fCurrentOffset.
+
+		uint64 fCurrentRawSize = 0;
+
 	public:
 
 		dng_jxl_box_reader (dng_host &host,
 							JxlDecoder *dec,
-							dng_jxl_decoder &decoder)
+							dng_jxl_decoder &decoder,
+							uint64 startPosition)
 			:	fHost (host)
 			,	fDec (dec)
 			,	fInfo (decoder.fInfo)
 			,	fDecoder (decoder)
+			,	fCurrentOffset (startPosition)
 			{
 			}
 
 		void HandleDecBox ()
 			{
-		
-			// Wrap up any previous box.
+
+			// Finish the previous box before advancing the stream offset,
+			// so FinishBox sees fCurrentOffset at the previous box's start.
 
 			CheckFinishBox ();
+
+			fCurrentOffset += fCurrentRawSize;
 
 			// Read box type.
 
@@ -2355,6 +2370,8 @@ class dng_jxl_box_reader
 			CheckResult (JxlDecoderGetBoxSizeRaw (fDec, &size),
 						 "JxlDecoderGetBoxSizeRaw",
 						 nullptr);
+
+			fCurrentRawSize = uint64 (size);
 
 			#if qLogJXL
 
@@ -2502,6 +2519,12 @@ class dng_jxl_box_reader
 
 		void FinishBox ()
 			{
+
+			// Expose this box's stream position and raw size on the decoder
+			// so that ProcessBox overrides can read them as context.
+
+			fDecoder.fCurrentBoxStreamOffset = fCurrentOffset;
+			fDecoder.fCurrentBoxRawSize      = fCurrentRawSize;
 
 			#if qLogJXL
 
@@ -2778,7 +2801,7 @@ void dng_jxl_decoder::Decode (dng_host &host,
 
 	JxlFrameHeader frameHeader;
 
-	dng_jxl_box_reader boxReader (host, dec, *this);
+	dng_jxl_box_reader boxReader (host, dec, *this, startPosition);
 
 	dng_jxl_decoder_callback_data cbData;
 
@@ -2984,20 +3007,27 @@ void dng_jxl_decoder::Decode (dng_host &host,
 					if (extra.name_length)
 						{
 
-						std::vector<char> temp (extra.name_length + 1);
+						// CR-4208475 N-L1: clamp the libjxl-reported length
+						// before the diagnostic +1 so a pathological
+						// UINT32_MAX cannot wrap the vector size to 0.
+
+						const uint32 nameLen =
+							Min_uint32 (extra.name_length, 65535u);
+
+						std::vector<char> temp (nameLen + 1);
 
 						char *name = temp.data ();
-						
+
 						CheckResult (JxlDecoderGetExtraChannelName
 									 (dec,
 									  i,
 									  name,
-									  extra.name_length + 1),
+									  nameLen + 1),
 									 "JxlDecoderGetExtraChannelName",
 									 nullptr);
 
 						printf ("  name: %s\n", name);
-						
+
 						}
 					
 					if (extra.type == JXL_CHANNEL_ALPHA)
@@ -3273,13 +3303,20 @@ void dng_jxl_decoder::Decode (dng_host &host,
 				if (frameHeader.name_length)
 					{
 
-					std::vector<char> temp (frameHeader.name_length + 1);
+					// CR-4208475 N-L1: clamp the libjxl-reported length
+					// before the diagnostic +1 so a pathological
+					// UINT32_MAX cannot wrap the vector size to 0.
+
+					const uint32 nameLen =
+						Min_uint32 (frameHeader.name_length, 65535u);
+
+					std::vector<char> temp (nameLen + 1);
 
 					char *name = temp.data ();
 
 					CheckResult (JxlDecoderGetFrameName (dec,
 														 name,
-														 frameHeader.name_length + 1),
+														 nameLen + 1),
 								 "JxlDecoderGetFrameName",
 								 &parallelData);
 
@@ -3642,6 +3679,18 @@ void dng_jxl_decoder::Decode (dng_host &host,
 				info.fShared.Reset (host.Make_dng_shared ());
 				}
 
+			// Flush any C2PA manifest location detected during box processing.
+			// Done here because fShared is now guaranteed to be initialized.
+
+			if (fC2PAManifestOffset &&
+				!info.fShared->fC2PAManifestOffset)
+				{
+
+				info.fShared->fC2PAManifestOffset = fC2PAManifestOffset;
+				info.fShared->fC2PAManifestCount  = fC2PAManifestRawSize;
+
+				}
+
 			if (info.IFDCount () == 0)
 				{
 				info.fIFD.push_back (host.Make_dng_ifd ());
@@ -3830,10 +3879,34 @@ void dng_jxl_decoder::ProcessXMPBox (dng_host &host,
 /*****************************************************************************/
 
 void dng_jxl_decoder::ProcessBox (dng_host & /* host */,
-								  const dng_string & /* name */,
-								  const std::vector<uint8> & /* data */)
+								  const dng_string &name,
+								  const std::vector<uint8> &data)
 	{
-	
+
+	// Detect embedded C2PA manifest store. In JXL BMFF containers, C2PA
+	// uses native JUMBF support via the "jumb" box type. The jumb payload
+	// begins with a "jumd" description sub-box whose content-type identifier
+	// starts with "c2pa" for a C2PA manifest store. The memcmp checks bytes
+	// 4-11 of the payload for the concatenation "jumd" + "c2pa":
+	//
+	//   data[0..3]  = jumd sub-box size (big-endian uint32)
+	//   data[4..7]  = "jumd" (description box type)
+	//   data[8..11] = first 4 bytes of content-type identifier ("c2pa")
+
+	if (name.Matches ("jumb", true)                              &&
+		data.size () >= 12                                       &&
+		memcmp (data.data () + 4, "jumdc2pa", 8) == 0           &&
+		!fC2PAManifestOffset)
+		{
+
+		// Record into side fields; Decode flushes them to fShared after the
+		// decode loop, where fShared is guaranteed to be fully initialized.
+
+		fC2PAManifestOffset  = fCurrentBoxStreamOffset;
+		fC2PAManifestRawSize = (uint32) fCurrentBoxRawSize;
+
+		}
+
 	}
 
 /*****************************************************************************/

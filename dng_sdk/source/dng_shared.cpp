@@ -15,6 +15,7 @@
 #include "dng_host.h"
 #include "dng_memory.h"
 #include "dng_parse_utils.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_sdk_limits.h"
 #include "dng_tag_codes.h"
 #include "dng_tag_types.h"
@@ -1609,7 +1610,19 @@ bool dng_camera_profile_info::ParseExtended (dng_stream &stream)
 
 		uint32 offset = stream.Get_uint32 ();
 
-		stream.Skip (SafeUint32Sub (offset, 8u));
+		if (offset < 8)
+			{
+			return false;
+			}
+
+		const uint64 ifdOffset = SafeUint64Add (startPosition, offset);
+
+		if (ifdOffset > stream.Length ())
+			{
+			return false;
+			}
+
+		stream.SetReadPosition (ifdOffset);
 
 		// Start on IFD entries.
 
@@ -1619,11 +1632,23 @@ bool dng_camera_profile_info::ParseExtended (dng_stream &stream)
 			{
 			return false;
 			}
+
+		const uint32 entryTableBytes = SafeUint32Mult (ifdEntries, 12u);
+
+		if (SafeUint64Add (stream.Position (), entryTableBytes) > stream.Length ())
+			{
+			return false;
+			}
 		
 		for (uint32 tag_index = 0; tag_index < ifdEntries; tag_index++)
 			{
 			
-			stream.SetReadPosition (startPosition + 8 + 2 + tag_index * 12);
+			const uint64 entryOffset =
+				SafeUint64Add (ifdOffset,
+							   2u,
+							   SafeUint32Mult (tag_index, 12u));
+
+			stream.SetReadPosition (entryOffset);
 			
 			uint16 tagCode	= stream.Get_uint16 ();
 			uint32 tagType	= stream.Get_uint16 ();
@@ -1631,10 +1656,18 @@ bool dng_camera_profile_info::ParseExtended (dng_stream &stream)
 			
 			uint64 tagOffset = stream.Position ();
 
-			if (SafeUint32Mult (TagTypeSize (tagType), tagCount) > 4)
+			const uint32 tagSize = SafeUint32Mult (TagTypeSize (tagType),
+												   tagCount);
+
+			if (tagSize > 4)
 				{
 
-				tagOffset = startPosition + stream.Get_uint32 ();
+				tagOffset = SafeUint64Add (startPosition, stream.Get_uint32 ());
+
+				if (SafeUint64Add (tagOffset, tagSize) > stream.Length ())
+					{
+					return false;
+					}
 
 				stream.SetReadPosition (tagOffset);
 

@@ -1508,6 +1508,8 @@ class dng_write_tiles_task : public dng_area_task,
 		uint32 fTilesDown;
 		
 		uint32 fTilesAcross;
+
+		uint32 fTileCount;
 		
 		uint32 fCompressedSize;
 		

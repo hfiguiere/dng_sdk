@@ -140,7 +140,11 @@ uint32 SafeUint32Sub(uint32 arg1, uint32 arg2) {
 	if (arg1 >= arg2) {
 		return arg1 - arg2;
 	} else {
-		ThrowOverflow ("Arithmetic overflow in SafeInt32Sub");
+		// CR-4208475 M-L1: Diagnostic previously misreported this as
+		// SafeInt32Sub. Correct it to SafeUint32Sub so debugging the
+		// failing call site is unambiguous.
+
+		ThrowOverflow ("Arithmetic overflow in SafeUint32Sub");
 
 		// Dummy return statement.
 		return 0;

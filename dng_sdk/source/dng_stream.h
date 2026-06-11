@@ -584,26 +584,39 @@ class dng_stream: private dng_uncopyable
 		/// \exception dng_exception with fErrorCode equal to dng_error_end_of_file
 		/// if stream runs out before NUL is seen.
 
+		// CR-4208475 N-L4: Get_CString / Get_UString optionally bound the
+		// number of stream bytes consumed while searching for the NUL
+		// terminator. Callers that parse from a tag-local payload should
+		// pass the declared payload length as maxStreamBytes so a malformed
+		// non-terminated tag fails closed instead of consuming later file
+		// bytes. Default UINT32_MAX preserves the original open-ended
+		// behavior for existing callers.
+
 		void Get_CString (char *data,
-						  uint32 maxLength);
-		
+						  uint32 maxLength,
+						  uint32 maxStreamBytes = 0xFFFFFFFFu);
+
 		/// Puts an 8-bit character string from stream, including trailing NUL.
 		/// \param data Buffer pointing to null terminated string.
 
 		void Put_CString (const char *data);
-		
+
 		/// Get a 16-bit character string from stream and advance read position.
 		/// 16-bit characters are truncated to 8-bits.
 		/// Routine always reads until a NUL character (16-bits of zero) is read.
-		/// (That is, only maxLength bytes will be returned in buffer, but the 
+		/// (That is, only maxLength bytes will be returned in buffer, but the
 		/// stream is always advanced until a NUL is read or EOF is reached.)
 		/// \param data Buffer to place string in.
 		/// \param maxLength Maximum number of bytes to place in buffer.
+		/// \param maxStreamBytes Maximum number of stream bytes (not code
+		/// units) that may be consumed before reaching the NUL terminator.
+		/// Throws ThrowBadFormat if the bound is exceeded.
 		/// \exception dng_exception with fErrorCode equal to dng_error_end_of_file
 		/// if stream runs out before NUL is seen.
 
 		void Get_UString (char *data,
-						  uint32 maxLength);
+						  uint32 maxLength,
+						  uint32 maxStreamBytes = 0xFFFFFFFFu);
 						  
 		/// Writes the specified number of zero bytes to stream.
 		/// \param count Number of zero bytes to write.

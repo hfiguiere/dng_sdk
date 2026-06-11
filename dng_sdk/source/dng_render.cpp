@@ -30,10 +30,28 @@ dng_function_zero_offset::dng_function_zero_offset (real64 zeroOffset)
 
 	:	fZeroOffset (zeroOffset)
 
-	,	fScale (1.0 / (1.0 - zeroOffset))
+	,	fScale (0.0)
 
 	{
-	
+
+	// CR-4208475 M-M2: Guard against division by zero / Inf propagation
+	// when zeroOffset is at or beyond 1.0 (or non-finite). The parser
+	// already caps Stage3BlackLevelNormalized at kMaxStage3BlackLevelNormalized
+	// (0.2) on the read path, but this constructor is also reachable from
+	// public callers that may pass arbitrary values. A zeroOffset of 1.0
+	// would otherwise produce fScale = 1.0/0.0 = +Inf, and Evaluate at
+	// x == zeroOffset would compute 0 * Inf = NaN which is undefined when
+	// later converted to integer codes by table builders.
+
+	const real64 denom = 1.0 - zeroOffset;
+
+	if (denom > 0.0)
+		{
+
+		fScale = 1.0 / denom;
+
+		}
+
 	}
 
 /*****************************************************************************/
@@ -51,29 +69,58 @@ dng_function_exposure_ramp::dng_function_exposure_ramp (real64 white,
 														real64 black,
 														real64 minBlack,
 														bool supportOverrange)
-									
-	:	fSlope (1.0 / (white - black))
+
+	:	fSlope (0.0)
 	,	fBlack (black)
-	
+
 	,	fRadius (0.0)
 	,	fQScale (0.0)
 
 	,	fSupportOverrange (supportOverrange)
-	
+
 	{
-	
+
+	// CR-4208475 N-L10: mirror the M-M2 dng_function_zero_offset hygiene.
+	// Inputs flow from log / pow / scale chains that can produce +Inf or
+	// NaN for pathological BaselineExposure / Stage3Gain values parsed
+	// from a malformed file; require finite, ordered (white > black) and
+	// finite minBlack before computing the reciprocal. Also require the
+	// reciprocal slope itself to stay finite so tiny finite denominators do
+	// not rebuild the same Inf/NaN ramp through overflow. Otherwise leave
+	// fSlope = 0 so the ramp collapses to a degenerate but defined shape
+	// (Evaluate returns 0 below black, 1 above white).
+
 	const real64 kMaxCurveX = 0.5;			// Fraction of minBlack.
-	
+
 	const real64 kMaxCurveY = 1.0 / 16.0;	// Fraction of white.
-	
-	fRadius = Min_real64 (kMaxCurveX * minBlack,
-						  kMaxCurveY / fSlope);
-	
-	if (fRadius > 0.0)
-		fQScale= fSlope / (4.0 * fRadius);
-	else
-		fQScale = 0.0;
-		
+
+	if (std::isfinite (white)	 &&
+		std::isfinite (black)	 &&
+		std::isfinite (minBlack) &&
+		white > black)
+		{
+
+		const real64 denom = white - black;
+		const real64 slope = 1.0 / denom;
+
+		if (!std::isfinite (denom) ||
+			!std::isfinite (slope))
+			{
+			return;
+			}
+
+		fSlope = slope;
+
+		fRadius = Min_real64 (kMaxCurveX * minBlack,
+							  kMaxCurveY / fSlope);
+
+		if (fRadius > 0.0)
+			fQScale = fSlope / (4.0 * fRadius);
+		else
+			fQScale = 0.0;
+
+		}
+
 	}
 			
 /*****************************************************************************/

@@ -1429,8 +1429,18 @@ dng_point dng_filter_warp::SrcTileSize (const dng_point &dstTileSize)
 
 		}
 
-	srcTileSize.h += ConvertUint32ToInt32 (fWeights.Width ());
-	srcTileSize.v += ConvertUint32ToInt32 (fWeights.Width ());
+	// CR-4208475 N-L9: each += chains a ConvertUint32ToInt32 /
+	// ConvertDoubleToInt32 result (which can reach INT32_MAX individually)
+	// onto srcTileSize, so two adds back-to-back can signed-overflow. Route
+	// through SafeInt32Add so the failure is a clean throw on overflow.
+	// Mirrors the M-M7 dng_tile_iterator pattern.
+
+	srcTileSize.h =
+		SafeInt32Add (srcTileSize.h,
+					  ConvertUint32ToInt32 (fWeights.Width ()));
+	srcTileSize.v =
+		SafeInt32Add (srcTileSize.v,
+					  ConvertUint32ToInt32 (fWeights.Width ()));
 
 	// Get upper bound on src tile size from tangential warp.
 
@@ -1438,17 +1448,21 @@ dng_point dng_filter_warp::SrcTileSize (const dng_point &dstTileSize)
 
 	const dng_point_real64 minDst ((bounds.t - fCenter.v) * fInvNormRadius,
 								   (bounds.l - fCenter.h) * fInvNormRadius);
-	
+
 	const dng_point_real64 maxDst ((bounds.b - 1.0 - fCenter.v) * fInvNormRadius,
 								   (bounds.r - 1.0 - fCenter.h) * fInvNormRadius);
-	
+
 	const dng_point_real64 srcTanGap = fParams->MaxSrcTanGap (minDst,
 															  maxDst);
 
 	// Add the two bounds together.
 
-	srcTileSize.v += ConvertDoubleToInt32 (ceil (srcTanGap.v * fNormRadius));
-	srcTileSize.h += ConvertDoubleToInt32 (ceil (srcTanGap.h * fNormRadius));
+	srcTileSize.v =
+		SafeInt32Add (srcTileSize.v,
+					  ConvertDoubleToInt32 (ceil (srcTanGap.v * fNormRadius)));
+	srcTileSize.h =
+		SafeInt32Add (srcTileSize.h,
+					  ConvertDoubleToInt32 (ceil (srcTanGap.h * fNormRadius)));
 	
 	DNG_REQUIRE (srcTileSize.v > 0, "Bad srcTileSize.v in dng_filter_warp::SrcTileSize");
 	DNG_REQUIRE (srcTileSize.h > 0, "Bad srcTileSize.h in dng_filter_warp::SrcTileSize");
@@ -2418,8 +2432,23 @@ bool dng_vignette_radial_params::IsValid () const
 		return false;
 		}
 
+	// CR-4208475 N-M3: reject NaN / Inf in the radial-vignette coefficient
+	// terms. The finiteness check on fCenter above was insufficient; the
+	// fParams array also feeds the per-pixel correction math and can
+	// produce non-finite intermediates if it contains NaN / Inf entries.
+
+	for (uint32 i = 0; i < kNumTerms; i++)
+		{
+
+		if (!std::isfinite (fParams [i]))
+			{
+			return false;
+			}
+
+		}
+
 	return true;
-	
+
 	}
 
 /*****************************************************************************/

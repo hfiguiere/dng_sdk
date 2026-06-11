@@ -215,7 +215,19 @@ uint64 dng_file_stream::DoGetLength ()
 
 		}
 
-	return (uint64) _ftelli64 (fFile);
+	// CR-4208475 K-L2: Treat tell failures as read errors before
+	// widening the position into the unsigned stream-length domain.
+
+	const auto position = _ftelli64 (fFile);
+
+	if (position < 0)
+		{
+
+		ThrowReadFile ();
+
+		}
+
+	return (uint64) position;
 
 	#else
 
@@ -226,7 +238,19 @@ uint64 dng_file_stream::DoGetLength ()
 
 		}
 
-	return (uint64) ftello (fFile);
+	// CR-4208475 K-L2: Treat tell failures as read errors before
+	// widening the position into the unsigned stream-length domain.
+
+	const auto position = ftello (fFile);
+
+	if (position < 0)
+		{
+
+		ThrowReadFile ();
+
+		}
+
+	return (uint64) position;
 
 	#endif
 	

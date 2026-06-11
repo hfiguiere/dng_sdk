@@ -1525,13 +1525,47 @@ dng_point dng_mosaic_info::FullScale () const
 
 bool dng_mosaic_info::IsSafeDownScale (const dng_point &downScale) const
 	{
-	
+
+	// CR-4209076 defense-in-depth: re-assert the CFA-pattern and color-plane
+	// invariants that this function relies on. These bounds are already
+	// enforced at parse time in this codebase:
+	//	 - fCFAPatternSize.v/.h is bounded to [1, kMaxCFAPattern] by
+	//	   dng_mosaic_info::Parse via DNG_REQUIRE, and by
+	//	   dng_ifd::IsValidCFA during IsValidDNG. The tcCFAPattern handler
+	//	   in dng_ifd::ParseTag adds a third bound when a CFAPattern tag
+	//	   is present.
+	//	 - fColorPlanes is pinned to [0, kMaxColorPlanes] by
+	//	   dng_shared::Parse via Pin_uint32 at every assignment site.
+	// Upstream / AOSP DNG SDK forks (which lack one or more of these
+	// upstream bounds) are vulnerable to a stack buffer overflow here
+	// because the compiler lowers the "contains [plane] = false" init
+	// loop below into a memset sized by fColorPlanes. With an unbounded
+	// fColorPlanes (or in some upstream variants an unbounded
+	// fCFAPatternSize feeding into a buffer indexed by phase), that
+	// memset walks past the fixed-size stack array.
+	// This guard fails closed locally so the function cannot be reached
+	// with out-of-range state even if a future regression bypasses one
+	// of the upstream checks. The bounds enforced here are strictly
+	// weaker than the existing parse-time bounds, so no valid file is
+	// affected.
+
+	if (fCFAPatternSize.v < 1 ||
+		fCFAPatternSize.v > (int32) kMaxCFAPattern ||
+		fCFAPatternSize.h < 1 ||
+		fCFAPatternSize.h > (int32) kMaxCFAPattern ||
+		fColorPlanes > kMaxColorPlanes)
+		{
+
+		return false;
+
+		}
+
 	if (downScale.v >= fCFAPatternSize.v &&
 		downScale.h >= fCFAPatternSize.h)
 		{
-		
+
 		return true;
-		
+
 		}
 		
 	dng_point test;
@@ -1936,9 +1970,45 @@ void dng_mosaic_info::InterpolateFast (dng_host &host,
 									   const dng_point &downScale,
 									   uint32 srcPlane) const
 	{
-	
+
+	// CR-4209077 defense-in-depth: re-assert the CFA-pattern and
+	// color-plane invariants before constructing the stack-resident
+	// dng_fast_interpolator. These bounds are already enforced at
+	// parse time in this codebase:
+	//	 - fCFAPatternSize.v/.h is bounded to [1, kMaxCFAPattern] by
+	//	   dng_mosaic_info::Parse via DNG_REQUIRE, and by
+	//	   dng_ifd::IsValidCFA during IsValidDNG.
+	//	 - fColorPlanes is pinned to [0, kMaxColorPlanes] by
+	//	   dng_shared::Parse via Pin_uint32 at every assignment site.
+	// Upstream / AOSP DNG SDK forks (which lack one or more of these
+	// upstream bounds) are vulnerable to a stack buffer overflow
+	// inside dng_fast_interpolator's constructor and ProcessArea
+	// because they index the stack-resident fFilterColor [8][8]
+	// member and the kMaxColorPlanes-sized total/count arrays using
+	// fCFAPatternSize and fColorPlanes directly. With unbounded
+	// dimensions or planes, those indexed accesses (and the compiler-
+	// lowered memset of total/count) walk past the stack frame.
+	// This guard fails closed locally so the interpolator cannot be
+	// constructed with out-of-range state even if a future regression
+	// bypasses one of the upstream checks. The bounds enforced here
+	// are strictly weaker than the existing parse-time bounds, so no
+	// valid file is affected. ThrowProgramError matches the failure
+	// mode of dng_mosaic_info::Parse's DNG_REQUIRE for the same
+	// invariants.
+
+	if (fCFAPatternSize.v < 1 ||
+		fCFAPatternSize.v > (int32) kMaxCFAPattern ||
+		fCFAPatternSize.h < 1 ||
+		fCFAPatternSize.h > (int32) kMaxCFAPattern ||
+		fColorPlanes > kMaxColorPlanes)
+		{
+
+		ThrowProgramError ("Invalid CFA pattern for fast interpolation");
+
+		}
+
 	// Create fast interpolator task.
-	
+
 	dng_fast_interpolator interpolator (*this,
 										srcImage,
 										dstImage,

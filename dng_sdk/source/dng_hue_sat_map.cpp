@@ -103,6 +103,12 @@ void dng_hue_sat_map::SetDivisions (uint32 hueDivisions,
 									uint32 valDivisions)
 	{
 
+	if (hueDivisions < 1 ||
+		satDivisions < 2)
+		{
+		ThrowBadFormat ("Invalid hue/sat map divisions");
+		}
+
 	DNG_ASSERT (hueDivisions >= 1, "Must have at least 1 hue division.");
 	DNG_ASSERT (satDivisions >= 2, "Must have at least 2 sat divisions.");
 	

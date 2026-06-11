@@ -21,6 +21,7 @@
 #include "dng_image_writer.h"
 #include "dng_iptc.h"
 #include "dng_negative.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_string.h"
 #include "dng_string_list.h"
 #include "dng_utils.h"
@@ -3284,18 +3285,27 @@ void dng_xmp::SyncExif (dng_exif &exif,
 							
 			if (xmpList.Count () > 0)
 				{
-				
+
 				uint32 j;
-				
-				uint32 bufferSize = xmpList.Count () * 4 + 1;
-				
+
+				// CR-4208475 M-M1: Compute the assembled Artist buffer size
+				// with overflow-safe uint32 arithmetic. Each entry can add
+				// per-entry framing (quotes, separator) plus up to 2x its
+				// length when every character is doubled by escaping.
+
+				uint32 bufferSize = SafeUint32Add (
+					SafeUint32Mult (xmpList.Count (), 4u),
+					1u);
+
 				for (j = 0; j < xmpList.Count (); j++)
 					{
-					
-					bufferSize += xmpList [j].Length () * 2;
-					
+
+					bufferSize = SafeUint32Add (
+						bufferSize,
+						SafeUint32Mult (xmpList [j].Length (), 2u));
+
 					}
-					
+
 				dng_memory_data temp (bufferSize);
 				
 				char *t = temp.Buffer_char ();

@@ -746,9 +746,12 @@ uint32 dng_ifd_updater::ByteCount (dng_file_updater &updater) const
 		{
 		return 0;
 		}
-		
-	return updater.BigTIFF () ? EntryCount () * 20 + 16
-							  : EntryCount () * 12 +  6;
+
+	const uint32 entryBytes = SafeUint32Mult (EntryCount (),
+											  updater.BigTIFF () ? 20u : 12u);
+
+	return SafeUint32Add (entryBytes,
+						  updater.BigTIFF () ? 16u : 6u);
 
 	}
 
