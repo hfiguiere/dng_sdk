@@ -61,6 +61,12 @@ additional dependencies:
 
 Release Notes / Changelog:
 
+1.7.1 2652 July 14, 2026
+
+    - Padded XMP packet fixes.
+
+    - Vulnerability issue fixes.
+
 1.7.1 2611 June 9, 2026
 
     - TIFF and ARW read fixes.

@@ -123,11 +123,34 @@ dng_mutex::dng_mutex (const char *mutexName, uint32 mutexLevel)
 	
 	// make recursive mutex, can lock within itself
 	pthread_mutexattr_t	  mta;
-	pthread_mutexattr_init(&mta);
-	pthread_mutexattr_settype(&mta, PTHREAD_MUTEX_RECURSIVE);
-		
-	if (pthread_mutex_init (&fPthreadMutex, &mta) != 0)
+	if (pthread_mutexattr_init(&mta) != 0)
 		{
+		ThrowMemoryFull ();
+		}
+
+	// CR-4208475 O-L6: The attr object must be initialized before use and
+	// destroyed after pthread_mutex_init, even when setup fails partway
+	// through.
+
+	int mutexResult = pthread_mutexattr_settype(&mta, PTHREAD_MUTEX_RECURSIVE);
+
+	bool mutexInitialized = false;
+
+	if (mutexResult == 0)
+		{
+		mutexResult = pthread_mutex_init (&fPthreadMutex, &mta);
+		mutexInitialized = (mutexResult == 0);
+		}
+
+	int attrDestroyResult = pthread_mutexattr_destroy(&mta);
+
+	if (mutexResult != 0 || attrDestroyResult != 0)
+		{
+		if (mutexInitialized)
+			{
+			pthread_mutex_destroy (&fPthreadMutex);
+			}
+
 		ThrowMemoryFull ();
 		}
 	#endif
