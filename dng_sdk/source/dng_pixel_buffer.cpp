@@ -87,6 +87,31 @@ static int32 NegateStepChecked (int32 step)
 
 /*****************************************************************************/
 
+static bool CanCoalesceStep (int32 outerStep,
+							 uint32 innerCount,
+							 int32 innerStep)
+	{
+
+	int32 innerCount32 = 0;
+
+	if (!ConvertUint32ToInt32 (innerCount, &innerCount32))
+		{
+		return false;
+		}
+
+	int32 coalescedStep = 0;
+
+	if (!SafeInt32Mult (innerCount32, innerStep, &coalescedStep))
+		{
+		return false;
+		}
+
+	return outerStep == coalescedStep;
+
+	}
+
+/*****************************************************************************/
+
 void OptimizeOrder (const void *&sPtr,
 					void *&dPtr,
 					uint32 sPixelSize,
@@ -317,17 +342,25 @@ void OptimizeOrder (const void *&sPtr,
 	dStep1 = step [index1];
 	dStep2 = step [index2];
 	
-	if (sStep0 == ((int32) count1) * sStep1 &&
-		dStep0 == ((int32) count1) * dStep1)
+	// CR-4208475 P-L1: These final coalescing checks are an optimization.
+	// If the step product or combined loop count cannot be represented,
+	// leave the dimensions split instead of evaluating signed-overflow math.
+
+	uint32 coalescedCount = 0;
+
+	if (CanCoalesceStep (sStep0, count1, sStep1) &&
+		CanCoalesceStep (dStep0, count1, dStep1) &&
+		SafeUint32Mult (count1, count0, &coalescedCount))
 		{
-		count1 *= count0;
+		count1 = coalescedCount;
 		count0 = 1;
 		}
 	
-	if (sStep1 == ((int32) count2) * sStep2 &&
-		dStep1 == ((int32) count2) * dStep2)
+	if (CanCoalesceStep (sStep1, count2, sStep2) &&
+		CanCoalesceStep (dStep1, count2, dStep2) &&
+		SafeUint32Mult (count2, count1, &coalescedCount))
 		{
-		count2 *= count1;
+		count2 = coalescedCount;
 		count1 = 1;
 		}
 	

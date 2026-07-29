@@ -249,6 +249,38 @@ namespace
 		void *arg;
 	};
 
+	struct ScopedThreadHandle
+	{
+		HANDLE handle;
+
+		explicit ScopedThreadHandle(HANDLE arg = NULL) : handle(arg)
+		{
+		}
+
+		~ScopedThreadHandle()
+		{
+			if (handle != NULL)
+			{
+			#if qWinRT
+				::WinRT_CloseThreadHandle(handle);
+			#else
+				::CloseHandle(handle);
+			#endif
+			}
+		}
+
+		HANDLE Release()
+		{
+			HANDLE result = handle;
+			handle = NULL;
+			return result;
+		}
+
+	private:
+		ScopedThreadHandle &operator=(const ScopedThreadHandle &);
+		ScopedThreadHandle(const ScopedThreadHandle &);
+	};
+
 	// This trampoline takes care of the return type being different
 	// between pthreads thread funcs and Windows C lib thread funcs
 	unsigned __stdcall trampoline(void *arg_arg)
@@ -373,13 +405,23 @@ int dng_pthread_create(dng_pthread_t *thread, const pthread_attr_t *attrs, void 
 				return -1; // ENOMEM
 			(void) args.Release();
 
+			// CR-4208475 O-L5: Keep the OS handle owned locally until the
+			// map insertion succeeds. If insert throws, the handle is
+			// closed by ScopedThreadHandle instead of leaking.
+			ScopedThreadHandle threadHandle((HANDLE)result);
+
 			std::pair<DWORD, std::pair<HANDLE, void **> > newMapEntry(threadID,
-																	 std::pair<HANDLE, void **>((HANDLE)result, resultHolder.Get ()));
+																	 std::pair<HANDLE, void **>(threadHandle.handle, resultHolder.Get ()));
 			std::pair<ThreadMapType::iterator, bool> insertion = primaryHandleMap.insert(newMapEntry);
 			(void) insertion;
 
 			// If there is a handle open on the thread, its ID should not be reused so assert that an insertion was made.
 			DNG_ASSERT(insertion.second, "pthread emulation logic error");
+
+			if (!insertion.second)
+				return -1;
+
+			(void) threadHandle.Release();
 		}
 
 

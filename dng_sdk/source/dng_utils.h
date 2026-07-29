@@ -728,7 +728,24 @@ inline uint32 Round_uint32 (real64 x)
 inline int64 Round_int64 (real64 x)
 	{
 	
-	return (int64) (x >= 0.0 ? x + 0.5 : x - 0.5);
+	const real64 temp = x >= 0.0 ? x + 0.5 : x - 0.5;
+
+	// CR-4208475 O-L2: Match the int32 helper's fail-closed contract
+	// before converting floating-point values to integer. NaN, infinity,
+	// or out-of-range input would otherwise make the cast undefined.
+
+	if (temp > real64 (std::numeric_limits<int64>::min ()) - 1.0 &&
+		temp < real64 (std::numeric_limits<int64>::max ()) + 1.0)
+		{
+		return (int64) temp;
+		}
+
+	else
+		{
+		ThrowProgramError ("Overflow in Round_int64");
+		// Dummy return.
+		return 0;
+		}
 	
 	}
 
@@ -751,7 +768,7 @@ inline int64 Real64ToFixed64 (real64 x)
 inline real64 Fixed64ToReal64 (int64 x)
 	{
 	
-	return x * (1.0 / (real64) kFixed64_One);
+	return ((real64)x) * (1.0 / (real64) kFixed64_One);
 	
 	}
 

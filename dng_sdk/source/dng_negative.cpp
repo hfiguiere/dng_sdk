@@ -52,6 +52,242 @@
 static const uint32 kMaxEmbeddedMakerNoteBlockSize	= 128u * 1024u * 1024u;
 static const uint32 kMaxEmbeddedIPTCBlockSize		= 128u * 1024u * 1024u;
 static const uint32 kMaxEmbeddedXMPBlockSize		= 128u * 1024u * 1024u;
+static const uint32 kTrimmedEmbeddedXMPPaddingSize	= 4096u;
+
+/*****************************************************************************/
+
+static bool IsXMPPacketWhitespace (uint8 ch)
+	{
+
+	return ch == ' '  ||
+		   ch == '\t' ||
+		   ch == '\n' ||
+		   ch == '\r';
+
+	}
+
+/*****************************************************************************/
+
+static bool FindPatternInStream (dng_stream &stream,
+								 uint64 offset,
+								 uint64 count,
+								 const char *pattern,
+								 uint32 patternSize,
+								 uint64 &patternOffset)
+	{
+
+	DNG_REQUIRE (patternSize > 0, "Expected pattern");
+
+	const uint32 kBufferSize = 64u * 1024u;
+
+	dng_memory_data buffer (kBufferSize + patternSize);
+
+	uint8 *data = buffer.Buffer_uint8 ();
+
+	uint32 carryCount = 0;
+
+	uint64 position = offset;
+	uint64 remaining = count;
+
+	while (remaining)
+		{
+
+		uint32 readCount = (uint32) Min_uint64 (remaining, kBufferSize);
+
+		stream.SetReadPosition (position);
+
+		stream.Get (data + carryCount, readCount);
+
+		uint32 searchCount = carryCount + readCount;
+
+		for (uint32 j = 0; j + patternSize <= searchCount; j++)
+			{
+
+			if (!memcmp (data + j, pattern, patternSize))
+				{
+
+				patternOffset = position - carryCount + j;
+
+				return true;
+
+				}
+
+			}
+
+		carryCount = Min_uint32 (patternSize - 1, searchCount);
+
+		if (carryCount)
+			{
+			memmove (data, data + searchCount - carryCount, carryCount);
+			}
+
+		position += readCount;
+		remaining -= readCount;
+
+		}
+
+	return false;
+
+	}
+
+/*****************************************************************************/
+
+static bool StreamRangeIsXMPPacketWhitespace (dng_stream &stream,
+											  uint64 offset,
+											  uint64 count)
+	{
+
+	const uint32 kBufferSize = 64u * 1024u;
+
+	dng_memory_data buffer (kBufferSize);
+
+	uint64 position = offset;
+	uint64 remaining = count;
+
+	while (remaining)
+		{
+
+		uint32 readCount = (uint32) Min_uint64 (remaining, kBufferSize);
+
+		stream.SetReadPosition (position);
+
+		stream.Get (buffer.Buffer (), readCount);
+
+		const uint8 *data = buffer.Buffer_uint8 ();
+
+		for (uint32 j = 0; j < readCount; j++)
+			{
+
+			if (!IsXMPPacketWhitespace (data [j]))
+				{
+				return false;
+				}
+
+			}
+
+		position += readCount;
+		remaining -= readCount;
+
+		}
+
+	return true;
+
+	}
+
+/*****************************************************************************/
+
+// CR-4209376: Some legacy DNG files contain small valid XMP packets with
+// pathological amounts of packet padding.  Keep the embedded metadata block
+// allocation cap, but allow these files after verifying that the oversized
+// portion is only XML packet whitespace and trimming it to a normal reserve.
+
+static dng_memory_block * ReadEmbeddedXMPBlock (dng_host &host,
+												dng_stream &stream,
+												uint64 offset,
+												uint32 count)
+	{
+
+	if (count <= kMaxEmbeddedXMPBlockSize)
+		{
+
+		AutoPtr<dng_memory_block> block (host.Allocate (count));
+
+		stream.SetReadPosition (offset);
+
+		stream.Get (block->Buffer (),
+					block->LogicalSize ());
+
+		return block.Release ();
+
+		}
+
+	const char kXMPMetaEnd [] = "</x:xmpmeta>";
+	const char kXMPPacketEndStart [] = "<?xpacket end=";
+	const char kXMPPacketEndClose [] = "?>";
+
+	uint64 xmpMetaEndOffset = 0;
+
+	if (!FindPatternInStream (stream,
+							  offset,
+							  kMaxEmbeddedXMPBlockSize,
+							  kXMPMetaEnd,
+							  (uint32) strlen (kXMPMetaEnd),
+							  xmpMetaEndOffset))
+		{
+		ThrowBadFormat ("XMP block too large");
+		}
+
+	uint64 contentEndOffset = xmpMetaEndOffset + strlen (kXMPMetaEnd);
+
+	uint64 packetEndStartOffset = 0;
+
+	if (!FindPatternInStream (stream,
+							  contentEndOffset,
+							  offset + count - contentEndOffset,
+							  kXMPPacketEndStart,
+							  (uint32) strlen (kXMPPacketEndStart),
+							  packetEndStartOffset))
+		{
+		ThrowBadFormat ("XMP block too large");
+		}
+
+	if (!StreamRangeIsXMPPacketWhitespace (stream,
+										   contentEndOffset,
+										   packetEndStartOffset - contentEndOffset))
+		{
+		ThrowBadFormat ("XMP block too large");
+		}
+
+	uint64 packetEndCloseOffset = 0;
+
+	if (!FindPatternInStream (stream,
+							  packetEndStartOffset,
+							  offset + count - packetEndStartOffset,
+							  kXMPPacketEndClose,
+							  (uint32) strlen (kXMPPacketEndClose),
+							  packetEndCloseOffset))
+		{
+		ThrowBadFormat ("XMP block too large");
+		}
+
+	uint64 packetEndOffset = packetEndCloseOffset + strlen (kXMPPacketEndClose);
+
+	if (!StreamRangeIsXMPPacketWhitespace (stream,
+										   packetEndOffset,
+										   offset + count - packetEndOffset))
+		{
+		ThrowBadFormat ("XMP block too large");
+		}
+
+	uint32 contentSize = (uint32) (contentEndOffset - offset);
+	uint32 trailerSize = (uint32) (packetEndOffset - packetEndStartOffset);
+	uint32 trimmedSize = contentSize +
+						 kTrimmedEmbeddedXMPPaddingSize +
+						 trailerSize;
+
+	if (trimmedSize > kMaxEmbeddedXMPBlockSize)
+		{
+		ThrowBadFormat ("XMP block too large");
+		}
+
+	AutoPtr<dng_memory_block> block (host.Allocate (trimmedSize));
+
+	uint8 *dst = block->Buffer_uint8 ();
+
+	stream.SetReadPosition (offset);
+
+	stream.Get (dst, contentSize);
+
+	memset (dst + contentSize, ' ', kTrimmedEmbeddedXMPPaddingSize);
+
+	stream.SetReadPosition (packetEndStartOffset);
+
+	stream.Get (dst + contentSize + kTrimmedEmbeddedXMPPaddingSize,
+				trailerSize);
+
+	return block.Release ();
+
+	}
 
 /*****************************************************************************/
 
@@ -4072,18 +4308,11 @@ void dng_negative::PostParse (dng_host &host,
 		
 		if (shared.fXMPCount)
 			{
-
-			if (shared.fXMPCount > kMaxEmbeddedXMPBlockSize)
-				{
-				ThrowBadFormat ("XMP block too large");
-				}
 			
-			AutoPtr<dng_memory_block> block (host.Allocate (shared.fXMPCount));
-			
-			stream.SetReadPosition (shared.fXMPOffset);
-			
-			stream.Get (block->Buffer	   (),
-						block->LogicalSize ());
+			AutoPtr<dng_memory_block> block (ReadEmbeddedXMPBlock (host,
+																	stream,
+																	shared.fXMPOffset,
+																	shared.fXMPCount));
 						
 			Metadata ().SetEmbeddedXMP (host,
 										block->Buffer	   (),

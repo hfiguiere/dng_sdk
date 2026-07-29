@@ -1171,7 +1171,7 @@
 					"$(inherited)",
 				);
 				INSTALL_PATH = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LIBRARY_SEARCH_PATHS = " $(inherited)";
 				LIBRARY_STYLE = STATIC;
 				OBJROOT = ../../../toolkit/XMPCore/build/CMake64_libcpp_ios;
@@ -1370,7 +1370,7 @@
 					"$(inherited)",
 				);
 				INSTALL_PATH = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LIBRARY_SEARCH_PATHS = " $(inherited)";
 				LIBRARY_STYLE = STATIC;
 				OBJROOT = ../../../toolkit/XMPCore/build/CMake64_libcpp_ios;
@@ -1549,7 +1549,7 @@
 					"$(inherited)",
 				);
 				INSTALL_PATH = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LIBRARY_SEARCH_PATHS = " $(inherited)";
 				LIBRARY_STYLE = STATIC;
 				OBJROOT = ../../../toolkit/XMPCore/build/CMake64_libcpp_ios;
@@ -1623,7 +1623,7 @@
 					"$(inherited)",
 				);
 				INSTALL_PATH = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LIBRARY_SEARCH_PATHS = " $(inherited)";
 				LIBRARY_STYLE = STATIC;
 				OBJROOT = ../../../toolkit/XMPCore/build/CMake64_libcpp_ios;

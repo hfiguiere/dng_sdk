@@ -61,9 +61,12 @@ dng_tile_iterator::dng_tile_iterator (const dng_point &tileSize,
 	{
 	
 	dng_rect tile (area);
+
+	// CR-4208475 O-L4: Check the caller-provided tile-size clipping
+	// arithmetic before Initialize derives tile width and height.
 	
-	tile.b = Min_int32 (tile.b, tile.t + tileSize.v);
-	tile.r = Min_int32 (tile.r, tile.l + tileSize.h);
+	tile.b = Min_int32 (tile.b, SafeInt32Add (tile.t, tileSize.v));
+	tile.r = Min_int32 (tile.r, SafeInt32Add (tile.l, tileSize.h));
 	
 	Initialize (tile,
 				area);
@@ -115,9 +118,12 @@ void dng_tile_iterator::Initialize (const dng_rect &tile,
 	
 	int32 vOffset = tile.t;
 	int32 hOffset = tile.l;
+
+	// CR-4208475 O-L4: These dimensions may come directly from public
+	// iterator callers, so derive them without raw signed subtraction.
 	
-	int32 tileHeight = tile.b - vOffset;
-	int32 tileWidth	 = tile.r - hOffset;
+	int32 tileHeight = SafeInt32Sub (tile.b, vOffset);
+	int32 tileWidth	 = SafeInt32Sub (tile.r, hOffset);
 
 	if (tileWidth <= 0 || tileHeight <= 0)
 		{

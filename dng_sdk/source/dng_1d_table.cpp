@@ -124,8 +124,15 @@ void dng_1d_table::Initialize (dng_memory_allocator &allocator,
 							   const dng_1d_function &function,
 							   bool subSample)
 	{
+
+	// CR-4208475 O-L3: Keep the allocation size in checked uint32
+	// arithmetic before writing fTable [0 .. fTableCount + 1].
+
+	const uint32 tableBytes =
+		SafeUint32Mult (SafeUint32Add (fTableCount, 2u),
+						static_cast<uint32> (sizeof (real32)));
 	
-	fBuffer.Reset (allocator.Allocate ((fTableCount + 2) * sizeof (real32)));
+	fBuffer.Reset (allocator.Allocate (tableBytes));
 	
 	fTable = fBuffer->Buffer_real32 ();
 	
