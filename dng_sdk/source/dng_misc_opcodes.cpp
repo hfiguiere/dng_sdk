@@ -1319,8 +1319,12 @@ void dng_opcode_DeltaPerColumn::ProcessArea (dng_negative &negative,
 					real32 y = x + colDelta;
 							   
 					dPtr [0] = Pin_real32 (-1.0f, y, 1.0f);
-					
-					dPtr += rowStep;
+
+					// CR-4208475 Q-L4: Do not form a pointer beyond the final
+					// row after its value has already been stored.
+
+					if (rowIdx + 1 < rows)
+						dPtr += rowStep;
 					
 					} // rows
 
@@ -1729,8 +1733,9 @@ void dng_opcode_ScalePerColumn::ProcessArea (dng_negative &negative,
 					real32 y = (x - blackOffset) * colScale + blackOffset;
 							   
 					dPtr [0] = Pin_real32 (-1.0f, y, 1.0f);
-					
-					dPtr += rowStep;
+
+					if (rowIdx + 1 < rows)
+						dPtr += rowStep;
 					
 					} // rows
 				

@@ -64,6 +64,23 @@ static bool ApplyOffsetDelta (uint64 offset,
 
 /*****************************************************************************/
 
+static void AppendIFD (dng_host &host,
+					   std::vector <dng_ifd *> &ifds)
+	{
+
+	// CR-4208475 Q-L10: Retain ownership while vector growth can throw, then
+	// transfer the IFD only after insertion succeeds.
+
+	AutoPtr<dng_ifd> ifd (host.Make_dng_ifd ());
+
+	ifds.push_back (ifd.Get ());
+
+	(void) ifd.Release ();
+
+	}
+
+/*****************************************************************************/
+
 dng_info::dng_info ()
 
 	:	fTIFFBlockOffset		 (0)
@@ -755,9 +772,9 @@ void dng_info::ParseIFD (dng_host &host,
 				{
 
 				// Throw unless this is a known case to ignore bad tags:
-				// 1. EXIF IFD — vendor cameras may write proprietary
+				// 1. EXIF IFD - vendor cameras may write proprietary
 				//    tags with over-declared sizes here.
-				// 2. IFD 0 tag 50457 (0xC519) — Phocus may write
+				// 2. IFD 0 tag 50457 (0xC519) - Phocus may write
 				//    this with an inflated byte count past EOF for
 				//    some FFF files.
 
@@ -2656,7 +2673,7 @@ void dng_info::Parse (dng_host &host,
 	
 	fShared.Reset (host.Make_dng_shared ());
 	
-	fIFD.push_back (host.Make_dng_ifd ());
+	AppendIFD (host, fIFD);
 	
 	ParseIFD (host,
 			  stream,
@@ -2730,7 +2747,7 @@ void dng_info::Parse (dng_host &host,
 			
 			}
 			
-		fChainedIFD.push_back (host.Make_dng_ifd ());
+		AppendIFD (host, fChainedIFD);
 		
 		fChainedSubIFD.push_back (std::vector <dng_ifd *> ());
 			
@@ -2784,7 +2801,7 @@ void dng_info::Parse (dng_host &host,
 				
 				uint64 sub_ifd_offset = stream.TagValue_uint64 (subIFDType);
 				
-				fIFD.push_back (host.Make_dng_ifd ());
+				AppendIFD (host, fIFD);
 				
 				ParseIFD (host,
 						  stream,
@@ -2851,7 +2868,7 @@ void dng_info::Parse (dng_host &host,
 			
 			uint64 sub_ifd_offset = stream.TagValue_uint64 (subIFDType);
 			
-			fChainedSubIFD [chainedIndex].push_back (host.Make_dng_ifd ());
+			AppendIFD (host, fChainedSubIFD [chainedIndex]);
 			
 			ParseIFD (host,
 					  stream,

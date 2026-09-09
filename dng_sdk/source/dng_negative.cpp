@@ -261,14 +261,21 @@ static dng_memory_block * ReadEmbeddedXMPBlock (dng_host &host,
 
 	uint32 contentSize = (uint32) (contentEndOffset - offset);
 	uint32 trailerSize = (uint32) (packetEndOffset - packetEndStartOffset);
-	uint32 trimmedSize = contentSize +
-						 kTrimmedEmbeddedXMPPaddingSize +
-						 trailerSize;
 
-	if (trimmedSize > kMaxEmbeddedXMPBlockSize)
+	// CR-4208475 Q-H1: Validate the complete retained size before narrowing so
+	// a near-4 GiB packet trailer cannot wrap the allocation below the cap.
+
+	const uint64 trimmedSize64 =
+		SafeUint64Add (contentSize,
+					   kTrimmedEmbeddedXMPPaddingSize,
+					   trailerSize);
+
+	if (trimmedSize64 > kMaxEmbeddedXMPBlockSize)
 		{
 		ThrowBadFormat ("XMP block too large");
 		}
+
+	const uint32 trimmedSize = (uint32) trimmedSize64;
 
 	AutoPtr<dng_memory_block> block (host.Allocate (trimmedSize));
 
@@ -295,13 +302,13 @@ void dng_semantic_mask::CalcMaskSubArea (dng_point &origin,
 										 dng_rect &wholeImageArea) const
 	{
 
-	origin.v = (int32) fMaskSubArea [0];	 // top
-	origin.h = (int32) fMaskSubArea [1];	 // left
+	origin.v = ConvertUint32ToInt32 (fMaskSubArea [0]);	 // top
+	origin.h = ConvertUint32ToInt32 (fMaskSubArea [1]);	 // left
 
 	wholeImageArea.t = (int32) 0;
 	wholeImageArea.l = (int32) 0;
-	wholeImageArea.b = (int32) fMaskSubArea [3]; // height
-	wholeImageArea.r = (int32) fMaskSubArea [2]; // width
+	wholeImageArea.b = ConvertUint32ToInt32 (fMaskSubArea [3]); // height
+	wholeImageArea.r = ConvertUint32ToInt32 (fMaskSubArea [2]); // width
 	
 	}
 
@@ -317,22 +324,29 @@ bool dng_semantic_mask::IsMaskSubAreaValid () const
 		return false;
 		}
 
-	dng_point origin;
-
-	dng_rect wholeImageArea;
-
-	CalcMaskSubArea (origin, wholeImageArea);
-
 	const dng_point maskSize = fMask->Bounds ().Size ();
 
-	dng_rect crop;
+	// CR-4208475 Q-M8: Validate untrusted unsigned geometry before narrowing
+	// or constructing signed rectangle endpoints.
 
-	crop.t = origin.v;
-	crop.l = origin.h;
-	crop.b = origin.v + maskSize.v;
-	crop.r = origin.h + maskSize.h;
+	if (fMaskSubArea [0] > (uint32) INT32_MAX ||
+		fMaskSubArea [1] > (uint32) INT32_MAX ||
+		fMaskSubArea [2] > (uint32) INT32_MAX ||
+		fMaskSubArea [3] > (uint32) INT32_MAX ||
+		maskSize.v <= 0 ||
+		maskSize.h <= 0)
+		{
+		return false;
+		}
 
-	if ((crop & wholeImageArea) != crop)
+	const uint64 cropBottom =
+		SafeUint64Add (fMaskSubArea [0], (uint32) maskSize.v);
+
+	const uint64 cropRight =
+		SafeUint64Add (fMaskSubArea [1], (uint32) maskSize.h);
+
+	if (cropBottom > fMaskSubArea [3] ||
+		cropRight > fMaskSubArea [2])
 		{
 		return false;
 		}
@@ -1573,9 +1587,12 @@ uint32 dng_negative::ProfileCount () const
 
 const dng_camera_profile & dng_negative::ProfileByIndex (uint32 index) const
 	{
+
+	// CR-4208475 Q-L11: This is a public release-build precondition, not a
+	// debug-only invariant.
 	
-	DNG_ASSERT (index < ProfileCount (),
-				"Invalid index for ProfileByIndex");
+	DNG_REQUIRE (index < ProfileCount () && fCameraProfile [index] != NULL,
+				 "Invalid index for ProfileByIndex");
 				
 	return *fCameraProfile [index];
 		
@@ -1607,10 +1624,11 @@ bool dng_negative::GetProfileByMetadata
 					dng_camera_profile &foundProfile) const
 	{
 	
-	if (metadata.fIndex >= 0)
+	if (metadata.fIndex >= 0 &&
+		(uint32) metadata.fIndex < ProfileCount ())
 		{
 		
-		foundProfile = ProfileByIndex (metadata.fIndex);
+		foundProfile = ProfileByIndex ((uint32) metadata.fIndex);
 		
 		return true;
 		
@@ -6899,10 +6917,17 @@ void dng_negative::LosslessCompressJXL (dng_host &host,
 		{
 		
 		AutoPtr<dng_jxl_image> lossyImage (new dng_jxl_image);
-		
+
+		// CR-4208475 R-M2: Encode the enhanced (stage 3) image here, matching
+		// this block's use_case_EnhancedImage intent and the raw-image block's
+		// use of RawImage (). The prior operand *RawTransparencyMask () was a
+		// copy-paste error: it dereferences a null pointer when the negative
+		// has no transparency mask (the guard above does not require one), and
+		// encodes the wrong pixels when a mask does exist.
+
 		lossyImage->Encode (host,
 							writer,
-							*RawTransparencyMask (),
+							*Stage3Image (),
 							nearLosslessOK ? dng_host::use_case_EnhancedImage
 										   : dng_host::use_case_LosslessEnhancedImage,
 							this);

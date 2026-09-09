@@ -952,6 +952,14 @@ void dng_lossless_decoder<simd>::GetSos ()
 	(void) GetJpegChar ();
 	
 	info.Pt = GetJpegChar () & 0x0F;
+
+	// CR-4208475 Q-M6: Predictor initialization shifts by
+	// dataPrecision - Pt - 1, which requires a nonnegative count.
+
+	if (info.Pt >= info.dataPrecision)
+		{
+		ThrowBadFormat ();
+		}
 	
 	}
 
@@ -2583,9 +2591,13 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 				
 				// Initialize predictors.
 				
-				int32 p0;
-				int32 p1;
-				int32 p2;
+				// CR-4208475 Q-L5: Malformed differences can accumulate beyond
+				// int32 across a wide row. Reconstruct in int64 and reject any
+				// value that cannot be represented by the component buffer.
+
+				int64 p0;
+				int64 p1;
+				int64 p2;
 				
 				if (row == 0)
 					{
@@ -2600,6 +2612,19 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 					p1 = prevRowBuf [0] [1];
 					p2 = prevRowBuf [0] [2];
 					}
+
+				const auto addDifference = [] (int64 &predictor,
+											   int32 difference)
+					{
+
+					predictor += (int64) difference;
+
+					if (predictor < 0 || predictor > 0xFFFF)
+						ThrowBadFormat ();
+
+					return (ComponentType) predictor;
+
+					};
 				
 				for (int32 col = 0; col < numCOL; col += 2)
 					{
@@ -2628,9 +2653,7 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 
 							}
 							
-						p0 += d;
-						
-						prevRowBuf [col] [0] = (ComponentType) p0;
+						prevRowBuf [col] [0] = addDifference (p0, d);
 					
 						}
 					
@@ -2658,9 +2681,7 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 
 							}
 							
-						p0 += d;
-						
-						prevRowBuf [col + 1] [0] = (ComponentType) p0;
+						prevRowBuf [col + 1] [0] = addDifference (p0, d);
 					
 						}
 					
@@ -2688,9 +2709,7 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 
 							}
 							
-						p0 += d;
-						
-						curRowBuf [col] [0] = (ComponentType) p0;
+						curRowBuf [col] [0] = addDifference (p0, d);
 					
 						}
 					
@@ -2718,9 +2737,7 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 
 							}
 							
-						p0 += d;
-						
-						curRowBuf [col + 1] [0] = (ComponentType) p0;
+						curRowBuf [col + 1] [0] = addDifference (p0, d);
 					
 						}
 					
@@ -2748,13 +2765,13 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 
 							}
 							
-						p1 += d;
+						const ComponentType component = addDifference (p1, d);
 						
-						prevRowBuf [col	   ] [1] = (ComponentType) p1;
-						prevRowBuf [col + 1] [1] = (ComponentType) p1;
+						prevRowBuf [col	   ] [1] = component;
+						prevRowBuf [col + 1] [1] = component;
 
-						curRowBuf [col	  ] [1] = (ComponentType) p1;
-						curRowBuf [col + 1] [1] = (ComponentType) p1;
+						curRowBuf [col	  ] [1] = component;
+						curRowBuf [col + 1] [1] = component;
 					
 						}
 					
@@ -2782,13 +2799,13 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 
 							}
 							
-						p2 += d;
+						const ComponentType component = addDifference (p2, d);
 						
-						prevRowBuf [col	   ] [2] = (ComponentType) p2;
-						prevRowBuf [col + 1] [2] = (ComponentType) p2;
+						prevRowBuf [col	   ] [2] = component;
+						prevRowBuf [col + 1] [2] = component;
 					
-						curRowBuf [col	  ] [2] = (ComponentType) p2;
-						curRowBuf [col + 1] [2] = (ComponentType) p2;
+						curRowBuf [col	  ] [2] = component;
+						curRowBuf [col + 1] [2] = component;
 					
 						}
 									
@@ -3083,7 +3100,15 @@ void dng_lossless_decoder<simd>::StartRead (uint32 &imageWidth,
 	{ 
 	
 	ReadFileHeader	  ();
-	ReadScanHeader	  ();
+
+	// CR-4208475 Q-L6: An EOI before SOS leaves scan state empty. Reject it
+	// before zero-sized MCU buffers can reach pointer arithmetic.
+
+	if (!ReadScanHeader () || info.compsInScan < 1)
+		{
+		ThrowBadFormat ();
+		}
+
 	DecoderStructInit ();
 	HuffDecoderInit	  ();
 	
@@ -4558,6 +4583,18 @@ void EncodeLosslessJPEG (const uint16 *srcData,
 						 int32 srcColStep,
 						 dng_stream &stream)
 	{
+
+	// CR-4208475 Q-H2: Encoder tables and predictors have fixed storage for
+	// four channels. Enforce that contract in release builds before use.
+
+	DNG_REQUIRE (srcChannels >= 1 && srcChannels <= 4,
+				 "Invalid lossless JPEG channel count");
+
+	// CR-4208475 Q-M5: Predictor initialization uses bit depth as a signed
+	// shift count. Match the decoder's supported precision contract.
+
+	DNG_REQUIRE (srcBitDepth >= 2 && srcBitDepth <= 16,
+				 "Invalid lossless JPEG bit depth");
 	
 	dng_lossless_encoder<simd> encoder (srcData,
 										srcRows,

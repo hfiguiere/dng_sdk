@@ -91,7 +91,7 @@ class dng_big_table_cache
 									   const dng_fingerprint &fingerprint,
 									   dng_big_table &table) = 0;
 
-		virtual void Clear ()
+		virtual void CacheClear (dng_lock_std_mutex & /* lock */)
 			{
 
 			fRefCounts.clear ();
@@ -103,6 +103,8 @@ class dng_big_table_cache
 	public:
 
 		virtual ~dng_big_table_cache ();
+
+		void Clear ();
 
 		void FlushRecentlyUsed ();
 
@@ -140,6 +142,20 @@ dng_big_table_cache::dng_big_table_cache ()
 
 dng_big_table_cache::~dng_big_table_cache ()
 	{
+
+	}
+
+/*****************************************************************************/
+
+void dng_big_table_cache::Clear ()
+	{
+
+	// CR-4208475 Q-L7: Serialize both base and derived cache clearing with
+	// normal cache access. The lock remains held across virtual dispatch.
+
+	dng_lock_std_mutex lock (fMutex);
+
+	CacheClear (lock);
 
 	}
 
@@ -439,10 +455,10 @@ class dng_look_table_cache : public dng_big_table_cache
 			{
 			}
 
-		virtual void Clear ()
+		virtual void CacheClear (dng_lock_std_mutex &lock)
 			{
 
-			dng_big_table_cache::Clear ();
+			dng_big_table_cache::CacheClear (lock);
 
 			fTableData.clear ();
 
@@ -541,10 +557,10 @@ class dng_rgb_table_cache : public dng_big_table_cache
 			{
 			}
 
-		virtual void Clear ()
+		virtual void CacheClear (dng_lock_std_mutex &lock)
 			{
 
-			dng_big_table_cache::Clear ();
+			dng_big_table_cache::CacheClear (lock);
 
 			fTableData.clear ();
 
@@ -631,10 +647,10 @@ class dng_image_table_cache : public dng_big_table_cache
 
 	public:
 
-		void Clear () override
+		void CacheClear (dng_lock_std_mutex &lock) override
 			{
 
-			dng_big_table_cache::Clear ();
+			dng_big_table_cache::CacheClear (lock);
 
 			fTableData.clear ();
 
@@ -744,10 +760,10 @@ class dng_packed_image_table_cache : public dng_big_table_cache
 
 	public:
 
-		void Clear () override
+		void CacheClear (dng_lock_std_mutex &lock) override
 			{
 
-			dng_big_table_cache::Clear ();
+			dng_big_table_cache::CacheClear (lock);
 
 			fEntries.clear ();
 
@@ -2458,8 +2474,18 @@ bool dng_rgb_table::GetStream (dng_stream &stream)
 	else if (data.fDimensions == 3)
 		{
 
+		// Bound 3D divisions on read by kMaxDivisions3D_InMemory, the same
+		// ceiling Set () (create), PutStream () (write), and .cube import
+		// enforce, so any 3D table the SDK can produce round-trips. This read
+		// guard historically used the smaller kMaxDivisions3D (32), stricter
+		// than the write path: a table with more than 32 divisions (for example
+		// a 64-cube .cube LUT) serialized fine but threw here on reload,
+		// silently dropping the LUT. The decode below sizes fSamples from
+		// fDivisions and indexes nopValue (sized to kMaxDivisions1D) safely
+		// across this range.
+
 		if (data.fDivisions < kMinDivisions3D ||
-			data.fDivisions > kMaxDivisions3D)
+			data.fDivisions > kMaxDivisions3D_InMemory)
 			{
 			ThrowBadFormat ("Invalid 3D divisions");
 			}
@@ -2595,6 +2621,40 @@ void dng_rgb_table::PutStream (dng_stream &stream,
 	{
 
 	DNG_REQUIRE (IsValid (), "Invalid RGB Table");
+
+	// Enforce the same division limits on write that Set () (create) and
+	// GetStream () (read) enforce, so we never serialize a table that cannot
+	// be read back. kMaxDivisions3D_InMemory bounds both the in-memory and the
+	// serialized 3D form (see dng_big_table.h). A violation means an oversized
+	// table was constructed through some path that bypassed Set (), so this is
+	// a program error rather than a bad-format condition.
+
+	if (fData.fDimensions == 1)
+		{
+
+		if (fData.fDivisions < kMinDivisions1D ||
+			fData.fDivisions > kMaxDivisions1D)
+			{
+			ThrowProgramError ("Bad 1D divisions");
+			}
+
+		}
+
+	else if (fData.fDimensions == 3)
+		{
+
+		if (fData.fDivisions < kMinDivisions3D ||
+			fData.fDivisions > kMaxDivisions3D_InMemory)
+			{
+			ThrowProgramError ("Bad 3D divisions");
+			}
+
+		}
+
+	else
+		{
+		ThrowProgramError ("Bad dimensions");
+		}
 
 	stream.Put_uint32 (btt_RGBTable);
 
@@ -5623,6 +5683,12 @@ void MoveBigTablesToDictionary (dng_xmp &xmp,
 					  XMP_NS_CRSS,
 					  nullptr,
 					  true);
+
+	xmp.IteratePaths (MoveBigTablesToDictionaryCallback,
+					  (void *) &context,
+					  XMP_NS_CRVC,
+					  nullptr,
+					  true);
 	
 	}
 
@@ -5655,6 +5721,7 @@ void DualParseXMP (dng_host &host,
 	
 	dng_string ns_crs  ("crs:");
 	dng_string ns_crss ("crss:");
+	dng_string ns_crvc ("crvc:");
 
 	// Search for big tables in XMP using fast search.
 		
@@ -5687,10 +5754,16 @@ void DualParseXMP (dng_host &host,
 			{
 			
 			TableEntry entry;
+
+			// CR-4208475 Q-L2: Validate forward distances as offsets before
+			// forming pointers into an exactly sized caller allocation.
+
+			const size_t searchOffset = (size_t) (search - blockString);
+			const size_t searchBytes  = (size_t) blockSize - searchOffset;
 			
 			// Is the search result followed by a valid hex encoded fingerprint?
 			
-			if (search + 6 + 32 > blockString + blockSize)
+			if (searchBytes < 6 + 32)
 				{
 				break;		// Too near end of xmp block to even fit fingerprint
 				}
@@ -5715,15 +5788,17 @@ void DualParseXMP (dng_host &host,
 				
 				}
 				
-			// Look for big tables in both the XMP_NS_CRS and XMP_NS_CRSS
-			// namespaces.
+			// Look for big tables in the edit, saved-settings, and
+			// Virtual Copy namespaces.
 			
 			bool foundTable = false;
 			
-			for (uint32 nsIndex = 0; nsIndex < 2; nsIndex++)
+			for (uint32 nsIndex = 0; nsIndex < 3; nsIndex++)
 				{
 				
-				dng_string ns = (nsIndex == 0 ? ns_crs : ns_crss);
+				const dng_string &ns = nsIndex == 0
+					? ns_crs
+					: (nsIndex == 1 ? ns_crss : ns_crvc);
 				
 				int32 nsLength = ns.Length ();
 					
@@ -5737,7 +5812,7 @@ void DualParseXMP (dng_host &host,
 					 search [-nsLength - 1] == '\t' ||
 					 search [-nsLength - 1] == '\n' ||
 					 search [-nsLength - 1] == '\r') &&
-					search + 6 + 32 + 2 < blockString + blockSize &&
+					searchBytes > 6 + 32 + 2 &&
 					memcmp (search + 6 + 32, "=\"", 2) == 0)
 					{
 					
@@ -5771,7 +5846,7 @@ void DualParseXMP (dng_host &host,
 				if (search >= blockString + nsLength + 1 &&
 					memcmp (search - nsLength, ns.Get (), nsLength) == 0 &&
 					search [-nsLength - 1] == '<' &&
-					search + 6 + 32 + 1 < blockString + blockSize &&
+					searchBytes > 6 + 32 + 1 &&
 					search [6 + 32] == '>')
 					{
 					

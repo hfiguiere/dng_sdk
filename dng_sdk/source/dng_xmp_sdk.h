@@ -37,6 +37,8 @@ extern const char *XMP_NS_CRS;
 extern const char *XMP_NS_CRSS;
 extern const char *XMP_NS_CRD;
 extern const char *XMP_NS_CRLCP;
+extern const char *XMP_NS_CRGI;
+extern const char *XMP_NS_CRVC;
 
 extern const char *XMP_NS_VFS;
 

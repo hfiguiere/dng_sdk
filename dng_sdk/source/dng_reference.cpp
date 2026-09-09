@@ -2392,7 +2392,12 @@ void RefVignette16 (int16 *sPtr,
 					uint32 mBits)
 	{
 	
-	const uint32 mRound = 1 << (mBits - 1);
+	// CR-4208475 R-L3: Guard mBits == 0 so the rounding term does not use a
+	// wrapped, out-of-range shift count (mBits - 1 wraps to 0xFFFFFFFF and
+	// 1 << 0xFFFFFFFF is undefined). Mirrors RefVignette32, which is safe at
+	// mBits == 0.
+
+	const uint32 mRound = (mBits == 0) ? 0 : (1u << (mBits - 1));
 
 	switch (planes)
 		{
@@ -3761,9 +3766,9 @@ void RefRGBtoRGBTable3D (real32 *rPtr,
 			if (hasAmount)
 				{
 
-				r = Pin_real32 (r + amount * (r0 - r));
-				g = Pin_real32 (g + amount * (g0 - g));
-				b = Pin_real32 (b + amount * (b0 - b));
+				r = r + amount * (r0 - r);
+				g = g + amount * (g0 - g);
+				b = b + amount * (b0 - b);
 
 				}
 
@@ -3775,6 +3780,13 @@ void RefRGBtoRGBTable3D (real32 *rPtr,
 				b = b0;
 
 				}
+
+			// CR-4209839: Enforce the bounded LUT output contract after scalar
+			// interpolation, which can overshoot by one ULP due to roundoff.
+
+			r = Pin_real32 (r);
+			g = Pin_real32 (g);
+			b = Pin_real32 (b);
 
 			if (hasGamma)
 				{

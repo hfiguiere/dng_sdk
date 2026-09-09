@@ -3164,7 +3164,15 @@ void dng_read_tiles_task::ProcessTask (uint32 tileIndex,
 
 		dng_md5_direct_printer printer;
 
-		printer.ProcessPtr (compressedBuffer->Buffer (),
+		// CR-4208475 R-L1: For a lossy image the tile bytes live in
+		// fLossyImage->fData [tileIndex]; compressedBuffer is only allocated
+		// when fLossyImage is null (see Process). Select the same buffer used
+		// to build tileStream below, or this dereferences an empty shared_ptr
+		// when a caller requests both a lossy image and a tile digest.
+
+		printer.ProcessPtr (fLossyImage
+								? fLossyImage->fData [tileIndex]->Buffer ()
+								: compressedBuffer->Buffer (),
 							byteCount);
 
 		fLossyTileDigest [tileIndex] = printer.Result ();

@@ -99,12 +99,15 @@ dng_rect dng_opcode_FixBadPixelsConstant::SrcArea (const dng_rect &dstArea,
 	{
 	
 	dng_rect srcArea = dstArea;
+
+	// CR-4208475 Q-L3: Public callers may use translated image coordinates,
+	// so reject padding that would cross the int32 coordinate limits.
 	
-	srcArea.t -= 2;
-	srcArea.l -= 2;
+	srcArea.t = SafeInt32Sub (srcArea.t, 2);
+	srcArea.l = SafeInt32Sub (srcArea.l, 2);
 	
-	srcArea.b += 2;
-	srcArea.r += 2;
+	srcArea.b = SafeInt32Add (srcArea.b, 2);
+	srcArea.r = SafeInt32Add (srcArea.r, 2);
 	
 	return srcArea;
 	

@@ -48,15 +48,11 @@ dng_fingerprint::dng_fingerprint (const dng_fingerprint& print)
 
 	{
 
-	if (this != &print)
+	for (uint32 j = 0; j < kDNGFingerprintSize; j++)
 		{
 
-		for (uint32 j = 0; j < kDNGFingerprintSize; j++)
-			{
+		data [j] = print.data [j];
 
-			data [j] = print.data [j];
-
-			}
 		}
 
 	}

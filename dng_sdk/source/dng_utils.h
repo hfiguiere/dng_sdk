@@ -390,8 +390,13 @@ uint32 ComputeBufferSize (uint32 pixelType,
 
 inline uint64 Abs_int64 (int64 x)
 	{
+
+	// CR-4208475 Q-L12: Convert before negation so INT64_MIN is handled with
+	// defined unsigned modulo arithmetic.
+
+	const uint64 value = (uint64) x;
 	
-	return (uint64) (x < 0 ? -x : x);
+	return x < 0 ? 0 - value : value;
 
 	}
 
@@ -640,15 +645,6 @@ inline uint8 Round_uint8 (real64 x)
 
 /*****************************************************************************/
 
-inline int32 Round_int32 (real32 x)
-	{
-	
-	return (int32) (x > 0.0f ? x + 0.5f : x - 0.5f);
-	
-	}
-
-/*****************************************************************************/
-
 inline int32 Round_int32 (real64 x)
 	{
 	
@@ -670,6 +666,18 @@ inline int32 Round_int32 (real64 x)
 		return 0;
 		}
 	
+	}
+
+/*****************************************************************************/
+
+inline int32 Round_int32 (real32 x)
+	{
+
+	// CR-4208475 N-L5: Match the real64 overload's finite and range checks
+	// before converting parsed or caller-provided floating-point values.
+
+	return Round_int32 ((real64) x);
+
 	}
 
 /*****************************************************************************/

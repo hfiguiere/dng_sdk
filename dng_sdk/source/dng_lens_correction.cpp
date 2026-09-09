@@ -25,6 +25,19 @@
 
 /*****************************************************************************/
 
+static void RequireValidWarpPlaneCount (uint32 planes)
+	{
+
+	// CR-4208475 Q-H3: Warp parameter storage is fixed to
+	// kMaxColorPlanes. Enforce the count before any array iteration.
+
+	DNG_REQUIRE (planes >= 1 && planes <= kMaxColorPlanes,
+				 "Invalid warp parameter plane count");
+
+	}
+
+/*****************************************************************************/
+
 dng_warp_params::dng_warp_params ()
 
 	:	fPlanes (1)
@@ -44,8 +57,7 @@ dng_warp_params::dng_warp_params (uint32 planes,
 
 	{
 	
-	DNG_ASSERT (planes >= 1,			   "Too few planes." );
-	DNG_ASSERT (planes <= kMaxColorPlanes, "Too many planes.");
+	RequireValidWarpPlaneCount (planes);
 
 	DNG_ASSERT (fCenter.h >= 0.0 && fCenter.h <= 1.0, 
 				"Center (horizontal) out of range.");
@@ -86,6 +98,8 @@ bool dng_warp_params::IsNOP (uint32 plane) const
 
 bool dng_warp_params::IsRadNOPAll () const
 	{
+
+	RequireValidWarpPlaneCount (fPlanes);
 	
 	for (uint32 plane = 0; plane < fPlanes; plane++)
 		{
@@ -114,6 +128,8 @@ bool dng_warp_params::IsRadNOP (uint32 /* plane */) const
 
 bool dng_warp_params::IsTanNOPAll () const
 	{
+
+	RequireValidWarpPlaneCount (fPlanes);
 	
 	for (uint32 plane = 0; plane < fPlanes; plane++)
 		{
@@ -593,6 +609,11 @@ bool dng_warp_params_rectilinear::IsTanNOP (uint32 plane) const
 bool dng_warp_params_rectilinear::IsValid () const
 	{
 
+	if (!dng_warp_params::IsValid ())
+		{
+		return false;
+		}
+
 	for (uint32 plane = 0; plane < fPlanes; plane++)
 		{
 
@@ -608,7 +629,7 @@ bool dng_warp_params_rectilinear::IsValid () const
 		
 		}
 
-	return dng_warp_params::IsValid ();
+	return true;
 	
 	}
 
@@ -617,7 +638,9 @@ bool dng_warp_params_rectilinear::IsValid () const
 void dng_warp_params_rectilinear::PropagateToAllPlanes (uint32 totalPlanes)
 	{
 
-	if (totalPlanes > kMaxColorPlanes)
+	RequireValidWarpPlaneCount (fPlanes);
+
+	if (totalPlanes < 1 || totalPlanes > kMaxColorPlanes)
 		{
 		ThrowBadFormat ();
 		}
@@ -688,6 +711,8 @@ dng_point_real64 dng_warp_params_rectilinear::EvaluateTangential (uint32 plane,
 real64 dng_warp_params_rectilinear::MaxSrcRadiusGap (real64 maxDstGap) const
 	{
 
+	RequireValidWarpPlaneCount (fPlanes);
+
 	real64 maxSrcGap = 0.0;
 
 	for (uint32 plane = 0; plane < fPlanes; plane++)
@@ -731,6 +756,8 @@ real64 dng_warp_params_rectilinear::MaxSrcRadiusGap (real64 maxDstGap) const
 dng_point_real64 dng_warp_params_rectilinear::MaxSrcTanGap (dng_point_real64 minDst,
 															dng_point_real64 maxDst) const
 	{
+
+	RequireValidWarpPlaneCount (fPlanes);
 	
 	const real64 v [] = { minDst.v, maxDst.v, 0.0 };
 	const real64 h [] = { minDst.h, maxDst.h, 0.0 };
@@ -804,6 +831,8 @@ void dng_warp_params_rectilinear::Dump () const
 	{
 	
 	#if qDNGValidate
+
+	RequireValidWarpPlaneCount (fPlanes);
 
 	dng_warp_params::Dump ();
 
@@ -910,6 +939,11 @@ bool dng_warp_params_fisheye::IsTanNOP (uint32 /* plane */) const
 bool dng_warp_params_fisheye::IsValid () const
 	{
 
+	if (!dng_warp_params::IsValid ())
+		{
+		return false;
+		}
+
 	for (uint32 plane = 0; plane < fPlanes; plane++)
 		{
 		
@@ -920,7 +954,7 @@ bool dng_warp_params_fisheye::IsValid () const
 		
 		}
 
-	return dng_warp_params::IsValid ();
+	return true;
 	
 	}
 
@@ -929,7 +963,9 @@ bool dng_warp_params_fisheye::IsValid () const
 void dng_warp_params_fisheye::PropagateToAllPlanes (uint32 totalPlanes)
 	{
 
-	if (totalPlanes > kMaxColorPlanes)
+	RequireValidWarpPlaneCount (fPlanes);
+
+	if (totalPlanes < 1 || totalPlanes > kMaxColorPlanes)
 		{
 		ThrowBadFormat ();
 		}
@@ -1004,6 +1040,8 @@ dng_point_real64 dng_warp_params_fisheye::EvaluateTangential (uint32 /* plane */
 
 real64 dng_warp_params_fisheye::MaxSrcRadiusGap (real64 maxDstGap) const
 	{
+
+	RequireValidWarpPlaneCount (fPlanes);
 	
 	//
 	//	Let f (r) be the radius warp function. Consider the function
@@ -1088,6 +1126,8 @@ void dng_warp_params_fisheye::Dump () const
 	{
 	
 	#if qDNGValidate
+
+	RequireValidWarpPlaneCount (fPlanes);
 
 	dng_warp_params::Dump ();
 

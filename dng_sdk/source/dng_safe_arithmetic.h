@@ -151,16 +151,16 @@ inline int64 SafeInt64MultByClang(int64 arg1, int64 arg2) {
 	  long temp_result;
 	  failed = __builtin_smull_overflow((long)arg1, (long)arg2, &temp_result);
 	  if (sizeof(long) > 8 && !failed) {
-		  failed = (temp_result > std::numeric_limits<int64>::max() ||
-				temp_result < std::numeric_limits<int64>::min());
+		  failed = (temp_result > (std::numeric_limits<int64>::max)() ||
+				temp_result < (std::numeric_limits<int64>::min)());
 	  }
 	  result = (int64)temp_result;
 	} else if (sizeof(long long) >= 8) {
 	  long long temp_result;
 	  failed = __builtin_smulll_overflow((long long)arg1, (long long)arg2, &temp_result);
 	  if (sizeof(long long) > 8 && !failed) {
-		  failed = (temp_result > std::numeric_limits<int64>::max() ||
-				temp_result < std::numeric_limits<int64>::min());
+		  failed = (temp_result > (std::numeric_limits<int64>::max)() ||
+				temp_result < (std::numeric_limits<int64>::min)());
 	  }
 	  result = (int64)temp_result;
 	} else {
@@ -180,9 +180,9 @@ inline int64 SafeInt64MultByClang(int64 arg1, int64 arg2) {
 inline int64 SafeInt64MultByInt128(int64 arg1,
 									  int64 arg2) {
 	const __int128 kInt64Max =
-		static_cast<__int128>(std::numeric_limits<int64>::max());
+		static_cast<__int128>((std::numeric_limits<int64>::max)());
 	const __int128 kInt64Min =
-		static_cast<__int128>(std::numeric_limits<int64>::min());
+		static_cast<__int128>((std::numeric_limits<int64>::min)());
 	__int128 result = static_cast<__int128>(arg1) * static_cast<__int128>(arg2);
 	if (result > kInt64Max || result < kInt64Min) {
 		ThrowProgramError("Arithmetic overflow");

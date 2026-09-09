@@ -74,6 +74,12 @@ void dng_srational::Set_real64 (real64 x, int32 dd)
 
 void dng_srational::ReduceByFactor (int32 factor)
 	{
+
+	// CR-4208475 Q-L9: Zero and one cannot reduce a rational safely or make
+	// progress; negative factors are outside this helper's contract.
+
+	if (factor < 2)
+		return;
 	
 	while (n % factor == 0 &&
 		   d % factor == 0 &&
@@ -145,6 +151,9 @@ void dng_urational::Set_real64 (real64 x, uint32 dd)
 
 void dng_urational::ReduceByFactor (uint32 factor)
 	{
+
+	if (factor < 2)
+		return;
 	
 	while (n % factor == 0 &&
 		   d % factor == 0 &&
