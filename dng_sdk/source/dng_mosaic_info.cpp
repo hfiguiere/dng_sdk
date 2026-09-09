@@ -19,6 +19,7 @@
 #include "dng_info.h"
 #include "dng_negative.h"
 #include "dng_pixel_buffer.h"
+#include "dng_safe_arithmetic.h"
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
 #include "dng_tile_iterator.h"
@@ -1832,11 +1833,31 @@ void dng_mosaic_info::InterpolateGeneric (dng_host &host,
 										  dng_image &dstImage,
 										  uint32 srcPlane) const
 	{
-	
+
+	// CR-4208475 R-L2: Fail closed on out-of-range CFA/plane geometry before
+	// constructing the bilinear interpolator, which indexes fixed stack arrays
+	// sized to kMaxCFAPattern / kMaxColorPlanes. This mirrors the guards
+	// already present in InterpolateFast and IsSafeDownScale. fCFAPatternSize
+	// is pinned to [1, kMaxCFAPattern] and fColorPlanes to [0, kMaxColorPlanes]
+	// by dng_mosaic_info::Parse / dng_shared::Parse, so no valid file is
+	// affected; this only protects against an upstream/fork regression that
+	// bypasses one of those parse-time bounds.
+
+	if (fCFAPatternSize.v < 1 ||
+		fCFAPatternSize.v > (int32) kMaxCFAPattern ||
+		fCFAPatternSize.h < 1 ||
+		fCFAPatternSize.h > (int32) kMaxCFAPattern ||
+		fColorPlanes > kMaxColorPlanes)
+		{
+
+		ThrowProgramError ("Invalid CFA pattern for generic interpolation");
+
+		}
+
 	// Find destination to source bit shifts.
-	
+
 	dng_point scale = FullScale ();
-	
+
 	uint32 srcShiftV = scale.v - 1;
 	uint32 srcShiftH = scale.h - 1;
 	
@@ -1855,8 +1876,10 @@ void dng_mosaic_info::InterpolateGeneric (dng_host &host,
 	srcTileSize.v >>= srcShiftV;
 	srcTileSize.h >>= srcShiftH;
 	
-	srcTileSize.v += fCFAPatternSize.v * 2;
-	srcTileSize.h += fCFAPatternSize.h * 2;
+	srcTileSize.v = SafeInt32Add
+		(srcTileSize.v, SafeInt32Mult (fCFAPatternSize.v, 2));
+	srcTileSize.h = SafeInt32Add
+		(srcTileSize.h, SafeInt32Mult (fCFAPatternSize.h, 2));
 	
 	// Allocate source buffer.
 	
@@ -1930,11 +1953,14 @@ void dng_mosaic_info::InterpolateGeneric (dng_host &host,
 			srcTile.l >>= srcShiftH;
 			srcTile.r >>= srcShiftH;
 			
-			srcTile.t -= fCFAPatternSize.v;
-			srcTile.b += fCFAPatternSize.v;
+			// CR-4208475 Q-L3: CFA padding applies to caller-controlled
+			// translated bounds, so preserve coordinate headroom explicitly.
+
+			srcTile.t = SafeInt32Sub (srcTile.t, fCFAPatternSize.v);
+			srcTile.b = SafeInt32Add (srcTile.b, fCFAPatternSize.v);
 			
-			srcTile.l -= fCFAPatternSize.h;
-			srcTile.r += fCFAPatternSize.h;
+			srcTile.l = SafeInt32Sub (srcTile.l, fCFAPatternSize.h);
+			srcTile.r = SafeInt32Add (srcTile.r, fCFAPatternSize.h);
 			
 			srcBuffer.fArea = srcTile;
 			dstBuffer.fArea = dstTile;

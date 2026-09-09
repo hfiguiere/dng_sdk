@@ -1107,7 +1107,12 @@ exif_tag_set::exif_tag_set (dng_tiff_directory &directory,
 	
 	,	fFocalPlaneResolutionUnit (tcFocalPlaneResolutionUnitExif, (uint16) exif.fFocalPlaneResolutionUnit)
 	
-	,	fSubjectArea (tcSubjectArea, fSubjectAreaData, exif.fSubjectAreaCount)
+		// CR-4208475 R-L5: fSubjectAreaData holds at most 4 entries; clamp the
+		// tag count so tag_data_ptr::Put cannot read past the fixed array if a
+		// caller sets exif.fSubjectAreaCount above 4. File parsing already
+		// bounds the count to [2,4].
+	,	fSubjectArea (tcSubjectArea, fSubjectAreaData,
+					  Min_uint32 (4, exif.fSubjectAreaCount))
 
 	,	fLensInfo (tcLensInfo, fLensInfoData, 4)
 	
@@ -3496,6 +3501,11 @@ static void EncodeDelta8 (uint8 *dPtr,
 						  uint32 cols,
 						  uint32 channels)
 	{
+
+	// CR-4208475 Q-M2: Empty helper input is a no-op. EncodePredictor still
+	// rejects nonempty tiles that are too narrow for their predictor grouping.
+
+	if (cols == 0) return;
 	
 	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
@@ -3527,6 +3537,8 @@ static void EncodeDelta16 (uint16 *dPtr,
 						   uint32 cols,
 						   uint32 channels)
 	{
+
+	if (cols == 0) return;
 	
 	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
@@ -3558,6 +3570,8 @@ static void EncodeDelta32 (uint32 *dPtr,
 						   uint32 cols,
 						   uint32 channels)
 	{
+
+	if (cols == 0) return;
 	
 	const uint32 dRowStep = SafeUint32Mult (cols, channels);
 	
@@ -3792,6 +3806,19 @@ void dng_image_writer::EncodePredictor (dng_host &host,
 				{
 				xFactor = 4;
 				}
+
+			// CR-4208475 Q-M2: Reverse delta loops subtract one from their
+			// grouped column count. Reject tiles too narrow for one group.
+
+			const uint32 width = buffer.fArea.W ();
+			const uint32 xFactor32 = (uint32) xFactor;
+
+			DNG_REQUIRE (width >= xFactor32,
+						 "Tile width is smaller than predictor grouping");
+
+			const uint32 cols = width / xFactor32;
+			const uint32 channels = SafeUint32Mult (buffer.fPlanes,
+												   xFactor32);
 			
 			switch (buffer.fPixelType)
 				{
@@ -3801,8 +3828,8 @@ void dng_image_writer::EncodePredictor (dng_host &host,
 					
 					EncodeDelta8 ((uint8 *) buffer.fData,
 								  buffer.fArea.H (),
-								  buffer.fArea.W () / xFactor,
-								  buffer.fPlanes	* xFactor);
+								  cols,
+								  channels);
 					
 					return;
 					
@@ -3813,8 +3840,8 @@ void dng_image_writer::EncodePredictor (dng_host &host,
 					
 					EncodeDelta16 ((uint16 *) buffer.fData,
 								   buffer.fArea.H (),
-								   buffer.fArea.W () / xFactor,
-								   buffer.fPlanes	 * xFactor);
+								   cols,
+								   channels);
 					
 					return;
 					
@@ -3825,8 +3852,8 @@ void dng_image_writer::EncodePredictor (dng_host &host,
 					
 					EncodeDelta32 ((uint32 *) buffer.fData,
 								   buffer.fArea.H (),
-								   buffer.fArea.W () / xFactor,
-								   buffer.fPlanes	 * xFactor);
+								   cols,
+								   channels);
 					
 					return;
 					

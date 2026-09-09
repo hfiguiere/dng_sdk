@@ -94,11 +94,19 @@ dng_file_stream::dng_file_stream (int fd,
 	{
 
 	// Note: Use dup here as caller is responsible for separately managing fd.
+	// CR-4208475 Q-L8: Keep the duplicate visible until fdopen succeeds so its
+	// failure path can release the descriptor.
 
-	fFile = fdopen (dup (fd), mode);
+	const int duplicatedFD = dup (fd);
+
+	if (duplicatedFD >= 0)
+		fFile = fdopen (duplicatedFD, mode);
 
 	if (!fFile)
 		{
+
+		if (duplicatedFD >= 0)
+			(void) close (duplicatedFD);
 
 		#if qDNGValidate
 

@@ -1714,14 +1714,48 @@ bool dng_pixel_buffer::EqualArea (const dng_pixel_buffer &src,
 								  uint32 plane,
 								  uint32 planes) const
 	{
-	
+
+	// CR-4208475 R-L4: Validate the compared area and plane interval against
+	// both buffers before indexing pixels. ConstPixel's internal bounds check
+	// is compiled out, so an out-of-range plane/planes value forwarded by a
+	// public caller would otherwise read past the backing allocations. Mirrors
+	// the area/plane DNG_REQUIRE guards in CopyArea.
+
+	if (planes == 0)
+		{
+		return true;
+		}
+
+	DNG_REQUIRE ((area & src.Area ()) == area,
+				 "EqualArea: area OOB src");
+
+	DNG_REQUIRE ((area &     Area ()) == area,
+				 "EqualArea: area OOB dst");
+
+		{
+
+		uint32 endPlane = plane + planes;
+
+		DNG_REQUIRE (plane < endPlane,
+					 "EqualArea: planes overflow");
+
+		DNG_REQUIRE (src.fPlane <= plane &&
+					 endPlane <= src.fPlane + src.fPlanes,
+					 "EqualArea: src planes range");
+
+		DNG_REQUIRE (    fPlane <= plane &&
+					 endPlane <=     fPlane +     fPlanes,
+					 "EqualArea: dst planes range");
+
+		}
+
 	uint32 rows = area.H ();
 	uint32 cols = area.W ();
-	
+
 	const void *sPtr = src.ConstPixel (area.t,
 									   area.l,
 									   plane);
-								  
+
 	const void *dPtr = ConstPixel (area.t,
 								   area.l,
 								   plane);
@@ -1741,8 +1775,8 @@ bool dng_pixel_buffer::EqualArea (const dng_pixel_buffer &src,
 			{
 			
 			return DoEqualBytes (sPtr,
-								 dPtr, 
-								 planes * fPixelSize);
+								 dPtr,
+								 SafeUint32Mult (planes, fPixelSize));
 			
 			}
 			
@@ -1942,10 +1976,41 @@ real64 dng_pixel_buffer::MaximumDifference (const dng_pixel_buffer &rhs,
 											uint32 plane,
 											uint32 planes) const
 	{
-	
+
+	// CR-4208475 R-L4: Validate the compared area and plane interval against
+	// both buffers before indexing pixels (see EqualArea).
+
+	if (planes == 0)
+		{
+		return 0.0;
+		}
+
+	DNG_REQUIRE ((area & rhs.Area ()) == area,
+				 "MaximumDifference: area OOB src");
+
+	DNG_REQUIRE ((area &     Area ()) == area,
+				 "MaximumDifference: area OOB dst");
+
+		{
+
+		uint32 endPlane = plane + planes;
+
+		DNG_REQUIRE (plane < endPlane,
+					 "MaximumDifference: planes overflow");
+
+		DNG_REQUIRE (rhs.fPlane <= plane &&
+					 endPlane <= rhs.fPlane + rhs.fPlanes,
+					 "MaximumDifference: src planes range");
+
+		DNG_REQUIRE (    fPlane <= plane &&
+					 endPlane <=     fPlane +     fPlanes,
+					 "MaximumDifference: dst planes range");
+
+		}
+
 	uint32 rows = area.H ();
 	uint32 cols = area.W ();
-	
+
 	const void *s1Ptr = rhs.ConstPixel (area.t,
 										area.l,
 										plane);

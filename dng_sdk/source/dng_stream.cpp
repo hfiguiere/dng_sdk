@@ -379,12 +379,16 @@ void dng_stream::Get (void *data, uint32 count, uint32 maxOverRead)
 		
 		fBufferEnd = Min_uint64 (fBufferStart + fBufferSize, Length ());
 
-		if ((fBufferEnd - fPosition) < maxOverRead)
-			return; // ep, allow over-read requests
-		else
+		// CR-4208475 Q-L1: Consume every available byte before permitting a
+		// missing suffix. This keeps partial reads deterministic while preserving
+		// the caller's explicit over-read allowance.
+
 		if (fBufferEnd <= fPosition)
 			{
-			
+
+			if (count <= maxOverRead)
+				return;
+
 			ThrowEndOfFile ();
 
 			}
@@ -1289,9 +1293,12 @@ dng_urational dng_stream::TagValue_urational (uint32 tagType)
 			
 		case ttSRational:
 			{
+
+			// CR-4208475 O-L1: Widen before sign normalization so parsed
+			// INT32_MIN values have a representable positive magnitude.
 			
-			int32 n = Get_int32 ();
-			int32 d = Get_int32 ();
+			int64 n = Get_int32 ();
+			int64 d = Get_int32 ();
 			
 			if ((n < 0) == (d < 0))
 				{
@@ -1301,9 +1308,13 @@ dng_urational dng_stream::TagValue_urational (uint32 tagType)
 					n = -n;
 					d = -d;
 					}
-					
-				result.n = (uint32) n;
-				result.d = (uint32) d;
+
+				if (n >= 0 && n <= 0xFFFFFFFFLL &&
+					d >= 0 && d <= 0xFFFFFFFFLL)
+					{
+					result.n = (uint32) n;
+					result.d = (uint32) d;
+					}
 					
 				}
 				

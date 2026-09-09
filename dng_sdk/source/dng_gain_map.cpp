@@ -116,6 +116,14 @@ dng_gain_map_interpolator::dng_gain_map_interpolator (const dng_gain_map &map,
 	
 	{
 
+	// CR-4208475 B2-10: Empty bounds produce zero interpolation scales and
+	// later require division by those scales when resetting a column.
+
+	if (mapBounds.IsEmpty ())
+		{
+		ThrowProgramError ("Empty gain map bounds");
+		}
+
 	if (!(fMap.Spacing ().v > 0.0) ||
 		!(fMap.Spacing ().h > 0.0))
 		{
@@ -213,8 +221,14 @@ void dng_gain_map_interpolator::ResetColumn ()
 		fValueBase = InterpolateEntry (0);
 		
 		fValueStep = 0.0f;
-		
-		fResetColumn = (int32) ceil (fMap.Origin ().h / fScale.h - fOffset.h);
+
+		// CR-4208475 Q-M7: Parsed origins can be finite but far outside the
+		// int32 image domain. Use the checked conversion used by the interior
+		// interpolation path.
+
+		fResetColumn =
+			ConvertDoubleToInt32 (ceil (fMap.Origin ().h / fScale.h -
+									   fOffset.h));
 
 		}
 		

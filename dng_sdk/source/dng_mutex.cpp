@@ -433,6 +433,7 @@ bool dng_condition::Wait (dng_mutex &mutex, double timeoutSecs)
 
 #if qDNGThreadSafe
 	bool timedOut = false;
+	int waitResult = 0;
 
 	#if qDNGThreadTestMutexLevels
 		
@@ -452,8 +453,9 @@ bool dng_condition::Wait (dng_mutex &mutex, double timeoutSecs)
 		
 	if (timeoutSecs < 0)
 		{
-		
-		pthread_cond_wait (&fPthreadCondition, &mutex.fPthreadMutex);
+
+		waitResult =
+			pthread_cond_wait (&fPthreadCondition, &mutex.fPthreadMutex);
 		
 		}
 		
@@ -477,13 +479,21 @@ bool dng_condition::Wait (dng_mutex &mutex, double timeoutSecs)
 		tempNow.tv_sec = (long) now.tv_sec;
 		tempNow.tv_nsec = now.tv_nsec;
 
-		timedOut = (pthread_cond_timedwait (&fPthreadCondition, &mutex.fPthreadMutex, &tempNow) == ETIMEDOUT);
+		waitResult =
+			pthread_cond_timedwait (&fPthreadCondition,
+									&mutex.fPthreadMutex,
+									&tempNow);
 
 		#else
 
-		timedOut = (pthread_cond_timedwait (&fPthreadCondition, &mutex.fPthreadMutex, &now) == ETIMEDOUT);
+		waitResult =
+			pthread_cond_timedwait (&fPthreadCondition,
+									&mutex.fPthreadMutex,
+									&now);
 
 		#endif
+
+		timedOut = (waitResult == ETIMEDOUT);
 
 		}
 
@@ -494,6 +504,14 @@ bool dng_condition::Wait (dng_mutex &mutex, double timeoutSecs)
 	gInnermostMutexHolder.SetInnermostMutex (&mutex);
 	
 	#endif
+
+	// CR-4208475 Q-M3: A non-timeout failure means the condition wait did
+	// not satisfy its synchronization contract and must not report success.
+
+	if (waitResult != 0 && !timedOut)
+		{
+		ThrowProgramError ("pthread condition wait failed");
+		}
 		
 	return !timedOut;
 #else

@@ -61,6 +61,20 @@ additional dependencies:
 
 Release Notes / Changelog:
 
+1.7.1 2724 September 8, 2026
+
+    - RGB Table fixes.
+
+    - Fix for crash on exit.
+
+    - Big table namespace work.
+
+    - EncodeDelta fixes.
+
+    - AVIF/HEIC/HEIF c2pa fallback logic.
+
+    - Vulnerability issue fixes.
+
 1.7.1 2652 July 14, 2026
 
     - Padded XMP packet fixes.

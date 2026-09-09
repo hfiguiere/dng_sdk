@@ -605,9 +605,22 @@ class dng_rgb_table : public dng_big_table
 			kMaxDivisions1D = 4096,
 
 			kMinDivisions3D = 2,
+
+			// Default resample resolution used when baking a 3D color table
+			// into a Look/preset (cr_output_look_params::fMaxRGBTableDivisions
+			// defaults to this). This is NOT the maximum a 3D table may have --
+			// the real create/read/write/import ceiling is
+			// kMaxDivisions3D_InMemory below.
+
 			kMaxDivisions3D = 32,
 
-			kMaxDivisions3D_InMemory = 130
+			// Maximum 3D divisions the SDK will create (Set), read (GetStream),
+			// write (PutStream), or import from a .cube. Despite the
+			// "_InMemory" name this also bounds the serialized form: read and
+			// write are held to the same limit so any table that can be created
+			// round-trips. Raised from 32 so common 64-cube LUTs persist.
+
+			kMaxDivisions3D_InMemory = 64
 
 			};
 

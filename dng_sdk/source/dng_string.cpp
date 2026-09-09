@@ -856,25 +856,39 @@ uint32 dng_string::DecodeUTF8 (const char *&s,
 		
 		}
 		
-	s += aSize;
+	// CR-4208475 R-M1: Validate the trailing continuation bytes before
+	// advancing s past the whole declared sequence length. A truncated
+	// multi-byte sequence (for example a lead byte immediately followed by the
+	// string's NUL terminator) must not move s beyond the terminator, or
+	// NUL-terminated callers that pass the default maxBytes (Get_UTF16,
+	// Compare, ForceASCII, NormalizeAsCommaSeparatedNumbers) would walk off the
+	// end of the buffer on the next dereference.
 
 	for (uint32 extra = 1; extra < aSize; extra++)
 		{
-		
+
 		if ((nBuf [extra] & 0xC0) != 0x80)
 			{
-			
+
+			// Consume only the lead byte plus the continuation bytes validated
+			// so far, stopping at the offending byte (which may be the NUL
+			// terminator) instead of skipping the full sequence length.
+
+			s += extra;
+
 			if (isValid)
 				{
 				*isValid = false;
 				}
-				
+
 			return kREPLACEMENT_CHARACTER;
 
 			}
-		
+
 		}
-	
+
+	s += aSize;
+
 	switch (aSize)
 		{
 		

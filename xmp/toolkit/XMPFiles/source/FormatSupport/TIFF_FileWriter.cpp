@@ -1528,14 +1528,21 @@ void TIFF_FileWriter::UpdateMemByAppend ( XMP_Uns8** newStream_out, XMP_Uns32* n
 {
 	bool appendedIFDs[kTIFF_KnownIFDCount];
 	XMP_Uns32 newIFDOffsets[kTIFF_KnownIFDCount];
-	XMP_Uns32 appendedOrigin = ((this->tiffLength + 1) & 0xFFFFFFFEUL);	// Start at an even offset.
+	XMP_Uns64 appendedOrigin64 = (((XMP_Uns64)this->tiffLength + 1) & 0xFFFFFFFFFFFFFFFEULL);
+	if ( appendedOrigin64 > Max_XMP_Uns32 ) XMP_Throw ( "TIFF append origin overflows", kXMPErr_BadTIFF );
+
+	XMP_Uns32 appendedOrigin = (XMP_Uns32)appendedOrigin64;	// Start at an even offset.
 	XMP_Uns32 appendedLength = DetermineAppendInfo ( appendedOrigin, appendedIFDs, newIFDOffsets, appendAll );
 
 	// Allocate the new block of memory for the full stream. Copy the original stream. Write the
 	// modified IFDs and values. Finally rebuild the internal IFD info and tag map.
 
-	XMP_Uns32 newLength = appendedOrigin + appendedLength;
-	XMP_Uns8* newStream = (XMP_Uns8*) malloc ( newLength + extraSpace );
+	XMP_Uns64 newLength64 = (XMP_Uns64)appendedOrigin + appendedLength;
+	XMP_Uns64 allocationLength = newLength64 + extraSpace;
+	if ( allocationLength > Max_XMP_Uns32 ) XMP_Throw ( "TIFF append length overflows", kXMPErr_BadTIFF );
+
+	XMP_Uns32 newLength = (XMP_Uns32)newLength64;
+	XMP_Uns8* newStream = (XMP_Uns8*) malloc ( (size_t)allocationLength );
 	if ( newStream == 0 ) XMP_Throw ( "Out of memory", kXMPErr_NoMemory );
 
 	memcpy ( newStream, this->memStream, this->tiffLength );	// AUDIT: Safe, malloc'ed newLength bytes above.
@@ -1761,8 +1768,8 @@ void TIFF_FileWriter::UpdateMemByRewrite ( XMP_Uns8** newStream_out, XMP_Uns32* 
 		}
 	}
 
-	// Determine the offsets and additional size for the hidden offset content. Set the offset tags
-	// to the new offset so that UpdateMemByAppend writes the new offsets.
+	// Determine the offsets and additional size for the hidden offset content. CR-4209721 showed
+	// that these source ranges and rounded sizes must be validated before the stream is rewritten.
 
 	XMP_Uns32 hiddenContentLength = 0;
 	XMP_Uns32 hiddenContentOrigin = this->DetermineVisibleLength();
@@ -1778,15 +1785,32 @@ void TIFF_FileWriter::UpdateMemByRewrite ( XMP_Uns8** newStream_out, XMP_Uns32* 
 		if ( haveLength != haveOffset ) XMP_Throw ( "Unpaired simple hidden content tag", kXMPErr_BadTIFF );
 		if ( (! haveLength) || (hiddenLocations[i].length == 0) ) continue;
 
-		hiddenLocations[i].newOffset = hiddenContentOrigin + hiddenContentLength;
+		if ( hiddenLocations[i].oldOffset > this->tiffLength ) {
+			XMP_Throw ( "Bad simple hidden content offset", kXMPErr_BadTIFF );
+		}
+
+		if ( hiddenLocations[i].length > (this->tiffLength - hiddenLocations[i].oldOffset) ) {
+			XMP_Throw ( "Bad simple hidden content length", kXMPErr_BadTIFF );
+		}
+
+		XMP_Uns64 newOffset64 = (XMP_Uns64)hiddenContentOrigin + hiddenContentLength;
+		XMP_Uns64 roundedLength64 = (((XMP_Uns64)hiddenLocations[i].length + 1) &
+									 0xFFFFFFFFFFFFFFFEULL);
+		XMP_Uns64 hiddenEnd64 = newOffset64 + roundedLength64;
+		if ( hiddenEnd64 > Max_XMP_Uns32 ) {
+			XMP_Throw ( "Simple hidden content length overflows", kXMPErr_BadTIFF );
+		}
+
+		hiddenLocations[i].newOffset = (XMP_Uns32)newOffset64;
 		this->SetTag_Long ( hiddenInfo.ifd, hiddenInfo.offsetTag, hiddenLocations[i].newOffset );
-		hiddenContentLength += ((hiddenLocations[i].length + 1) & 0xFFFFFFFE);	// ! Round up for even offsets.
+		hiddenContentLength = (XMP_Uns32)(hiddenEnd64 - hiddenContentOrigin);
 
 	}
 
 	// Save any old memory stream for the content behind hidden offsets. Setup a bare TIFF header.
 
 	XMP_Uns8* oldStream = this->memStream;
+	XMP_Uns32 oldTiffLength = this->tiffLength;
 	bool ownedOldStream = this->ownedStream;
 
 	XMP_Uns8 bareTIFF [8];
@@ -1803,7 +1827,18 @@ void TIFF_FileWriter::UpdateMemByRewrite ( XMP_Uns8** newStream_out, XMP_Uns32* 
 
 	// Call UpdateMemByAppend to write the new stream, telling it to append everything.
 
-	this->UpdateMemByAppend ( newStream_out, newLength_out, true, hiddenContentLength );
+	try {
+
+		this->UpdateMemByAppend ( newStream_out, newLength_out, true, hiddenContentLength );
+
+	} catch ( ... ) {
+
+		this->memStream = oldStream;
+		this->tiffLength = oldTiffLength;
+		this->ownedStream = ownedOldStream;
+		throw;
+
+	}
 
 	// Copy the hidden content and update the output stream length;
 
@@ -1816,13 +1851,14 @@ void TIFF_FileWriter::UpdateMemByRewrite ( XMP_Uns8** newStream_out, XMP_Uns32* 
 
 		XMP_Uns8* srcPtr  = oldStream + hiddenLocations[i].oldOffset;
 		XMP_Uns8* destPtr = *newStream_out + hiddenLocations[i].newOffset;
-		memcpy ( destPtr, srcPtr, hiddenLocations[i].length );	// AUDIT: Safe copy, not user data, computed length.
+		memcpy ( destPtr, srcPtr, hiddenLocations[i].length );	// AUDIT: Source and destination ranges were preflighted above.
+		if ( (hiddenLocations[i].length & 1) != 0 ) destPtr[hiddenLocations[i].length] = 0;
 
 	}
 	
 	// Delete the old stream if appropriate.
 	
-	if ( ownedOldStream ) delete ( oldStream );
+	if ( ownedOldStream ) free ( oldStream );
 
 }	// TIFF_FileWriter::UpdateMemByRewrite
 

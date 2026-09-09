@@ -399,9 +399,12 @@ class dng_stream: private dng_uncopyable
 		uint32 Get_uint32_LE ()
 			{
 	
-			uint32 x;
+			// CR-4208475 Q-L1: Zero-fill the explicitly permitted missing
+			// suffix so truncated reads never expose indeterminate bytes.
+
+			uint32 x = 0;
 	
-			Get (&x, 4, 3); // Allow 3-byte overread (undefined data returned but not used)
+			Get (&x, 4, 3);
 
 			// No check for fSwapBytes
 
