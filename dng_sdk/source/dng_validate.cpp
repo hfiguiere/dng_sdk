@@ -10,6 +10,7 @@
 // ------------------
 //
 // As usual, 0 indicates success.
+// Validation errors reported without an exception return an exit code of 1.
 //
 // If an exception occurs, the exit code will be equal to:
 //
@@ -1162,6 +1163,11 @@ int main (int argc, char *argv [])
 		dng_xmp_sdk::TerminateSDK ();
 		#endif
 			
+		if (result == 0 && DNGValidationErrorReported ())
+			{
+			result = 1;
+			}
+
 		return result;
 		
 		}
