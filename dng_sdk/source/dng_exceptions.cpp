@@ -11,11 +11,28 @@
 #include "dng_flags.h"
 #include "dng_globals.h"
 
+#if qDNGValidate
+#include <atomic>
+#endif
+
 /*****************************************************************************/
 
 #ifndef qDNGReportErrors
 // assuming this isn't enable on Win, because it's using printf, but an app can redirect that to console
 #define qDNGReportErrors ((qDNGDebug && qMacOS) || qDNGValidate)
+#endif
+
+/*****************************************************************************/
+
+#if qDNGValidate
+
+static std::atomic<bool> gValidationErrorReported (false);
+
+bool DNGValidationErrorReported ()
+	{
+	return gValidationErrorReported.load ();
+	}
+
 #endif
 
 /*****************************************************************************/
@@ -53,6 +70,10 @@ void ReportWarning (const char *message,
 void ReportError (const char *message,
 				  const char *sub_message)
 	{
+
+	#if qDNGValidate
+	gValidationErrorReported.store (true);
+	#endif
 
 	#if qDNGReportErrors
 

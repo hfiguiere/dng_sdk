@@ -77,6 +77,14 @@ void ReportWarning (const char *message,
 
 void ReportError (const char *message,
 				  const char *sub_message = NULL);
+
+#if qDNGValidate
+
+/// True if ReportError has been called during validation.
+
+bool DNGValidationErrorReported ();
+
+#endif
 	
 /*****************************************************************************/
 
