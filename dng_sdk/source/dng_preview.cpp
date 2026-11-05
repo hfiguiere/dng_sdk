@@ -164,7 +164,13 @@ dng_preview_tag_set::~dng_preview_tag_set ()
 void dng_preview::SetIFDInfo (dng_host & /* host */,
 							  const dng_image &image)
 	{
-	
+
+	// CR-4208475 S-H3: preview IFD sample arrays have a fixed plane capacity.
+
+	DNG_REQUIRE (image.Planes () >= 1 &&
+				 image.Planes () <= kMaxSamplesPerPixel,
+				 "Invalid preview plane count");
+
 	fIFD.fNewSubFileType = fInfo.fIsPrimary ? sfPreviewImage
 											: sfAltPreviewImage;
 	
@@ -659,7 +665,10 @@ dng_raw_preview::dng_raw_preview ()
 void dng_raw_preview::SetIFDInfo (dng_host &host,
 								  const dng_image &image)
 	{
-	
+
+	DNG_REQUIRE (image.Planes () <= kMaxColorPlanes,
+				 "Invalid raw preview plane count");
+
 	dng_preview::SetIFDInfo (host, image);
 	
 	fIFD.fNewSubFileType = sfPreviewImage;

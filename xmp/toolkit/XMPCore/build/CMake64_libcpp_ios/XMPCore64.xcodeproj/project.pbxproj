@@ -1128,6 +1128,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				"ARCHS[sdk=iphonesimulator*]" = "$(NATIVE_ARCH_ACTUAL)";
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_BITCODE = NO;
 				EXECUTABLE_PREFIX = lib;
@@ -1327,6 +1328,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				"ARCHS[sdk=iphonesimulator*]" = "$(NATIVE_ARCH_ACTUAL)";
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_BITCODE = NO;
 				EXECUTABLE_PREFIX = lib;
@@ -1506,6 +1508,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				"ARCHS[sdk=iphonesimulator*]" = "$(NATIVE_ARCH_ACTUAL)";
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_BITCODE = NO;
 				EXECUTABLE_PREFIX = lib;
@@ -1580,6 +1583,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				"ARCHS[sdk=iphonesimulator*]" = "$(NATIVE_ARCH_ACTUAL)";
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_BITCODE = NO;
 				EXECUTABLE_PREFIX = lib;

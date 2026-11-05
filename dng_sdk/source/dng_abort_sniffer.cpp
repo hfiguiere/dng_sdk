@@ -211,14 +211,21 @@ dng_set_minimum_priority::dng_set_minimum_priority (dng_priority priority,
 	:	fPriority (priority)
 
 	{
-	
-	#if qDNGThreadSafe
 
-	gPriorityManager.Increment (fPriority, name);
-	
-	#endif
+	// CR-4208475 S-H4: validate and finish throwing initialization before
+	// acquiring the single-owner priority counter.
+
+	DNG_REQUIRE (priority >= dng_priority_minimum &&
+				 priority <= dng_priority_maximum,
+				 "Invalid minimum priority");
 
 	fName.Set (name);
+
+	#if qDNGThreadSafe
+
+	gPriorityManager.Increment (fPriority, fName.Get ());
+	
+	#endif
 	
 	}
 

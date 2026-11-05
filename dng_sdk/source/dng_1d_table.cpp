@@ -188,11 +188,17 @@ void dng_1d_table::Expand16 (uint16 *table16) const
 	
 	uint32 index = 1;
 	real64 fract = 0.0;
-	
+
+	// CR-4208475 S-L11: clamp before narrowing without adding an explicit
+	// finiteness branch to this 65,536-entry loop.
+
 	for (uint32 j = 0; j < 0x10000; j++)
 		{
-		
-		table16 [j] = (uint16) (base + slope * fract);
+
+		const real64 value =
+			Pin_real64 (0.0, base + slope * fract, 65535.0);
+
+		table16 [j] = (uint16) value;
 		
 		fract += step;
 		

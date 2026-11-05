@@ -54,6 +54,33 @@ void dng_spline_solver::Add (real64 x, real64 y)
 
 /******************************************************************************/
 
+int32 dng_spline_solver::ValidatedPointCount (bool requireSlopes) const
+	{
+
+	// CR-4208475 S-L5: public vectors can be edited independently, so every
+	// consumer validates the representation before indexing or narrowing.
+
+	DNG_REQUIRE (X.size () == Y.size (),
+				 "Mismatched spline point arrays");
+
+	DNG_REQUIRE (X.size () >= 2,
+				 "Too few spline points");
+
+	DNG_REQUIRE (X.size () <= 0x7FFFFFFFu,
+				 "Too many spline points");
+
+	if (requireSlopes)
+		{
+		DNG_REQUIRE (S.size () == X.size (),
+					 "Spline has not been solved");
+		}
+
+	return (int32) X.size ();
+
+	}
+
+/******************************************************************************/
+
 void dng_spline_solver::Solve ()
 	{
 
@@ -61,9 +88,7 @@ void dng_spline_solver::Solve ()
 	//		It is C0, C1, and C2 continuous
 	//		The second derivative is zero at the end points
 	
-	int32 count = (int32) X.size ();
-	
-	DNG_REQUIRE (count >= 2, "Too few points");
+	int32 count = ValidatedPointCount (false);
 
 	// CR-4208475 M-M6: Spline construction below divides by per-segment
 	// X spacings (A = X[start+1] - X[start], C = X[j] - X[j-1], and
@@ -163,8 +188,11 @@ void dng_spline_solver::Solve ()
 
 bool dng_spline_solver::IsIdentity () const
 	{
-	
-	int32 count = (int32) X.size ();
+
+	// CR-4208475 S-L5: identity detection reads only X and Y, so it does not
+	// require a solved spline. Validate point parity without demanding slopes.
+
+	int32 count = ValidatedPointCount (false);
 	
 	if (count != 2)
 		return false;
@@ -182,7 +210,7 @@ bool dng_spline_solver::IsIdentity () const
 real64 dng_spline_solver::Evaluate (real64 x) const
 	{
 
-	int32 count = (int32) X.size ();
+	int32 count = ValidatedPointCount (true);
 	
 	// Check for off each end of point list.
 
@@ -245,7 +273,7 @@ real64 dng_spline_solver::Evaluate (real64 x) const
 real64 dng_spline_solver::EvaluateSlope (real64 x) const
 	{
 
-	int32 count = (int32) X.size ();
+	int32 count = ValidatedPointCount (true);
 	
 	int32 lower = 1;
 	int32 upper = count - 1;

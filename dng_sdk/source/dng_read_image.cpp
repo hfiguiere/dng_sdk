@@ -967,6 +967,10 @@ class dng_image_spooler: public dng_spooler,
 			
 		virtual void Spool (const void *data,
 							uint32 count);
+
+		// CR-4208475 S-H1: require every decoded byte to reach the image.
+
+		void Finish ();
 							
 	};
 
@@ -1106,6 +1110,19 @@ void dng_image_spooler::Spool (const void *data,
 
 		}
 	
+	}
+
+/*****************************************************************************/
+
+void dng_image_spooler::Finish ()
+	{
+
+	if (fBufferCount != 0 ||
+		fTileStrip.t != fTileArea.b)
+		{
+		ThrowBadFormat ();
+		}
+
 	}
 
 /*****************************************************************************/
@@ -1920,6 +1937,8 @@ bool dng_read_image::ReadLosslessJPEG (dng_host &host,
 						  bug16,
 						  tileOffset + tileByteCount);
 
+	spooler.Finish ();
+
 	return true;
 	
 	}
@@ -1944,6 +1963,18 @@ bool dng_read_image::ReadJXL (dng_host &host,
 	decoder.fNeedImage       = true;
 	decoder.fUsePixelBuffer  = true;
 	decoder.fUseSingleThread = usingMultipleThreads;
+
+	decoder.fValidatePixelBuffer = true;
+
+	decoder.fExpectedPixelBufferSize	  = tileArea.Size ();
+	decoder.fExpectedPixelBufferPlanes   = image.Planes ();
+	decoder.fExpectedPixelBufferPixelType = image.PixelType ();
+
+	decoder.fExpectedPixelBufferByteCount =
+		ComputeBufferSize (image.PixelType (),
+						   tileArea.Size (),
+						   image.Planes (),
+						   padNone);
 		
 	if (!jxlCompressedRawBitStream)
 		{

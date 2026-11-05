@@ -257,6 +257,18 @@ class dng_jxl_decoder
 
 		bool fUsePixelBuffer = false;
 
+		// Optional contract for tile decodes into fMainPixelBuffer.
+
+		bool fValidatePixelBuffer = false;
+
+		dng_point fExpectedPixelBufferSize;
+
+		uint32 fExpectedPixelBufferPlanes = 0;
+
+		uint32 fExpectedPixelBufferPixelType = 0;
+
+		uint64 fExpectedPixelBufferByteCount = 0;
+
 		// Basic info.
 
 		bool fUsesOriginalProfile = false;

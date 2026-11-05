@@ -496,15 +496,34 @@ bool dng_tag_updater::PrepareToSet (dng_file_updater &updater,
 
 uint64 dng_tag_updater::Get_uint64 (dng_file_updater &updater) const
 	{
-	
-	std::vector<uint64> values;
-	
-	if (GetArray_uint64 (updater, values))
+
+	// CR-4208475 J-M2: scalar IFD pointers must not materialize an
+	// attacker-sized declared array. A zero-count tag is treated as absent
+	// (preserving the prior lenient behavior of returning 0 so the caller
+	// skips it); any present value reads only the first element directly,
+	// without reserving or reading the full declared count.
+
+	if (fTagCount == 0)
 		{
-		return values [0];
+		return 0;
 		}
-		
-	return 0;
+
+	if (TagSize () <= updater.InlineLimit ())
+		{
+
+		dng_stream tempStream (fTagValue8, updater.InlineLimit ());
+
+		tempStream.SetSwapBytes (false);
+
+		return tempStream.TagValue_uint64 (fTagType);
+
+		}
+
+	DNG_REQUIRE (fTagOffset, "Expected fTagOffset");
+
+	updater.Stream ().SetReadPosition (fTagOffset);
+
+	return updater.Stream ().TagValue_uint64 (fTagType);
 
 	}
 			

@@ -618,14 +618,17 @@ inline real64 Lerp_real64 (real64 a, real64 b, real64 t)
 inline uint8 Floor_uint8 (real32 x)
 	{
 
-	return (uint8) Max_real32 (0.0f, x);
+	// CR-4208475 S-L4: clamp NaN, infinities, and both numeric bounds before
+	// conversion.
+
+	return (uint8) Pin_real32_Overrange (0.0f, x, 255.0f);
 
 	}
 
 inline uint8 Floor_uint8 (real64 x)
 	{
 
-	return (uint8) Max_real64 (0.0, x);
+	return (uint8) Pin_real64_Overrange (0.0, x, 255.0);
 
 	}
 

@@ -341,6 +341,21 @@ dng_fingerprint dng_lossy_compressed_image::FindDigest (dng_host &host) const
 	
 	const uint32 tileCount = TileCount ();
 
+	// CR-4208475 S-L9: public geometry and tile storage must agree before
+	// dispatch narrows the count or workers dereference entries.
+
+	DNG_REQUIRE (tileCount == fData.size (),
+				 "Compressed tile count mismatch");
+
+	DNG_REQUIRE (tileCount <= 0x7FFFFFFFu,
+				 "Too many compressed tiles");
+
+	for (const auto &tile : fData)
+		{
+		DNG_REQUIRE (tile.get (),
+					 "Missing compressed tile data");
+		}
+
 	std::vector<dng_fingerprint> digests (tileCount);
 	
 	// Compute digest of each compressed tile.

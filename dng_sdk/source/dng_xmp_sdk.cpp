@@ -67,6 +67,7 @@ const char *XMP_NS_CRD		  = "http://ns.adobe.com/camera-raw-defaults/1.0/";
 const char *XMP_NS_CRLCP	  = "http://ns.adobe.com/camera-raw-embedded-lens-profile/1.0/";
 const char *XMP_NS_CRGI		  = "http://ns.adobe.com/camera-raw-group-info/1.0/";
 const char *XMP_NS_CRVC		  = "http://ns.adobe.com/camera-raw-virtual-copy/1.0/";
+const char *XMP_NS_CRCO		  = "http://ns.adobe.com/camera-raw-custom-order/1.0/";
 
 const char *XMP_NS_VFS        = "http://ns.adobe.com/video-foundation-settings/1.0/";
 
@@ -350,6 +351,18 @@ void dng_xmp_sdk::InitializeSDK (dng_xmp_namespace * extraNamespaces,
 
 				SXMPMeta::RegisterNamespace (XMP_NS_CRVC,
 											 "crvc",
+											 &ss);
+
+				}
+
+			// Register Camera Raw custom-order namespace.
+
+				{
+
+				TXMP_STRING_TYPE ss ("");
+
+				SXMPMeta::RegisterNamespace (XMP_NS_CRCO,
+											 "crco",
 											 &ss);
 
 				}

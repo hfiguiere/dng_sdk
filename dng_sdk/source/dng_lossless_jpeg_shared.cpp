@@ -2592,8 +2592,11 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 				// Initialize predictors.
 				
 				// CR-4208475 Q-L5: Malformed differences can accumulate beyond
-				// int32 across a wide row. Reconstruct in int64 and reject any
-				// value that cannot be represented by the component buffer.
+				// int32 across a wide row, so reconstruct in int64.
+				//
+				// CR-4210176: Valid Canon M-RAW data can transiently reconstruct
+				// outside the component range. Preserve the legacy modulo narrowing
+				// when storing each component while keeping accumulation overflow-safe.
 
 				int64 p0;
 				int64 p1;
@@ -2618,9 +2621,6 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 					{
 
 					predictor += (int64) difference;
-
-					if (predictor < 0 || predictor > 0xFFFF)
-						ThrowBadFormat ();
 
 					return (ComponentType) predictor;
 
@@ -2973,9 +2973,12 @@ void dng_lossless_decoder<simd>::DecodeImage ()
 			// Unrolling the general case logic results in a significant speed increase.
 			
 			uint16 *dPtr = &curRowBuf [1] [0];
-			
-			int32 prev0 = dPtr [-2];
-			int32 prev1 = dPtr [-1];
+
+			// CR-4208475 S-L3: widened predictors cannot overflow for any
+			// int32 row width. The uint16 stores retain defined JPEG wrapping.
+
+			int64 prev0 = dPtr [-2];
+			int64 prev1 = dPtr [-1];
 			
 			for (int32 col = 1; col < numCOL; col++)
 				{

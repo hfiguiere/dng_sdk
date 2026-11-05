@@ -1579,15 +1579,27 @@ void dng_xmp::Set_real64 (const char *ns,
 	
 	if (trim)
 		{
-		
-		while (s [strlen (s) - 1] == '0')
+
+		// CR-4208475 S-M3: trim only fractional zeroes, preserving integral
+		// values such as "0" and "100".
+
+		char *decimalPoint = strchr (s, '.');
+
+		if (decimalPoint)
 			{
-			s [strlen (s) - 1] = 0;
-			}
-			
-		if (s [strlen (s) - 1] == '.')
-			{
-			s [strlen (s) - 1] = 0;
+
+			char *end = s + strlen (s);
+
+			while (end > decimalPoint + 1 && end [-1] == '0')
+				{
+				*--end = 0;
+				}
+
+			if (end [-1] == '.')
+				{
+				*--end = 0;
+				}
+
 			}
 			
 		}
@@ -3894,6 +3906,110 @@ void dng_xmp::SyncExif (dng_exif &exif,
 		
 		}
 	
+	// LensVignetteInfo:
+
+		{
+
+		dng_string s;
+
+		if (exif.HasLensVignetteInfo ())
+			{
+
+			char ss [32];
+
+			snprintf (ss,
+					  sizeof (ss),
+					  "%u",
+					  (unsigned) exif.fLensVignetteInfoCount);
+
+			s.Set (ss);
+
+			for (uint32 j = 0; j < exif.fLensVignetteInfoCount; j++)
+				{
+
+				snprintf (ss,
+						  sizeof (ss),
+						  " %d/%d",
+						  (int) exif.fLensVignetteInfo [j].n,
+						  (int) exif.fLensVignetteInfo [j].d);
+
+				s.Append (ss);
+
+				}
+
+			}
+
+		SyncString (XMP_NS_AUX,
+					"LensVignetteInfo",
+					s,
+					readOnly);
+
+		if (s.NotEmpty ())
+			{
+
+			uint32 count = 0;
+			int offset = 0;
+
+			if (sscanf (s.Get (),
+						"%u%n",
+						&count,
+						&offset) == 1)
+				{
+
+				if (count >= 2 &&
+					count <= dng_exif::kMaxLensVignetteInfo)
+					{
+
+					const char *p = s.Get () + offset;
+
+					bool valid = true;
+
+					dng_srational temp [dng_exif::kMaxLensVignetteInfo];
+
+					for (uint32 j = 0; j < count; j++)
+						{
+
+						int n = 0;
+						int d = 0;
+						int used = 0;
+
+						if (sscanf (p,
+									" %d/%d%n",
+									&n,
+									&d,
+									&used) != 2 ||
+							d == 0 ||
+							used <= 0)
+							{
+							valid = false;
+							break;
+							}
+
+						temp [j] = dng_srational (n, d);
+
+						p += used;
+
+						}
+
+					if (valid)
+						{
+						for (uint32 j = 0; j < count; j++)
+							{
+							exif.fLensVignetteInfo [j] = temp [j];
+							}
+
+						exif.fLensVignetteInfoCount = count;
+						}
+
+					}
+
+				}
+
+
+			}
+
+		}
+
 	// Flash Compensation:
 	
 	Sync_srational (XMP_NS_AUX,

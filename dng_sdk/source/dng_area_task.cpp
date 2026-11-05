@@ -131,6 +131,15 @@ dng_point dng_area_task::FindTileSize (const dng_rect &area) const
 											 repeatingTile3.W ());
 	
 	dng_point maxTileSize = MaxTileSize ();
+	dng_point unitCell	 = UnitCell ();
+
+	// CR-4208475 S-L8: task subclasses must provide usable divisors.
+
+	DNG_REQUIRE (maxTileSize.h > 0 &&
+				 maxTileSize.v > 0 &&
+				 unitCell.h > 0 &&
+				 unitCell.v > 0,
+				 "Invalid area-task tile geometry");
 
 	dng_point tileSize;
 		
@@ -164,8 +173,6 @@ dng_point dng_area_task::FindTileSize (const dng_rect &area) const
 	tileSize.h = (repeatH + countH - 1) / countH;
 	
 	// Round up to unit cell size.
-	
-	dng_point unitCell = UnitCell ();
 	
 	if (unitCell.h != 1 || unitCell.v != 1)
 		{

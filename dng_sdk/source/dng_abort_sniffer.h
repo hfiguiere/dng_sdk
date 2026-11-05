@@ -47,7 +47,7 @@ enum dng_priority
 
 /// \brief Convenience class for setting thread priority level to minimum.
 
-class dng_set_minimum_priority
+class dng_set_minimum_priority: private dng_uncopyable
 	{
 	
 	private:
