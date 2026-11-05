@@ -2684,6 +2684,20 @@ dng_jxl_decoder::~dng_jxl_decoder ()
 
 /*****************************************************************************/
 
+static uint32 JXLPixelType (const JxlBasicInfo &basicInfo)
+	{
+
+	if (basicInfo.exponent_bits_per_sample != 0)
+		{
+		return ttFloat;
+		}
+
+	return basicInfo.bits_per_sample <= 8 ? ttByte : ttShort;
+
+	}
+
+/*****************************************************************************/
+
 void dng_jxl_decoder::Decode (dng_host &host,
 							  dng_stream &stream)
 	{
@@ -2882,6 +2896,49 @@ void dng_jxl_decoder::Decode (dng_host &host,
 			CheckResult (JxlDecoderGetBasicInfo (dec, &basicInfo),
 						 "JxlDecoderGetBasicInfo",
 						 &parallelData);
+
+			// CR-4208475 S-M2: reject a tile codestream that violates its DNG
+			// output contract before libjxl requests an output allocation.
+
+			if (fValidatePixelBuffer)
+				{
+
+				DNG_REQUIRE (fUsePixelBuffer,
+							 "Expected JXL pixel buffer mode");
+
+				DNG_REQUIRE (basicInfo.xsize <= 0x7fffffff &&
+							 basicInfo.ysize <= 0x7fffffff,
+							 "JXL tile size exceeds supported size");
+
+				const dng_point outputSize ((int32) basicInfo.ysize,
+											(int32) basicInfo.xsize);
+
+				const uint32 outputPlanes =
+					(uint32) basicInfo.num_color_channels;
+
+				const uint32 outputPixelType = JXLPixelType (basicInfo);
+
+				DNG_REQUIRE (outputSize == fExpectedPixelBufferSize,
+							 "Mismatched JXL tile size");
+
+				DNG_REQUIRE (outputPlanes == fExpectedPixelBufferPlanes,
+							 "Mismatched JXL tile plane count");
+
+				DNG_REQUIRE (outputPixelType ==
+							 fExpectedPixelBufferPixelType,
+							 "Mismatched JXL tile pixel type");
+
+				const uint64 outputByteCount =
+					(uint64) SafeInt64Mult ((int64) outputSize.h,
+											(int64) outputSize.v,
+											(int64) outputPlanes *
+												TagTypeSize (outputPixelType));
+
+				DNG_REQUIRE (outputByteCount <=
+							 fExpectedPixelBufferByteCount,
+							 "JXL tile output exceeds expected size");
+
+				}
 
 			foundBasicInfo = true;
 
@@ -3391,43 +3448,17 @@ void dng_jxl_decoder::Decode (dng_host &host,
 				ThrowNotYetImplemented ("unsupported plane count");
 				}
 
-			uint32 pixelType = ttByte;
-			
-			if (basicInfo.exponent_bits_per_sample == 0)
+			uint32 pixelType = JXLPixelType (basicInfo);
+
+			#if qLogJXL
+
+			if (basicInfo.exponent_bits_per_sample == 0 &&
+				basicInfo.bits_per_sample > 16)
 				{
-				
-				// Integer.
-
-				if (basicInfo.bits_per_sample <= 8)
-					pixelType = ttByte;
-
-				else
-					{
-					
-					pixelType = ttShort;
-
-					#if qLogJXL
-					
-					if (basicInfo.bits_per_sample > 16)
-						printf ("jxl: bits per sample > 16; truncating to 16");
-
-					#endif
-
-					}
-
+				printf ("jxl: bits per sample > 16; truncating to 16");
 				}
 
-			else
-				{
-
-				// TODO(erichan): Do we want to try reading as fp16 if
-				// exponent_bits_per_sample is 5? For now, just read as fp32.
-				
-				// Float.
-
-				pixelType = ttFloat;
-				
-				}
+			#endif
 			
 			JxlPixelFormat format;
 

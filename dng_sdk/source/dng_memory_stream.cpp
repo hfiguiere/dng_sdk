@@ -129,7 +129,17 @@ void dng_memory_stream::DoRead (void *data,
 
 void dng_memory_stream::DoSetLength (uint64 length)
 	{
-	
+
+	SetLengthInternal (length, true);
+
+	}
+
+/*****************************************************************************/
+
+void dng_memory_stream::SetLengthInternal (uint64 length,
+										   bool zeroNewBytes)
+	{
+
 	if (fLengthLimit && length > fLengthLimit)
 		{
 		
@@ -225,9 +235,49 @@ void dng_memory_stream::DoSetLength (uint64 length)
 		fPageCount++;
 		
 		}
-		
+
+	if (zeroNewBytes && length > fMemoryStreamLength)
+		{
+
+		// CR-4208475 S-M1: direct growth exposes readable bytes immediately.
+
+		ZeroRange (fMemoryStreamLength, length);
+
+		}
+
 	fMemoryStreamLength = length;
 	
+	}
+
+/*****************************************************************************/
+
+void dng_memory_stream::ZeroRange (uint64 offset,
+								   uint64 limit)
+	{
+
+	while (offset < limit)
+		{
+
+		uint32 pageIndex  = (uint32) (offset / fPageSize);
+		uint32 pageOffset = (uint32) (offset % fPageSize);
+
+		if (pageIndex >= fPageCount)
+			{
+			ThrowProgramError ("Bad pageIndex in ZeroRange");
+			}
+
+		uint32 blockCount = (uint32) Min_uint64 (fPageSize - pageOffset,
+												 limit - offset);
+
+		uint8 *dPtr = fPageList [pageIndex]->Buffer_uint8 () +
+					  pageOffset;
+
+		DoZeroBytes (dPtr, blockCount);
+
+		offset += blockCount;
+
+		}
+
 	}
 							 
 /*****************************************************************************/
@@ -242,8 +292,17 @@ void dng_memory_stream::DoWrite (const void *data,
 		ThrowProgramError ("DoWrite offset+count overflow");
 		}
 
-	DoSetLength (Max_uint64 (fMemoryStreamLength,
-							 offset + count));
+	uint64 oldLength = fMemoryStreamLength;
+
+	SetLengthInternal (Max_uint64 (oldLength, offset + count), false);
+
+	// Sequential writes initialize their growth directly. Only clear a sparse
+	// gap that the write itself will not cover.
+
+	if (offset > oldLength)
+		{
+		ZeroRange (oldLength, offset);
+		}
 	
 	uint64 baseOffset = offset;
 	

@@ -220,6 +220,16 @@ class dng_exif
 
 		dng_srational fLensDistortInfo [4];
 
+		// Image-specific radial vignetting / shading metadata that can be
+		// used later during (UI-driven) lens profile corrections. Values are
+		// stored as vendor samples from image center to maximum image height.
+
+		static const uint32 kMaxLensVignetteInfo = 16;
+
+		uint32 fLensVignetteInfoCount;
+
+		dng_srational fLensVignetteInfo [kMaxLensVignetteInfo];
+
 		// Some cameras have a built-in neutral density filter. If the ND
 		// filter is applied, it reduces the incoming light by a linear factor
 		// K. This field stores the value of K. For example, if the camera has
@@ -327,8 +337,13 @@ class dng_exif
 		void SetVersion0231 ();
 
 		bool HasLensDistortInfo () const;
-		
+
 		void SetLensDistortInfo (const dng_vector &params);
+
+		bool HasLensVignetteInfo () const;
+
+		void SetLensVignetteInfo (const int32 *params,
+								  uint32 count);
 		
 		virtual bool ParseTag (dng_stream &stream,
 							   dng_shared &shared,

@@ -3485,13 +3485,16 @@ bool ParseVectorTag (dng_stream &stream,
 							
 /*****************************************************************************/
 
-bool ParseDateTimeTag (dng_stream &stream,
-					   uint32 parentCode,
-					   uint32 tagCode,
-					   uint32 tagType,
-					   uint32 tagCount,
-					   dng_date_time &dt)
+static bool ParseDateTimeTagData (dng_stream &stream,
+							  uint32 parentCode,
+							  uint32 tagCode,
+							  uint32 tagType,
+							  uint32 tagCount,
+							  dng_date_time &dt,
+							  bool &dateOnly)
 	{
+
+	dateOnly = false;
 	
 	if (!CheckTagType (parentCode, tagCode, tagType, ttAscii))
 		{
@@ -3516,10 +3519,28 @@ bool ParseDateTimeTag (dng_stream &stream,
 	
 	s [20] = 0;
 	
-	// See if this is a valid date/time string.
+	// CR-4210188: Keep blank EXIF time fields distinct from a genuine midnight.
+	// dng_date_time parses blanks as zero, so capture this semantic before the
+	// numeric representation loses it.
 	
 	if (dt.Parse (s))
 		{
+
+		const uint32 timeFieldOffsets [] = {11, 12, 14, 15, 17, 18};
+
+		dateOnly = true;
+
+		for (uint32 offset : timeFieldOffsets)
+			{
+
+			if (s [offset] != ' ')
+				{
+				dateOnly = false;
+				break;
+				}
+
+			}
+
 		return true;
 		}
 
@@ -3567,6 +3588,80 @@ bool ParseDateTimeTag (dng_stream &stream,
 	
 	return false;
 	
+	}
+
+/*****************************************************************************/
+
+bool ParseDateTimeTag (dng_stream &stream,
+					   uint32 parentCode,
+					   uint32 tagCode,
+					   uint32 tagType,
+					   uint32 tagCount,
+					   dng_date_time &dt)
+	{
+
+	bool dateOnly = false;
+
+	return ParseDateTimeTagData (stream,
+							 parentCode,
+							 tagCode,
+							 tagType,
+							 tagCount,
+							 dt,
+							 dateOnly);
+
+	}
+
+/*****************************************************************************/
+
+bool ParseDateTimeTag (dng_stream &stream,
+					   uint32 parentCode,
+					   uint32 tagCode,
+					   uint32 tagType,
+					   uint32 tagCount,
+					   dng_date_time_info &info)
+	{
+
+	dng_date_time dt;
+	bool dateOnly = false;
+
+	if (!ParseDateTimeTagData (stream,
+							  parentCode,
+							  tagCode,
+							  tagType,
+							  tagCount,
+							  dt,
+							  dateOnly))
+		return false;
+
+	info.Clear ();
+
+	if (!dt.IsValid ())
+		return true;
+
+	if (dateOnly)
+		{
+
+		char date [11];
+
+		snprintf (date,
+				  sizeof (date),
+				  "%04u-%02u-%02u",
+				  (unsigned) dt.fYear,
+				  (unsigned) dt.fMonth,
+				  (unsigned) dt.fDay);
+
+		info.Decode_ISO_8601 (date);
+
+		}
+
+	else
+		{
+		info.SetDateTime (dt);
+		}
+
+	return true;
+
 	}
 							
 /*****************************************************************************/

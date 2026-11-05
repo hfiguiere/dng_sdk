@@ -91,6 +91,20 @@ class dng_big_table_cache
 									   const dng_fingerprint &fingerprint,
 									   dng_big_table &table) = 0;
 
+		// Unlike every other path in this class (CacheIncrement ()/
+		// CacheDecrement ()/CacheAdd ()/CacheExtract (), all of which only
+		// ever remove an entry once its reference count reaches zero),
+		// this unconditionally wipes fRefCounts regardless of any
+		// outstanding live references. That is only safe to call when no
+		// dng_big_table with fCache set to this cache is still alive --
+		// in practice this means it is only intended to be called from
+		// test code (e.g. via dng_big_table_cache_clear ()) to force a
+		// subsequent read to bypass the cache, not from production code
+		// paths that may still have live tables referencing this cache.
+		// A still-live table's later CacheIncrement ()/CacheDecrement ()
+		// call will report "fingerprint not in cache" as a harmless
+		// consequence -- see those functions' comments.
+
 		virtual void CacheClear (dng_lock_std_mutex & /* lock */)
 			{
 
@@ -245,6 +259,17 @@ void dng_big_table_cache::CacheIncrement (dng_lock_std_mutex &lock,
 		if (it == fRefCounts.end ())
 			{
 
+			// This is expected (and harmless) if Clear () was called while
+			// this fingerprint still had a live registered reference --
+			// e.g. test code forcing a cache reset via
+			// dng_big_table_cache_clear (). Clear () deliberately does not
+			// respect outstanding reference counts when it wipes
+			// fRefCounts, unlike every other path in this class, so a
+			// still-live table's later CacheIncrement () call (e.g. from a
+			// copy constructor) has nothing left to find here. This does
+			// not indicate any actual fRefCounts/derived-cache-data
+			// inconsistency.
+
 			DNG_REPORT ("dng_big_table_cache::CacheIncrement"
 						"fingerprint not in cache");
 
@@ -276,6 +301,16 @@ void dng_big_table_cache::CacheDecrement (dng_lock_std_mutex &lock,
 
 		if (it == fRefCounts.end ())
 			{
+
+			// This is expected (and harmless) if Clear () was called while
+			// this fingerprint still had a live registered reference --
+			// e.g. test code forcing a cache reset via
+			// dng_big_table_cache_clear (). Clear () deliberately does not
+			// respect outstanding reference counts when it wipes
+			// fRefCounts, unlike every other path in this class, so a
+			// still-live table's later CacheDecrement () call has nothing
+			// left to find here. This does not indicate any actual
+			// fRefCounts/derived-cache-data inconsistency.
 
 			DNG_REPORT ("dng_big_table_cache::CacheDecrement"
 						"fingerprint not in cache");
@@ -1187,76 +1222,45 @@ bool dng_big_table::DecodeFromBinary (dng_host &host,
 
 /*****************************************************************************/
 
+static uint32 DecodeBigTableASCIICharacter (uint8 ch)
+	{
+
+	// This binary to text encoding is very similar to the Z85 encoding, but
+	// the exact character set has been adjusted to encode more cleanly in XMP.
+
+	static const uint8 kDecodeTable [96] =
+		{
+
+		0xFF, 0x44, 0xFF, 0x54, 0x53, 0x52, 0xFF, 0x49,
+		0x4B, 0x4C, 0x46, 0x41, 0xFF, 0x3F, 0x3E, 0x45,
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x08, 0x09, 0x40, 0xFF, 0xFF, 0x42, 0xFF, 0x47,
+		0x51, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A,
+		0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32,
+		0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A,
+		0x3B, 0x3C, 0x3D, 0x4D, 0xFF, 0x4E, 0x43, 0xFF,
+		0x48, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+		0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+		0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
+		0x21, 0x22, 0x23, 0x4F, 0x4A, 0x50, 0xFF, 0xFF
+
+		};
+
+	if (ch < 32 || ch > 127)
+		return 0xFF;
+
+	return kDecodeTable [ch - 32];
+
+	}
+
+/*****************************************************************************/
+
 void dng_big_table::ASCIItoBinary (dng_memory_allocator &allocator,
 								   const char *sPtr,
 								   uint32 sCount,
 								   AutoPtr<dng_memory_block> &dBlock,
 								   uint32 &dCount)
 	{
-	
-	// This binary to text encoding is very similar to the Z85
-	// encoding, but the exact character set has been adjusted to
-	// encode more cleanly into XMP.
-
-	static uint8 kDecodeTable [96] =
-		{
-
-		0xFF,	// space
-		0x44,	// !
-		0xFF,	// "
-		0x54,	// #
-		0x53,	// $
-		0x52,	// %
-		0xFF,	// &
-		0x49,	// '
-		0x4B,	// (
-		0x4C,	// )
-		0x46,	// *
-		0x41,	// +
-		0xFF,	// ,
-		0x3F,	// -
-		0x3E,	// .
-		0x45,	// /
-
-		0x00, 0x01, 0x02, 0x03, 0x04,	// 01234
-		0x05, 0x06, 0x07, 0x08, 0x09,	// 56789
-
-		0x40,	// :
-		0xFF,	// ;
-		0xFF,	// <
-		0x42,	// =
-		0xFF,	// >
-		0x47,	// ?
-		0x51,	// @
-
-		0x24, 0x25, 0x26, 0x27, 0x28,	// ABCDE
-		0x29, 0x2A, 0x2B, 0x2C, 0x2D,	// FGHIJ
-		0x2E, 0x2F, 0x30, 0x31, 0x32,	// KLMNO
-		0x33, 0x34, 0x35, 0x36, 0x37,	// PQRST
-		0x38, 0x39, 0x3A, 0x3B, 0x3C,	// UVWXY
-		0x3D,							// Z
-
-		0x4D,	// [
-		0xFF,	// backslash
-		0x4E,	// ]
-		0x43,	// ^
-		0xFF,	// _
-		0x48,	// `
-
-		0x0A, 0x0B, 0x0C, 0x0D, 0x0E,	// abcde
-		0x0F, 0x10, 0x11, 0x12, 0x13,	// fghij
-		0x14, 0x15, 0x16, 0x17, 0x18,	// klmno
-		0x19, 0x1A, 0x1B, 0x1C, 0x1D,	// pqrst
-		0x1E, 0x1F, 0x20, 0x21, 0x22,	// uvwxy
-		0x23,							// z
-
-		0x4F,	// {
-		0x4A,	// |
-		0x50,	// }
-		0xFF,	// ~
-		0xFF	// del
-
-		};
 		
 	dCount = 0;
 	
@@ -1273,14 +1277,7 @@ void dng_big_table::ASCIItoBinary (dng_memory_allocator &allocator,
 	for (uint32 j = 0; j < sCount; j++)
 		{
 
-		uint8 e = (uint8) sPtr [j];
-
-		if (e < 32 || e > 127)
-			{
-			continue;
-			}
-
-		uint32 d = kDecodeTable [e - 32];
+		uint32 d = DecodeBigTableASCIICharacter ((uint8) sPtr [j]);
 
 		if (d > 85)
 			{
@@ -1355,6 +1352,148 @@ void dng_big_table::ASCIItoBinary (dng_memory_allocator &allocator,
 		dCount++;
 
 		}
+
+		}
+
+/*****************************************************************************/
+
+void dng_big_table::ASCIItoBinary (dng_stream &stream,
+								   uint64 offset,
+								   uint32 count,
+								   uint32 maxDecodedSize,
+								   dng_ref_counted_block &block)
+	{
+
+	const uint32 kBufferSize = 64u * 1024u;
+
+	dng_memory_data buffer (kBufferSize);
+
+	uint32 validCount = 0;
+	uint32 remaining = count;
+	uint64 position = offset;
+
+	// Count meaningful characters first so the retained dictionary block is
+	// exact-sized rather than based on the larger encoded XMP representation.
+
+	while (remaining)
+		{
+
+		dng_abort_sniffer::SniffForAbort (stream.Sniffer ());
+
+		const uint32 readCount = Min_uint32 (remaining, kBufferSize);
+
+		stream.SetReadPosition (position);
+		stream.Get (buffer.Buffer (), readCount);
+
+		const uint8 *src = buffer.Buffer_uint8 ();
+
+		for (uint32 j = 0; j < readCount; j++)
+			{
+
+			if (DecodeBigTableASCIICharacter (src [j]) <= 85)
+				validCount = SafeUint32Add (validCount, 1u);
+
+			}
+
+		position += readCount;
+		remaining -= readCount;
+
+		}
+
+	const uint32 tailCount = validCount % 5;
+
+	uint32 decodedSize = SafeUint32Mult (validCount / 5, 4u);
+
+	if (tailCount > 1)
+		decodedSize = SafeUint32Add (decodedSize, tailCount - 1);
+
+	if (decodedSize > maxDecodedSize)
+		ThrowBadFormat ("Embedded XMP big tables too large");
+
+	block.Allocate (decodedSize);
+
+	if (!decodedSize)
+		return;
+
+	uint8 *dst = block.Buffer_uint8 ();
+	uint32 phase = 0;
+	uint32 value = 0;
+	remaining = count;
+	position = offset;
+
+	// Decode directly into the final reference-counted dictionary block. This
+	// avoids retaining a file-sized XMP string and a second decoded copy.
+
+	while (remaining)
+		{
+
+		dng_abort_sniffer::SniffForAbort (stream.Sniffer ());
+
+		const uint32 readCount = Min_uint32 (remaining, kBufferSize);
+
+		stream.SetReadPosition (position);
+		stream.Get (buffer.Buffer (), readCount);
+
+		const uint8 *src = buffer.Buffer_uint8 ();
+
+		for (uint32 j = 0; j < readCount; j++)
+			{
+
+			const uint32 d = DecodeBigTableASCIICharacter (src [j]);
+
+			if (d > 85)
+				continue;
+
+			phase++;
+
+			if (phase == 1)
+				value = d;
+
+			else if (phase == 2)
+				value += d * 85;
+
+			else if (phase == 3)
+				value += d * (85 * 85);
+
+			else if (phase == 4)
+				value += d * (85 * 85 * 85);
+
+			else
+				{
+
+				value += d * (85 * 85 * 85 * 85);
+
+				*dst++ = (uint8) (value      );
+				*dst++ = (uint8) (value >>  8);
+				*dst++ = (uint8) (value >> 16);
+				*dst++ = (uint8) (value >> 24);
+
+				phase = 0;
+
+				}
+
+			}
+
+		position += readCount;
+		remaining -= readCount;
+
+		}
+
+	if (phase > 1)
+		{
+
+		*dst++ = (uint8) value;
+
+		if (phase > 2)
+			*dst++ = (uint8) (value >> 8);
+
+		if (phase > 3)
+			*dst++ = (uint8) (value >> 16);
+
+		}
+
+	DNG_REQUIRE ((uint32) (dst - block.Buffer_uint8 ()) == decodedSize,
+				 "Unexpected embedded big table decoded size");
 
 	}
 

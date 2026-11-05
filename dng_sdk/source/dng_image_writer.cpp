@@ -3986,7 +3986,27 @@ void dng_image_writer::ReorderSubTileBlocks (const dng_ifd &ifd,
 	
 	uint32 blockRows = ifd.fSubTileBlockRows;
 	uint32 blockCols = ifd.fSubTileBlockCols;
-	
+
+	// CR-4208475 S-H2: every byte copied from the reorder buffer must be
+	// initialized for the current tile area.
+
+	DNG_REQUIRE (blockRows > 0 &&
+				 blockCols > 0 &&
+				 (buffer.fArea.H () % blockRows) == 0 &&
+				 (buffer.fArea.W () % blockCols) == 0,
+				 "Invalid sub-tile block geometry");
+
+	uint32 bufferSize = ComputeBufferSize (buffer.fPixelType,
+										   buffer.fArea.Size (),
+										   buffer.fPlanes,
+										   padNone);
+
+	DNG_REQUIRE (uncompressedBuffer.Get () != NULL &&
+				 subTileBlockBuffer.Get () != NULL &&
+				 uncompressedBuffer->LogicalSize () >= bufferSize &&
+				 subTileBlockBuffer->LogicalSize () >= bufferSize,
+				 "Invalid sub-tile block buffers");
+
 	uint32 rowBlocks = buffer.fArea.H () / blockRows;
 	uint32 colBlocks = buffer.fArea.W () / blockCols;
 	
@@ -4044,7 +4064,7 @@ void dng_image_writer::ReorderSubTileBlocks (const dng_ifd &ifd,
 		
 	DoCopyBytes (subTileBlockBuffer->Buffer		 (),
 				 uncompressedBuffer->Buffer		 (),
-				 uncompressedBuffer->LogicalSize ());
+				 bufferSize);
 	
 	}
 							

@@ -12,6 +12,8 @@
 #include "dng_assertions.h"
 #include "dng_exceptions.h"
 
+#include <cmath>
+#include <limits>
 #include <stdlib.h>
 
 /*****************************************************************************/
@@ -461,16 +463,48 @@ bool dng_condition::Wait (dng_mutex &mutex, double timeoutSecs)
 		
 	else
 		{
-		
+
+		DNG_REQUIRE (std::isfinite (timeoutSecs),
+					 "Invalid condition timeout");
+
 		struct timespec now;
 
 		dng_pthread_now (&now);
 
-		timeoutSecs += now.tv_sec;
-		timeoutSecs += now.tv_nsec / 1000000000.0;
+		const long double deadline =
+			(long double) now.tv_sec +
+			(long double) now.tv_nsec / 1000000000.0L +
+			(long double) timeoutSecs;
 
-		now.tv_sec	= (long) timeoutSecs;
-		now.tv_nsec = (long) ((timeoutSecs - now.tv_sec) * 1000000000);
+		DNG_REQUIRE (std::isfinite (deadline) &&
+					 deadline >=
+						(long double) (std::numeric_limits<time_t>::min) () &&
+					 deadline <=
+						(long double) (std::numeric_limits<time_t>::max) () &&
+					 deadline >=
+						(long double) (std::numeric_limits<long>::min) () &&
+					 deadline <=
+						(long double) (std::numeric_limits<long>::max) (),
+					 "Condition timeout is out of range");
+
+		long seconds = (long) deadline;
+		long nanoseconds =
+			(long) ((deadline - (long double) seconds) * 1000000000.0L);
+
+		// CR-4208475 S-L7: keep the absolute deadline normalized even if
+		// floating-point rounding reaches exactly one billion nanoseconds.
+
+		if (nanoseconds >= 1000000000L)
+			{
+			DNG_REQUIRE (seconds < (std::numeric_limits<long>::max) (),
+						 "Condition timeout is out of range");
+
+			seconds++;
+			nanoseconds -= 1000000000L;
+			}
+
+		now.tv_sec	= (time_t) seconds;
+		now.tv_nsec = nanoseconds;
 
 		#if defined(_MSC_VER) && _MSC_VER >= 1900 
 		

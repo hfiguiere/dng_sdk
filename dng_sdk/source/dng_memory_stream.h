@@ -83,6 +83,14 @@ class dng_memory_stream: public dng_stream
 		virtual void DoWrite (const void *data,
 							  uint32 count,
 							  uint64 offset);
+
+	private:
+
+		void SetLengthInternal (uint64 length,
+								bool zeroNewBytes);
+
+		void ZeroRange (uint64 offset,
+						uint64 limit);
 		
 	};
 

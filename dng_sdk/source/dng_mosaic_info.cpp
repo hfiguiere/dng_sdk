@@ -1639,9 +1639,26 @@ bool dng_mosaic_info::IsSafeDownScale (const dng_point &downScale) const
 	
 /*****************************************************************************/
 
+static bool IsValidDownScaleFactor (const dng_point &downScale)
+	{
+
+	const int32 kMaxDownScale = 64;
+
+	return downScale.h >= 1 &&
+		   downScale.h <= kMaxDownScale &&
+		   downScale.v >= 1 &&
+		   downScale.v <= kMaxDownScale;
+
+	}
+
+/*****************************************************************************/
+
 uint32 dng_mosaic_info::SizeForDownScale (const dng_point &downScale) const
 	{
-	
+
+	DNG_REQUIRE (IsValidDownScaleFactor (downScale),
+				 "Invalid mosaic downscale");
+
 	uint32 sizeV = Max_uint32 (1, (fCroppedSize.v + (downScale.v >> 1)) / downScale.v);
 	uint32 sizeH = Max_uint32 (1, (fCroppedSize.h + (downScale.h >> 1)) / downScale.h);
 	
@@ -1654,11 +1671,8 @@ uint32 dng_mosaic_info::SizeForDownScale (const dng_point &downScale) const
 bool dng_mosaic_info::ValidSizeDownScale (const dng_point &downScale,
 										  uint32 minSize) const
 	{
-	
-	const int32 kMaxDownScale = 64;
-	
-	if (downScale.h > kMaxDownScale ||
-		downScale.v > kMaxDownScale)
+
+	if (!IsValidDownScaleFactor (downScale))
 		{
 		
 		return false;
@@ -1795,7 +1809,14 @@ dng_point dng_mosaic_info::DownScale (uint32 minSize,
 
 dng_point dng_mosaic_info::DstSize (const dng_point &downScale) const
 	{
-	
+
+	// CR-4208475 S-L12: reject unsupported factors before any division.
+
+	if (!IsValidDownScaleFactor (downScale))
+		{
+		return dng_point (0, 0);
+		}
+
 	if (downScale == dng_point (1, 1))
 		{
 	
@@ -1804,16 +1825,6 @@ dng_point dng_mosaic_info::DstSize (const dng_point &downScale) const
 		return dng_point (fSrcSize.v * scale.v,
 						  fSrcSize.h * scale.h);
 						  
-		}
-		
-	const int32 kMaxDownScale = 64;
-	
-	if (downScale.h > kMaxDownScale ||
-		downScale.v > kMaxDownScale)
-		{
-		
-		return dng_point (0, 0);
-		
 		}
 		
 	dng_point size;
@@ -1997,6 +2008,9 @@ void dng_mosaic_info::InterpolateFast (dng_host &host,
 									   uint32 srcPlane) const
 	{
 
+	DNG_REQUIRE (IsValidDownScaleFactor (downScale),
+				 "Invalid mosaic downscale");
+
 	// CR-4209077 defense-in-depth: re-assert the CFA-pattern and
 	// color-plane invariants before constructing the stack-resident
 	// dng_fast_interpolator. These bounds are already enforced at
@@ -2062,7 +2076,10 @@ void dng_mosaic_info::Interpolate (dng_host &host,
 								   uint32 srcPlane,
 								   dng_matrix *scaleTransforms) const
 	{
-	
+
+	DNG_REQUIRE (IsValidDownScaleFactor (downScale),
+				 "Invalid mosaic downscale");
+
 	if (scaleTransforms && downScale != dng_point (1, 1))
 		{
 		

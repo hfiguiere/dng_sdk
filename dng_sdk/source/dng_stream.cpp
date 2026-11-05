@@ -236,6 +236,16 @@ dng_memory_block * dng_stream::AsMemoryBlock (dng_memory_allocator &allocator,
 	
 	AutoPtr<dng_memory_block> block
 		(allocator.Allocate (blockSize));
+
+	// CR-4208475 S-L2: the requested prefix is initialized even when the
+	// payload is empty.
+
+	if (numLeadingZeroBytes > 0)
+		{
+		memset (block->Buffer (),
+				0,
+				size_t (numLeadingZeroBytes));
+		}
 	
 	if (len)
 		{
@@ -244,11 +254,6 @@ dng_memory_block * dng_stream::AsMemoryBlock (dng_memory_allocator &allocator,
 		
 		Get (block->Buffer_uint8 () + numLeadingZeroBytes,
 			 len);
-
-		if (numLeadingZeroBytes > 0)
-			memset (block->Buffer (),
-					0,
-					size_t (numLeadingZeroBytes));
 		
 		}
 		
@@ -461,7 +466,18 @@ void dng_stream::SetLength (uint64 length)
 		DoSetLength (length);
 		
 		fLength = length;
-		
+
+		// CR-4208475 S-L1: a resized backing stream invalidates cached bytes.
+
+		fBufferStart = 0;
+		fBufferEnd	 = 0;
+		fBufferLimit = fBufferSize;
+
+		if (fPosition > length)
+			{
+			fPosition = length;
+			}
+
 		}
 		
 	}

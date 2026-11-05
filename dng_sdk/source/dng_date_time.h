@@ -149,8 +149,19 @@ class dng_time_zone
 			
 		void SetOffsetSeconds (int32 offset)
 			{
-			fOffsetMinutes = (offset > 0) ? ((offset + 30) / 60)
-										  : ((offset - 30) / 60);
+			// CR-4208475 S-L6: widen before applying the rounding adjustment.
+
+			const int64 roundedOffset =
+				(offset > 0) ? (((int64) offset + 30) / 60)
+							 : (((int64) offset - 30) / 60);
+
+			if (roundedOffset < (std::numeric_limits<int32>::min) () ||
+				roundedOffset > (std::numeric_limits<int32>::max) ())
+				{
+				ThrowOverflow ("Time-zone offset overflow");
+				}
+
+			fOffsetMinutes = (int32) roundedOffset;
 			}
 
 		bool IsValid () const

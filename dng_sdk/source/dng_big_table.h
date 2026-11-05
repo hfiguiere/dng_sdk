@@ -31,7 +31,21 @@
 
 /*****************************************************************************/
 
+// Releases each fingerprint's "recently used" bookkeeping claim (see
+// dng_big_table_cache::FlushRecentlyUsed ()) across all global big-table
+// caches, without disturbing any entry still referenced by a live
+// dng_big_table. Safe to call from production code; used at SDK/plugin
+// shutdown.
+
 void dng_big_table_cache_flush ();
+
+// Unconditionally wipes all global big-table caches, including entries
+// still referenced by a live dng_big_table -- unlike
+// dng_big_table_cache_flush () above, this does not respect outstanding
+// reference counts (see dng_big_table_cache::CacheClear ()'s comment).
+// Only intended for test code that needs to force a subsequent read to
+// bypass the cache and genuinely exercise a caller-supplied dictionary;
+// not intended to be called from production code paths.
 
 void dng_big_table_cache_clear ();
 
@@ -106,6 +120,15 @@ class dng_big_table
 								   uint32 sCount,
 								   AutoPtr<dng_memory_block> &dBlock,
 								   uint32 &dCount);
+
+		// Decode a table string directly from a file stream without first
+		// allocating a second copy of the encoded text.
+
+		static void ASCIItoBinary (dng_stream &stream,
+								   uint64 offset,
+								   uint32 count,
+								   uint32 maxDecodedSize,
+								   dng_ref_counted_block &block);
 								   
 		bool DecodeFromString (dng_host &host,
 							   const dng_string &block1);

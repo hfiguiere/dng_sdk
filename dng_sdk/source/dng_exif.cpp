@@ -185,6 +185,10 @@ dng_exif::dng_exif ()
 			}
 
 	memset (fLensDistortInfo, 0, sizeof (fLensDistortInfo));
+
+	fLensVignetteInfoCount = 0;
+
+	memset (fLensVignetteInfo, 0, sizeof (fLensVignetteInfo));
 		
 	}
 	
@@ -816,7 +820,57 @@ void dng_exif::SetLensDistortInfo (const dng_vector &params)
 	fLensDistortInfo [3] . Set_real64 (params [3]);
 	
 	}
+
+/*****************************************************************************/
+
+bool dng_exif::HasLensVignetteInfo () const
+	{
+
+	if (fLensVignetteInfoCount < 2 ||
+		fLensVignetteInfoCount > kMaxLensVignetteInfo)
+		{
+		return false;
+		}
+
+	for (uint32 j = 0; j < fLensVignetteInfoCount; j++)
+		{
+
+		if (!fLensVignetteInfo [j].IsValid ())
+			{
+			return false;
+			}
+
+		}
+
+	return true;
+
+	}
 		
+/*****************************************************************************/
+
+void dng_exif::SetLensVignetteInfo (const int32 *params,
+									uint32 count)
+	{
+
+	if (!params ||
+		count < 2 ||
+		count > kMaxLensVignetteInfo)
+		{
+		return;
+		}
+
+	for (uint32 j = 0; j < count; j++)
+		{
+
+		fLensVignetteInfo [j] = dng_srational (params [j],
+											   1);
+
+		}
+
+	fLensVignetteInfoCount = count;
+
+	}
+
 /*****************************************************************************/
 
 bool dng_exif::ParseTag (dng_stream &stream,
@@ -1065,19 +1119,19 @@ bool dng_exif::Parse_ifd0 (dng_stream &stream,
 			
 			uint64 tagPosition = stream.PositionInOriginalFile ();
 			
-			dng_date_time dt;
+			dng_date_time_info info;
 				
 			if (!ParseDateTimeTag (stream,
 								   parentCode,
 								   tagCode,
 								   tagType,
 								   tagCount,
-								   dt))
+								   info))
 				{
 				return false;
 				}
 				
-			fDateTime.SetDateTime (dt);
+			fDateTime = info;
 				
 			fDateTimeStorageInfo = dng_date_time_storage_info (tagPosition,
 															   dng_date_time_format_exif);
@@ -1941,19 +1995,19 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 			
 			uint64 tagPosition = stream.PositionInOriginalFile ();
 			
-			dng_date_time dt;
+			dng_date_time_info info;
 			
 			if (!ParseDateTimeTag (stream,
 								   parentCode,
 								   tagCode,
 								   tagType,
 								   tagCount,
-								   dt))
+								   info))
 				{
 				return false;
 				}
 				
-			fDateTimeOriginal.SetDateTime (dt);
+			fDateTimeOriginal = info;
 			
 			fDateTimeOriginalStorageInfo = dng_date_time_storage_info (tagPosition,
 																	   dng_date_time_format_exif);
@@ -1982,19 +2036,19 @@ bool dng_exif::Parse_ifd0_exif (dng_stream &stream,
 			
 			uint64 tagPosition = stream.PositionInOriginalFile ();
 			
-			dng_date_time dt;
+			dng_date_time_info info;
 			
 			if (!ParseDateTimeTag (stream,
 								   parentCode,
 								   tagCode,
 								   tagType,
 								   tagCount,
-								   dt))
+								   info))
 				{
 				return false;
 				}
 				
-			fDateTimeDigitized.SetDateTime (dt);
+			fDateTimeDigitized = info;
 			
 			fDateTimeDigitizedStorageInfo = dng_date_time_storage_info (tagPosition,
 																		dng_date_time_format_exif);

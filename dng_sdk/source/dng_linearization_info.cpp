@@ -1410,7 +1410,19 @@ void dng_linearization_info::PostParse (dng_host & /* host */,
 
 real64 dng_linearization_info::MaxBlackLevel (uint32 plane) const
 	{
-	
+
+	// CR-4208475 S-L10: this public query must validate every fixed-array
+	// dimension independently of parsing and Linearize.
+
+	DNG_REQUIRE (plane < kMaxColorPlanes,
+				 "Invalid black-level plane");
+
+	DNG_REQUIRE (fBlackLevelRepeatRows >= 1 &&
+				 fBlackLevelRepeatRows <= kMaxBlackPattern &&
+				 fBlackLevelRepeatCols >= 1 &&
+				 fBlackLevelRepeatCols <= kMaxBlackPattern,
+				 "Invalid black-level repeat dimensions");
+
 	uint32 j;
 	uint32 k;
 	
@@ -1531,6 +1543,10 @@ uint16 dng_linearization_info::Stage3BlackLevel (dng_negative &negative,
 												 uint32 numPlanes) const
 	{
 
+	DNG_REQUIRE (numPlanes >= 1 &&
+				 numPlanes <= kMaxColorPlanes,
+				 "Invalid black-level plane count");
+
 	real64 zeroFract = 0.0;
 
 	for (uint32 plane = 0; plane < numPlanes; plane++)
@@ -1616,7 +1632,12 @@ dng_urational dng_linearization_info::BlackLevel (uint32 row,
 												  uint32 col,
 												  uint32 plane) const
 	{
-	
+
+	DNG_REQUIRE (row < kMaxBlackPattern &&
+				 col < kMaxBlackPattern &&
+				 plane < kMaxColorPlanes,
+				 "Invalid black-level index");
+
 	dng_urational r;
 	
 	r.Set_real64 (fBlackLevel [row] [col] [plane], fBlackDenom);

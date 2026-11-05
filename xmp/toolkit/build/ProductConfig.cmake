@@ -31,6 +31,8 @@ if (UNIX)
 			else()
 				set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
 			endif()
+			# Simulator builds use only the host architecture.
+			set("CMAKE_XCODE_ATTRIBUTE_ARCHS[sdk=iphonesimulator*]" "$(NATIVE_ARCH_ACTUAL)")
 			add_definitions(-DIOS_ENV=1)			
 
 			# shared flags

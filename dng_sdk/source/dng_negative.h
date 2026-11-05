@@ -450,6 +450,11 @@ class dng_metadata
 		void SetEmbeddedXMP (dng_host &host,
 							 const void *buffer,
 							 uint32 count);
+
+		void SetEmbeddedXMP (dng_host &host,
+							 const void *buffer,
+							 uint32 count,
+							 const dng_fingerprint &sourceDigest);
 					 
 		dng_xmp * GetXMP ()
 			{

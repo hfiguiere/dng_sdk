@@ -227,6 +227,13 @@ bool ParseDateTimeTag (dng_stream &stream,
 					   uint32 tagType,
 					   uint32 tagCount,
 					   dng_date_time &dt);
+
+bool ParseDateTimeTag (dng_stream &stream,
+					   uint32 parentCode,
+					   uint32 tagCode,
+					   uint32 tagType,
+					   uint32 tagCount,
+					   dng_date_time_info &info);
 							
 /*****************************************************************************/
 

@@ -150,6 +150,10 @@ class dng_spline_solver: public dng_1d_function
 			fUseSlopeExtensionHi = flag;
 			}
 
+	private:
+
+		int32 ValidatedPointCount (bool requireSlopes) const;
+
 	};
 
 /*****************************************************************************/
