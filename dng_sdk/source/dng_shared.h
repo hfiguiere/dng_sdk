@@ -16,6 +16,7 @@
 #include "dng_matrix.h"
 #include "dng_memory.h"
 #include "dng_negative.h"
+#include "dng_parse_utils.h"
 #include "dng_rational.h"
 #include "dng_string.h"
 #include "dng_stream.h"
@@ -174,7 +175,12 @@ class dng_camera_profile_info
 					   uint32 tagCount,
 					   uint64 tagOffset);
 					   
-		bool ParseExtended (dng_stream &stream);
+		// CR-4209661 A1-11: If payloadBudget is not NULL, each out-of-line
+		// tag payload is charged against it, and parsing fails if the
+		// budget would be exceeded.
+
+		bool ParseExtended (dng_stream &stream,
+							dng_tag_payload_budget *payloadBudget = NULL);
 
 	};
 		
@@ -210,6 +216,23 @@ class dng_shared
 		dng_camera_profile_info fCameraProfile;
 		
 		dng_std_vector<dng_camera_profile_info> fExtraCameraProfiles;
+
+		// CR-4209661 A1-9: Total ExtraCameraProfiles references processed
+		// across all ExtraCameraProfiles tags (bounded by 1000, counting
+		// failed parses), and the index in fExtraCameraProfiles of each
+		// successfully parsed profile, keyed by its stream offset and its
+		// position in the original file. A profile IFD referenced more
+		// than once in the same address space is then parsed only once.
+
+		uint32 fExtraCameraProfileReferences = 0;
+
+		std::map<std::pair<uint64, uint64>, size_t>
+			fExtraCameraProfileIndexByOffset;
+
+		// CR-4209661 A1-11: Aggregate out-of-line tag payload bytes parsed
+		// from all ExtraCameraProfiles profile IFDs.
+
+		dng_tag_payload_budget fExtraCameraProfilePayloadBudget;
 
 		dng_matrix fCameraCalibration1;
 		dng_matrix fCameraCalibration2;

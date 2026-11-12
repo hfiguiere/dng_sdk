@@ -13,11 +13,13 @@
 
 #include "dng_classes.h"
 #include "dng_camera_profile.h"
+#include "dng_mutex.h"
 #include "dng_rect.h"
 #include "dng_safe_arithmetic.h"
 #include "dng_semantic_mask.h"
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
+#include "dng_uncopyable.h"
 
 #include <map>
 #include <memory>
@@ -1031,16 +1033,229 @@ class dng_image_table_jxl_compression_info : public dng_image_table_compression_
 
 /*****************************************************************************/
 
+// Image table residency (CR-4209840).
+//
+// Lossy (JPEG XL) image tables keep their compressed bytes, which are the
+// source of truth for writing the table, and a decoded image, which is
+// bit-identical to a decode of those bytes. By default both stay in memory
+// for the lifetime of the table, as before. A client may install a
+// dng_image_table_residency hook to manage memory for large numbers of
+// tables: the hook may supply compressed-byte holders that can move their
+// bytes to disk, and may release decoded images that are not in use. A
+// released decoded image is decoded again on demand, so the logical state
+// of a table (valid, unpacked, same fingerprint) never changes.
+
+/*****************************************************************************/
+
+// Immutable compressed bytes of an image table.
+
+class dng_image_table_bytes: private dng_uncopyable
+	{
+
+	public:
+
+		dng_image_table_bytes ()
+			{
+			}
+
+		virtual ~dng_image_table_bytes ();
+
+		// Size of the compressed bytes.
+
+		virtual uint32 Size () const = 0;
+
+		// Returns the bytes, reading them back into memory if needed. The
+		// returned block stays valid while the caller holds it. May throw if
+		// the bytes cannot be read back.
+
+		virtual std::shared_ptr<const dng_memory_block> Acquire () const = 0;
+
+	};
+
+/*****************************************************************************/
+
+// Default compressed-byte holder that always keeps the bytes in memory.
+
+class dng_image_table_resident_bytes: public dng_image_table_bytes
+	{
+
+	private:
+
+		const std::shared_ptr<const dng_memory_block> fBlock;
+
+	public:
+
+		explicit dng_image_table_resident_bytes
+			(const std::shared_ptr<const dng_memory_block> &block);
+
+		uint32 Size () const override;
+
+		std::shared_ptr<const dng_memory_block> Acquire () const override;
+
+	};
+
+/*****************************************************************************/
+
+// Data shared by all copies of one image table, and by all image tables with
+// the same fingerprint (through the global image table cache).
+//
+// For a table with compressed bytes, the decoded image is a cache: it is held
+// strongly until a residency hook releases it (ReleaseStrongImage), and then
+// only weakly, so it is freed once no reader holds it and is decoded again on
+// the next access. A table without compressed bytes always holds its decoded
+// image strongly.
+//
+// Lock order: payload mutex, then the compressed-byte holder's internal
+// locks, then any residency hook locks. A residency hook must not call
+// payload methods while holding its own locks.
+
+class dng_image_table_payload: private dng_uncopyable
+	{
+
+	friend class dng_image_table;
+
+	private:
+
+		mutable dng_std_mutex fMutex;
+
+		// Image properties. Immutable after construction.
+
+		dng_rect fBounds;
+
+		uint32 fPlanes = 0;
+
+		uint32 fPixelType = 0;
+
+		// Compression type -- for information/debugging purposes only.
+
+		uint32 fCompressionType = 0;
+
+		// Compressed bytes, or null for tables without stored compressed
+		// data. Set at most once.
+
+		std::shared_ptr<const dng_image_table_bytes> fCompressed;
+
+		// True when the decoded image is exactly what decoding fCompressed
+		// produces, so that the decoded image may be released and decoded
+		// again on demand.
+
+		bool fDecodedMatchesCompressed = false;
+
+		// Strong decoded image reference (see class comment).
+
+		std::shared_ptr<const dng_image> fStrongImage;
+
+		// Weak decoded image cache, valid while any reader holds the image.
+
+		std::weak_ptr<const dng_image> fWeakImage;
+
+	public:
+
+		dng_image_table_payload ()
+			{
+			}
+
+		const dng_rect & Bounds () const
+			{
+			return fBounds;
+			}
+
+		uint32 Planes () const
+			{
+			return fPlanes;
+			}
+
+		uint32 PixelType () const
+			{
+			return fPixelType;
+			}
+
+		uint32 CompressionType () const
+			{
+			return fCompressionType;
+			}
+
+		// Size of the decoded image in bytes.
+
+		uint64 DecodedBytes () const;
+
+		// Compressed-byte holder, or null.
+
+		std::shared_ptr<const dng_image_table_bytes> CompressedBytes () const;
+
+		// Returns the decoded image if it is currently in memory, without
+		// decoding.
+
+		std::shared_ptr<const dng_image> PeekImage () const;
+
+		// Drops the strong decoded reference of a table with compressed
+		// bytes. Readers that hold the image keep it alive. No effect on
+		// tables without compressed bytes. Returns the released reference so
+		// that the caller can choose where to destroy it (outside its own
+		// locks).
+
+		std::shared_ptr<const dng_image> ReleaseStrongImage ();
+
+	};
+
+/*****************************************************************************/
+
+// Residency hook interface. See the Image table residency comment above.
+// Methods may be called from any thread; Register and Unregister are called
+// while the global image table cache lock is held, so implementations must
+// not create, copy, or destroy big tables from these methods.
+
+class dng_image_table_residency
+	{
+
+	public:
+
+		virtual ~dng_image_table_residency ();
+
+		// Wraps newly created compressed bytes in a holder.
+
+		virtual std::shared_ptr<const dng_image_table_bytes>
+			WrapBytes (const std::shared_ptr<const dng_memory_block> &block) = 0;
+
+		// A payload became visible under the given table fingerprint, or the
+		// last table with that fingerprint was destroyed.
+
+		virtual void Register (const dng_fingerprint &digest,
+							   const std::shared_ptr<dng_image_table_payload> &payload) = 0;
+
+		virtual void Unregister (const dng_fingerprint &digest) = 0;
+
+		// Packed bytes (dng_packed_image_table) became visible under the
+		// given table fingerprint, or the last packed table with that
+		// fingerprint was destroyed.
+
+		virtual void RegisterPacked (const dng_fingerprint &digest,
+									 const std::shared_ptr<const dng_image_table_bytes> &bytes) = 0;
+
+		virtual void UnregisterPacked (const dng_fingerprint &digest) = 0;
+
+		// A decoded image was produced on demand for the given fingerprint.
+
+		virtual void NoteDecoded (const dng_fingerprint &digest,
+								  const std::shared_ptr<const dng_image> &image) = 0;
+
+	};
+
+// Installs (or clears, with nullptr) the process-wide residency hook. Tables
+// created before installation keep their decoded images in memory.
+
+void dng_image_table_set_residency (const std::shared_ptr<dng_image_table_residency> &residency);
+
+std::shared_ptr<dng_image_table_residency> dng_image_table_get_residency ();
+
+/*****************************************************************************/
+
 class dng_image_table_data
 	{
 
 	public:
-		
-		std::shared_ptr<const dng_image> fImage;
 
-		mutable std::shared_ptr<const dng_memory_block> fCompressedData;
-
-		uint32 fCompressionType = 0;
+		std::shared_ptr<dng_image_table_payload> fPayload;
 		
 	};
 
@@ -1059,18 +1274,17 @@ class dng_image_table : public dng_big_table
 			kImageTableVersion = 1
 			};
 
-	protected:
-	
-		std::shared_ptr<const dng_image> fImage;
+	private:
 
-		// For lossy-compressed big table data, we store a copy of the
-		// compressed data to avoid round-trip errors.
+		// Shared table data (CR-4209840). See dng_image_table_payload.
 
-		mutable std::shared_ptr<const dng_memory_block> fCompressedData;
+		std::shared_ptr<dng_image_table_payload> fPayload;
 
-		// Compression type -- for information/debugging purposes only.
-		
-		uint32 fCompressionType = 0;
+		// Decoded image pinned by Image () for the lifetime of this object, so
+		// that the returned reference stays valid even if the payload's
+		// decoded cache is released. Not copied to other table objects.
+
+		mutable std::shared_ptr<const dng_image> fPinnedImage;
 		
 	public:
 	
@@ -1097,15 +1311,17 @@ class dng_image_table : public dng_big_table
 			return !(*this == table);
 			}
 			
-		const dng_image & Image () const
-			{
-			return *fImage;
-			}
-			
-		std::shared_ptr<const dng_image> ShareImage () const
-			{
-			return fImage;
-			};
+		// Returns the decoded image, decoding it from the compressed bytes if
+		// it was released. The reference stays valid for the lifetime of
+		// this table object (or until it is assigned or modified).
+
+		const dng_image & Image () const;
+
+		// Returns the decoded image, decoding it from the compressed bytes if
+		// it was released. Prefer this over Image () when the image is used
+		// beyond the current scope.
+
+		std::shared_ptr<const dng_image> ShareImage () const;
 			
 		void SetImage (const dng_image *image,
 					   const dng_image_table_compression_info *compressionInfo = nullptr,
@@ -1117,12 +1333,19 @@ class dng_image_table : public dng_big_table
 
 		uint32 CompressionType () const
 			{
-			return fCompressionType;
+			return fPayload ? fPayload->CompressionType () : 0;
 			}
 
-		std::shared_ptr<const dng_memory_block> CompressedData () const
+		// Returns the stored compressed bytes, or null. May read them back
+		// into memory; may throw if they cannot be read.
+
+		std::shared_ptr<const dng_memory_block> CompressedData () const;
+
+		// Shared table data, or null if the table is invalid.
+
+		std::shared_ptr<dng_image_table_payload> Payload () const
 			{
-			return fCompressedData;
+			return fPayload;
 			}
 
 	private:
@@ -1130,6 +1353,28 @@ class dng_image_table : public dng_big_table
 		void SetData (const dng_image_table_data &data);
 
 		void GetData (dng_image_table_data &data) const;
+
+		// Sets this table's fingerprint to a known value and registers it in
+		// the image table cache (used when a packed table restores its inner
+		// table from the packed table cache). Requires an empty fingerprint.
+
+		void AdoptFingerprint (const dng_fingerprint &fingerprint);
+
+		// Installs a new payload holding the given decoded image.
+
+		void SetPayloadImage (const std::shared_ptr<const dng_image> &image);
+
+		// Decodes the image from the payload's compressed bytes.
+
+		std::shared_ptr<const dng_image> DecodePayloadImage
+			(const dng_image_table_payload &payload) const;
+
+		// Reads an image table codestream (JPEG XL or TIFF) from stream.
+
+		void DecodeCodestream (dng_host &host,
+							   dng_stream &stream,
+							   AutoPtr<dng_image> &image,
+							   uint32 &compressionType) const;
 
 	protected:
 
@@ -1201,9 +1446,11 @@ class dng_packed_image_table : public dng_big_table
 
 		std::unique_ptr<dng_image_table> fTable;
 
-		// The packed / opaque image table.
+		// The packed / opaque image table. Held through a compressed-byte
+		// holder so that a residency hook may move the bytes to disk
+		// (CR-4209840).
 		
-		std::shared_ptr<const dng_memory_block> fBlock;
+		std::shared_ptr<const dng_image_table_bytes> fBlock;
 
 		// Image properties.
 
@@ -1240,7 +1487,17 @@ class dng_packed_image_table : public dng_big_table
 			return fTable ? fTable->ShareImage () : nullptr;
 			}
 
+		// Returns the packed bytes, or null. May read them back into memory;
+		// may throw if they cannot be read.
+
 		std::shared_ptr<const dng_memory_block> ShareBlock () const
+			{
+			return fBlock ? fBlock->Acquire () : std::shared_ptr<const dng_memory_block> ();
+			}
+
+		// Returns the packed-byte holder, or null, without reading the bytes.
+
+		std::shared_ptr<const dng_image_table_bytes> ShareBytes () const
 			{
 			return fBlock;
 			}

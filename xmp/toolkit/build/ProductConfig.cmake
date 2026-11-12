@@ -56,7 +56,7 @@ if (UNIX)
 				# no, so default to CS6 settings
 				#set(CMAKE_XCODE_ATTRIBUTE_GCC_VERSION "4.2")
 				set(XMP_OSX_SDK		10.13)
-				set(XMP_OSX_TARGET	10.14)
+				set(XMP_OSX_TARGET	12.0)
 			endif()
 
 			if (APPLE_UNIVERSAL)

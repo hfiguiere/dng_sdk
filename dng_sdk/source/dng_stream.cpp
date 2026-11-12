@@ -370,25 +370,33 @@ void dng_stream::Get (void *data, uint32 count, uint32 maxOverRead)
 			}
 			
 		// Figure out new buffer range.
+
+		// CR-4209661 T-L1: Compute the new window in locals and publish it
+		// only after DoRead succeeds. Previously the window was recorded
+		// before the end-of-file check, the abort check, and the read, so
+		// a failed or partial refill whose exception was caught could
+		// leave uninitialized or stale buffer bytes advertised as valid
+		// data for later reads.
 		
-		fBufferStart = fPosition;
+		uint64 newBufferStart = fPosition;
 		
 		if (fBufferSize >= gDNGStreamBlockSize)
 			{
 			
 			// Align to a file block.
 			
-			fBufferStart &= (uint64) ~((int64) (gDNGStreamBlockSize - 1));
+			newBufferStart &= (uint64) ~((int64) (gDNGStreamBlockSize - 1));
 			
 			}
 		
-		fBufferEnd = Min_uint64 (fBufferStart + fBufferSize, Length ());
+		uint64 newBufferEnd = Min_uint64 (newBufferStart + fBufferSize,
+										  Length ());
 
 		// CR-4208475 Q-L1: Consume every available byte before permitting a
 		// missing suffix. This keeps partial reads deterministic while preserving
 		// the caller's explicit over-read allowance.
 
-		if (fBufferEnd <= fPosition)
+		if (newBufferEnd <= fPosition)
 			{
 
 			if (count <= maxOverRead)
@@ -397,14 +405,23 @@ void dng_stream::Get (void *data, uint32 count, uint32 maxOverRead)
 			ThrowEndOfFile ();
 
 			}
+
+		// Invalidate the old window before anything that can throw or
+		// partially overwrite the buffer.
+
+		fBufferStart = 0;
+		fBufferEnd	 = 0;
 			
 		// Read data into buffer.
 		
 		dng_abort_sniffer::SniffForAbort (fSniffer);
 		
 		DoRead (fBuffer,
-				(uint32) (fBufferEnd - fBufferStart),
-				fBufferStart);
+				(uint32) (newBufferEnd - newBufferStart),
+				newBufferStart);
+
+		fBufferStart = newBufferStart;
+		fBufferEnd	 = newBufferEnd;
 		
 		}
 

@@ -38,7 +38,11 @@
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\abort.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\aligned_allocator.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\image\image.cc" />
-    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\print_network.cc" />
+    <!-- A standalone tool with its own main (a cc_binary in highway's BUILD),
+         not library code: linked in, its main clashes with the program's. -->
+    <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\print_network.cc">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_128a.cc" />
     <ClCompile Include="..\..\libjxl\third_party\highway\hwy\contrib\sort\vqsort_128d.cc" />

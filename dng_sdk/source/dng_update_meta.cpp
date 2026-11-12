@@ -60,6 +60,14 @@ class dng_tag_updater
 			};
 			
 		uint64 fTagOffset = 0;
+
+		// CR-4209661 T-M4: False when an out-of-line value's declared
+		// extent (offset and size) does not lie within the original file.
+		// The read parser tolerates and skips some such tags, so they can
+		// reach the updater. They may be removed or replaced, but their
+		// declared range is never patched, reused, or zeroed.
+
+		bool fExtentValid = true;
 		
 	public:
 	
@@ -429,14 +437,21 @@ bool dng_tag_updater::PrepareToSet (dng_file_updater &updater,
 		
 		if (!wasInline)
 			{
+
+			if (fExtentValid)
+				{
 			
-			DNG_REQUIRE (fTagOffset, "Expected fTagOffset");
+				DNG_REQUIRE (fTagOffset, "Expected fTagOffset");
 			
-			updater.AddZeroRange (fTagOffset, oldSize);
+				updater.AddZeroRange (fTagOffset, oldSize);
+
+				}
 			
 			fTagOffset = 0;
 			
 			}
+
+		fExtentValid = true;
 		
 		fTagValue64 = 0;
 		
@@ -445,7 +460,10 @@ bool dng_tag_updater::PrepareToSet (dng_file_updater &updater,
 	else
 		{
 		
-		if (allowPatch && fTagType == tagType && fTagCount == tagCount)
+		if (allowPatch			   &&
+			fExtentValid		   &&
+			fTagType  == tagType   &&
+			fTagCount == tagCount)
 			{
 			
 			DNG_REQUIRE (fTagOffset, "Expected fTagOffset");
@@ -457,7 +475,7 @@ bool dng_tag_updater::PrepareToSet (dng_file_updater &updater,
 		else
 			{
 			
-			if (!wasInline)
+			if (!wasInline && fExtentValid)
 				{
 				
 				DNG_REQUIRE (fTagOffset, "Expected fTagOffset");
@@ -470,6 +488,8 @@ bool dng_tag_updater::PrepareToSet (dng_file_updater &updater,
 			updater.PrepareToAppend (newSize);
 			
 			fTagOffset = updater.Stream ().Position ();
+
+			fExtentValid = true;
 			
 			if (isBigTIFF)
 				{
@@ -673,6 +693,11 @@ void dng_ifd_updater::Parse (dng_file_updater &updater)
 		}
 	
 	fTag.reserve (entryCount);
+
+	// CR-4209661 T-M4: Parsing happens before any update writes, so this is
+	// the original file length.
+
+	const uint64 streamLength = stream.Length ();
 	
 	for (uint64 j = 0; j < entryCount; j++)
 		{
@@ -702,6 +727,10 @@ void dng_ifd_updater::Parse (dng_file_updater &updater)
 				tag.fTagValue32 [0] = stream.Get_uint32 ();
 				tag.fTagOffset		= tag.fTagValue32 [0];
 				}
+
+			tag.fExtentValid = (tag.fTagOffset != 0				&&
+								tag.fTagOffset <= streamLength	&&
+								tagSize <= streamLength - tag.fTagOffset);
 			
 			}
 			
@@ -870,7 +899,8 @@ void dng_ifd_updater::DeleteTag (dng_file_updater &updater,
 				
 			#endif
 
-			if (tag.TagSize () > updater.InlineLimit ())
+			if (tag.TagSize () > updater.InlineLimit () &&
+				tag.fExtentValid)
 				{
 				
 				DNG_REQUIRE (tag.fTagOffset, "Expected fTagOffset");
@@ -949,8 +979,14 @@ void dng_ifd_updater::UpdateTag (dng_file_updater &updater,
 		
 		dng_tag_updater &oldTag (RequiredTag (tagCode));
 		
+		// CR-4209661 T-M4: An out-of-line value whose declared extent is
+		// outside the original file is never compared or patched in place;
+		// it is replaced below instead.
+
 		if (oldTag.fTagType	 == tagType &&
-			oldTag.fTagCount == tagCount)
+			oldTag.fTagCount == tagCount &&
+			(oldTag.fExtentValid ||
+			 oldTag.TagSize () <= updater.InlineLimit ()))
 			{
 			
 			bool dirty = false;
@@ -3207,7 +3243,11 @@ void DNGUpdateMetadata (dng_host &host,
 			
 			const dng_tag_updater &xmpTag (updater.IFD0 ().ExistingTag (tcXMP));
 			
-			if (xmpTag.TagSize () <= 0xFFFFFFFF)
+			// CR-4209661 T-M4: Only reuse the existing packet size when the
+			// old XMP value actually lies within the original file.
+
+			if (xmpTag.fExtentValid &&
+				xmpTag.TagSize () <= 0xFFFFFFFF)
 				{
 				existingSize = (uint32) xmpTag.TagSize ();
 				}

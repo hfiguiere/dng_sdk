@@ -3292,6 +3292,12 @@ void dng_negative::SetBlackLevel (real64 black,
 								  int32 plane)
 	{
 
+	// CR-4209661 T-L5: Bound the plane index (negative means all planes)
+	// before touching the fixed-size black level arrays.
+
+	DNG_REQUIRE (plane < (int32) kMaxColorPlanes,
+				 "Invalid plane in SetBlackLevel");
+
 	NeedLinearizationInfo ();
 	
 	dng_linearization_info &info = *fLinearizationInfo.Get ();
@@ -3330,6 +3336,11 @@ void dng_negative::SetQuadBlacks (real64 black0,
 								  real64 black3,
 								  int32 plane)
 	{
+
+	// CR-4209661 T-L5: Bound the plane index (negative means all planes).
+
+	DNG_REQUIRE (plane < (int32) kMaxColorPlanes,
+				 "Invalid plane in SetQuadBlacks");
 	
 	NeedLinearizationInfo ();
 	
@@ -3372,6 +3383,11 @@ void dng_negative::SetQuadBlacks (real64 black0,
 void dng_negative::Set6x6Blacks (real64 blacks6x6 [36],
 								  int32 plane)
 	{
+
+	// CR-4209661 T-L5: Bound the plane index (negative means all planes).
+
+	DNG_REQUIRE (plane < (int32) kMaxColorPlanes,
+				 "Invalid plane in Set6x6Blacks");
 	
 	NeedLinearizationInfo ();
 	
@@ -3506,6 +3522,12 @@ uint32 dng_negative::WhiteLevel (uint32 plane) const
 	
 	if (fLinearizationInfo.Get ())
 		{
+
+		// CR-4209661 T-L5: Bound the plane index before reading the
+		// fixed-size white level array.
+
+		DNG_REQUIRE (plane < kMaxColorPlanes,
+					 "Invalid plane in WhiteLevel");
 		
 		const dng_linearization_info &info = *fLinearizationInfo.Get ();
 										
@@ -3529,6 +3551,11 @@ uint32 dng_negative::WhiteLevel (uint32 plane) const
 void dng_negative::SetWhiteLevel (uint32 white,
 								  int32 plane)
 	{
+
+	// CR-4209661 T-L5: Bound the plane index (negative means all planes).
+
+	DNG_REQUIRE (plane < (int32) kMaxColorPlanes,
+				 "Invalid plane in SetWhiteLevel");
 
 	NeedLinearizationInfo ();
 	

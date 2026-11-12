@@ -12,6 +12,7 @@
 #include "dng_globals.h"
 #include "dng_ifd.h"
 #include "dng_safe_arithmetic.h"
+#include "dng_sdk_limits.h"
 #include "dng_tag_codes.h"
 #include "dng_tag_types.h"
 #include "dng_tag_values.h"
@@ -3664,4 +3665,40 @@ bool ParseDateTimeTag (dng_stream &stream,
 
 	}
 							
+/*****************************************************************************/
+
+bool dng_tag_payload_budget::Consume (uint64 streamLength,
+									  uint64 tagDataSize)
+	{
+
+	// limit = streamLength * factor + allowance, saturating on overflow,
+	// and never smaller than any limit computed before.
+
+	const uint64 kMaxUint64 = ~uint64 (0);
+
+	uint64 limit = kMaxUint64;
+
+	if (streamLength <= (kMaxUint64 - kTagPayloadBudgetAllowance) /
+						kTagPayloadBudgetLengthFactor)
+		{
+
+		limit = streamLength * kTagPayloadBudgetLengthFactor +
+				kTagPayloadBudgetAllowance;
+
+		}
+
+	fLimit = Max_uint64 (fLimit, limit);
+
+	if (tagDataSize > fLimit ||
+		fBytes > fLimit - tagDataSize)
+		{
+		return false;
+		}
+
+	fBytes += tagDataSize;
+
+	return true;
+
+	}
+
 /*****************************************************************************/

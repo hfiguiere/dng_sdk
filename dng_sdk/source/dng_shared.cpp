@@ -1574,7 +1574,8 @@ bool dng_camera_profile_info::ParseTag (dng_stream &stream,
 
 /*****************************************************************************/
 
-bool dng_camera_profile_info::ParseExtended (dng_stream &stream)
+bool dng_camera_profile_info::ParseExtended (dng_stream &stream,
+											 dng_tag_payload_budget *payloadBudget)
 	{
 
 	try
@@ -1665,6 +1666,16 @@ bool dng_camera_profile_info::ParseExtended (dng_stream &stream)
 				tagOffset = SafeUint64Add (startPosition, stream.Get_uint32 ());
 
 				if (SafeUint64Add (tagOffset, tagSize) > stream.Length ())
+					{
+					return false;
+					}
+
+				// CR-4209661 A1-11: Many profile IFDs can reference the same
+				// payload, so charge it against the caller's aggregate
+				// budget, if any.
+
+				if (payloadBudget &&
+					!payloadBudget->Consume (stream.Length (), tagSize))
 					{
 					return false;
 					}
@@ -3091,12 +3102,25 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 				
 			#endif
 			
-			if (tagCount > 1000)
+			// CR-4208475 A1-9 / CR-4209661: Bound the total number of extra
+			// camera profile references across all ExtraCameraProfiles
+			// tags, including references whose parse fails, so duplicate
+			// tags cannot accumulate unbounded parse work or entries.
+
+			const uint32 kMaxExtraCameraProfileReferences = 1000;
+
+			if (fExtraCameraProfileReferences >
+					kMaxExtraCameraProfileReferences ||
+				tagCount > kMaxExtraCameraProfileReferences -
+						   fExtraCameraProfileReferences)
 				{
 				ThrowBadFormat ("Too many ExtraCameraProfiles");
 				}
 
-			fExtraCameraProfiles.reserve (tagCount);
+			fExtraCameraProfileReferences += tagCount;
+
+			fExtraCameraProfiles.reserve (fExtraCameraProfiles.size () +
+										  tagCount);
 			
 			for (uint32 index = 0; index < tagCount; index++)
 				{
@@ -3116,12 +3140,60 @@ bool dng_shared::Parse_ifd0 (dng_stream &stream,
 				
 				uint64 savePosition = stream.Position ();
 				
+				stream.SetReadPosition (profileOffset);
+
+				// CR-4209661 A1-9: A profile IFD referenced more than once
+				// is parsed only once. Later references reuse the parsed
+				// info, which shares its heavy table data, preserving list
+				// order without re-materializing those tables. Reuse
+				// requires the same stream offset and original-file
+				// position, so the stored stream-relative offsets and the
+				// underlying bytes are the same. Only successful parses are
+				// cached, and nothing is cached when the original-file
+				// position is unknown.
+
+				const uint64 originalPosition =
+					stream.PositionInOriginalFile ();
+
+				const bool cacheable =
+					(originalPosition != kDNGStreamInvalidOffset);
+
+				const std::pair<uint64, uint64> cacheKey (profileOffset,
+														  originalPosition);
+
+				if (cacheable)
+					{
+
+					auto previous =
+						fExtraCameraProfileIndexByOffset.find (cacheKey);
+
+					if (previous != fExtraCameraProfileIndexByOffset.end ())
+						{
+
+						dng_camera_profile_info profileCopy
+							(fExtraCameraProfiles [previous->second]);
+
+						fExtraCameraProfiles.push_back (profileCopy);
+
+						stream.SetReadPosition (savePosition);
+
+						continue;
+
+						}
+
+					}
+				
 				dng_camera_profile_info profileInfo;
 				
-				stream.SetReadPosition (profileOffset);
-				
-				if (profileInfo.ParseExtended (stream))
+				if (profileInfo.ParseExtended (stream,
+											   &fExtraCameraProfilePayloadBudget))
 					{
+
+					if (cacheable)
+						{
+						fExtraCameraProfileIndexByOffset [cacheKey] =
+							fExtraCameraProfiles.size ();
+						}
 					
 					fExtraCameraProfiles.push_back (profileInfo);
 					

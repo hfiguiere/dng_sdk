@@ -810,6 +810,35 @@ void dng_info::ParseIFD (dng_host &host,
 
 				}
 
+			// CR-4209661 A1-11: Aliased IFDs, or many entries pointing at
+			// the same payload, can otherwise make a small file drive
+			// retained copies and parse work far beyond its size.
+
+			if (!ConsumeTagPayloadBudget (host, stream, tag_data_size))
+				{
+
+				#if qDNGValidate
+
+					{
+
+					char message [256];
+
+					snprintf (message,
+							  256,
+							  "%s %s exceeds the total tag payload budget; skipping",
+							  LookupParentCode (parentCode),
+							  LookupTagCode (parentCode, tagCode));
+
+					ReportWarning (message);
+
+					}
+
+				#endif
+
+				continue;
+
+				}
+
 			localTag = ifdStream.DataInBuffer (tag_data_size,
 											   tagOffset);
 				
@@ -920,6 +949,23 @@ void dng_info::ParseIFD (dng_host &host,
 						 
 /*****************************************************************************/
 
+bool dng_info::ConsumeTagPayloadBudget (dng_host &host,
+										dng_stream &stream,
+										uint64 tagDataSize)
+	{
+
+	if (tagDataSize >= kTagPayloadAbortCheckBytes)
+		{
+		host.SniffForAbort ();
+		}
+
+	return fTagPayloadBudget.Consume (stream.Length (),
+									  tagDataSize);
+
+	}
+
+/*****************************************************************************/
+
 bool dng_info::ParseMakerNoteIFD (dng_host &host,
 								  dng_stream &stream,
 								  uint64 ifdSize,
@@ -969,6 +1015,19 @@ bool dng_info::ParseMakerNoteIFD (dng_host &host,
 		{
 		return false;
 		}
+
+	// CR-4209661 T-M1: Bound total MakerNote parse work across all nested
+	// and repeated MakerNote IFDs, and allow cancellation. Nested streams
+	// below have no abort sniffer of their own.
+
+	host.SniffForAbort ();
+
+	if (ifdEntries > kMaxMakerNoteEntries - fMakerNoteEntryCount)
+		{
+		return false;
+		}
+
+	fMakerNoteEntryCount += ifdEntries;
 		
 	// Scan IFD to verify all the tag types are all valid.
 		
@@ -1081,6 +1140,14 @@ bool dng_info::ParseMakerNoteIFD (dng_host &host,
 			catch (...)
 				{
 				// Detect overflow and skip this tag.
+				continue;
+				}
+
+			// CR-4209661 A1-11: Charge MakerNote tag payloads against the
+			// same aggregate budget used by ParseIFD.
+
+			if (!ConsumeTagPayloadBudget (host, stream, tagSize))
+				{
 				continue;
 				}
 				

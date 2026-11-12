@@ -5119,11 +5119,13 @@ dng_rect dng_ifd::TileArea (uint32 rowIndex,
 	
 	dng_rect r;
 	
-	r.t = rowIndex * fTileLength;
-	r.b = r.t	   + fTileLength;
-	
-	r.l = colIndex * fTileWidth;
-	r.r = r.l	   + fTileWidth;
+	// CR-4211050: Nominal tiled edges must remain representable. Do not
+	// clip padded tiles, but clip strips before narrowing their bottom edge
+	// so RowsPerStrip = UINT32_MAX still denotes a single strip.
+
+	r.t = ConvertUint32ToInt32 (SafeUint32Mult (rowIndex, fTileLength));
+	r.l = ConvertUint32ToInt32 (SafeUint32Mult (colIndex, fTileWidth));
+	r.r = SafeInt32Add (r.l, ConvertUint32ToInt32 (fTileWidth));
 	
 	// If this IFD is using strips rather than tiles, the last strip
 	// is trimmed so it does not extend beyond the end of the image.
@@ -5131,8 +5133,17 @@ dng_rect dng_ifd::TileArea (uint32 rowIndex,
 	if (fUsesStrips)
 		{
 		
-		r.b = Min_uint32 (r.b, fImageLength);
+		r.b = ConvertUint32ToInt32
+				((uint32) Min_uint64 ((uint64) r.t + fTileLength,
+									  fImageLength));
 		
+		}
+
+	else
+		{
+
+		r.b = SafeInt32Add (r.t, ConvertUint32ToInt32 (fTileLength));
+
 		}
 		
 	return r;
