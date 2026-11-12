@@ -544,8 +544,17 @@ void dng_bilinear_pattern::Calculate (const dng_mosaic_info &info,
 					else
 						{
 						
-						map [j] [k] = (info.fCFAPattern [((j >> 1) & ~1) + Min_uint32 (jj, 1)]
-														[((k >> 1) & ~1) + Min_uint32 (kk, 1)] == planeColor);
+						uint32 row = ((j >> 1) & ~1) + Min_uint32 (jj, 1);
+						uint32 col = ((k >> 1) & ~1) + Min_uint32 (kk, 1);
+
+						// CR-4211048: Odd staggered patterns can map beyond
+						// the declared rectangle. These are absent samples,
+						// regardless of the initialized storage's color code.
+
+						map [j] [k] =
+							row < (uint32) info.fCFAPatternSize.v &&
+							col < (uint32) info.fCFAPatternSize.h &&
+							info.fCFAPattern [row] [col] == planeColor;
 						
 						}
 						

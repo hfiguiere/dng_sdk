@@ -748,13 +748,27 @@ void dng_image::Get (dng_pixel_buffer &buffer,
 				 repeatH <= (uint32) INT32_MAX,
 				 "dng_image::Get repeat sizes exceed int32 range");
 
-	const int32 repeatV32 = (int32) repeatV;
-	const int32 repeatH32 = (int32) repeatH;
-
 	// See if we need to pad the edge values.
 	
 	if ((edgeOption != edge_none) && (overlap != buffer.fArea))
 		{
+
+		// CR-4209661 T-M5: Edge padding repeats source rectangles anchored
+		// at the image edges. A repeat size larger than the image (e.g. an
+		// image smaller than its CFA pattern) would make those rectangles
+		// extend past the image, into buffer pixels that DoGet never
+		// filled. Clamp the repeat sizes to the image dimensions, as
+		// WrapCornerHorizontal already does, so only real image pixels
+		// are repeated. An empty image has no pixels to repeat.
+
+		DNG_REQUIRE (fBounds.NotEmpty (),
+					 "dng_image::Get cannot pad an empty image");
+
+		repeatV = Min_uint32 (repeatV, fBounds.H ());
+		repeatH = Min_uint32 (repeatH, fBounds.W ());
+
+		const int32 repeatV32 = (int32) repeatV;
+		const int32 repeatH32 = (int32) repeatH;
 		
 		dng_rect areaT (buffer.fArea);
 		dng_rect areaL (buffer.fArea);

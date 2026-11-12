@@ -2381,6 +2381,110 @@ void dng_read_image::DecodePredictor (dng_host & /* host */,
 							
 /*****************************************************************************/
 
+// CR-4209661 T-M3: Inflate a zlib stream without storing its output, and
+// return the same status that uncompress () would return for a destination
+// buffer of outputLimit bytes. totalOut receives the number of bytes the
+// stream produced (at most outputLimit). The CR-4209182 edge-strip retry
+// uses this to confirm that a full-height stored strip really expands to
+// its full size before allocating a buffer sized by the nominal
+// (file-controlled) RowsPerStrip. Output goes into a small reused scratch
+// buffer and is discarded.
+
+static int InflateWithoutStorage (dng_host &host,
+								  const uint8 *input,
+								  uint32 inputSize,
+								  uint32 outputLimit,
+								  uint64 &totalOut)
+	{
+
+	totalOut = 0;
+
+	z_stream zs;
+
+	memset (&zs, 0, sizeof (zs));
+
+	int err = inflateInit (&zs);
+
+	if (err != Z_OK)
+		{
+		return err;
+		}
+
+	// Ensure inflateEnd runs even if the abort sniffer throws.
+
+	struct inflate_end_guard
+		{
+
+		z_stream &fStream;
+
+		explicit inflate_end_guard (z_stream &zStream)
+			:	fStream (zStream)
+			{
+			}
+
+		~inflate_end_guard ()
+			{
+			(void) inflateEnd (&fStream);
+			}
+
+		} guard (zs);
+
+	uint8 scratch [16384];
+
+	zs.next_in	 = (Bytef *) input;
+	zs.avail_in	 = inputSize;
+	zs.avail_out = 0;
+
+	uint32 left = outputLimit;
+
+	// Mirror uncompress (): keep calling inflate while it reports progress,
+	// offering at most outputLimit bytes of (discarded) output in total.
+
+	do
+		{
+
+		if (zs.avail_out == 0)
+			{
+
+			host.SniffForAbort ();
+
+			uint32 chunk = Min_uint32 (left, (uint32) sizeof (scratch));
+
+			zs.next_out	 = scratch;
+			zs.avail_out = chunk;
+
+			left -= chunk;
+
+			}
+
+		err = inflate (&zs, Z_NO_FLUSH);
+
+		}
+	while (err == Z_OK);
+
+	totalOut = (uint64) zs.total_out;
+
+	if (err == Z_STREAM_END)
+		{
+		return Z_OK;
+		}
+
+	if (err == Z_NEED_DICT)
+		{
+		return Z_DATA_ERROR;
+		}
+
+	if (err == Z_BUF_ERROR && (left != 0 || zs.avail_out != 0))
+		{
+		return Z_DATA_ERROR;
+		}
+
+	return err;
+
+	}
+
+/*****************************************************************************/
+
 void dng_read_image::ReadTile (dng_host &host,
 							   const dng_ifd &ifd,
 							   dng_stream &stream,
@@ -2576,8 +2680,24 @@ void dng_read_image::ReadTile (dng_host &host,
 
 					dng_rect fullTileArea (tileArea);
 
-					fullTileArea.r = fullTileArea.l + ifd.fTileWidth;
-					fullTileArea.b = fullTileArea.t + ifd.fTileLength;
+					// CR-4211050: A retry needs the nominal rectangle,
+					// not a wrapped endpoint from an oversized strip.
+
+					fullTileArea.r = SafeInt32Add
+						(fullTileArea.l, ConvertUint32ToInt32 (ifd.fTileWidth));
+
+					fullTileArea.b = SafeInt32Add
+						(fullTileArea.t, ConvertUint32ToInt32 (ifd.fTileLength));
+
+					// CR-4209661 T-M3: First inflate the full stored strip
+					// without storing its output, to learn how it ends.
+					// Only when the stream really expands to the full
+					// stored strip size is a full-strip buffer allocated
+					// and decoded, so that allocation is backed by actual
+					// compressed data rather than by the nominal
+					// (file-controlled) RowsPerStrip alone. Otherwise the
+					// resulting status feeds the unchanged error handling
+					// below, which then uses the first-pass visible output.
 
 					if (fullTileArea != tileArea)
 						{
@@ -2590,56 +2710,75 @@ void dng_read_image::ReadTile (dng_host &host,
 						dng_safe_uint32 fullUncompressedSize =
 							fullSampleCount * bytesPerSample;
 
-						dng_pixel_buffer fullBuffer (fullTileArea,
-													 plane,
-													 planes,
-													 pixelType,
-													 pcInterleaved,
-													 NULL);
+						uint64 verifiedLen = 0;
 
-						fullBuffer.fPixelSize = bytesPerSample.Get ();
-
-						dng_safe_uint32 fullBufferSize =
-							fullUncompressedSize;
-
-						if (fullBuffer.fPixelType == ttFloat)
-							{
-							fullBufferSize =
-								Max_uint32 (fullBufferSize.Get (),
-											(fullSampleCount * 4u).Get ());
-							}
-
-						if (uncompressedBuffer.Get () &&
-							uncompressedBuffer->LogicalSize () <
-								fullBufferSize.Get ())
-							{
-							uncompressedBuffer.Reset ();
-							}
-
-						if (uncompressedBuffer.Get () == NULL)
-							{
-							uncompressedBuffer.Reset (
-								host.Allocate (fullBufferSize.Get ()));
-							}
-
-						fullBuffer.fData = uncompressedBuffer->Buffer ();
-
-						uLongf fullDstLen = fullUncompressedSize.Get ();
-
-						err = uncompress ((Bytef *) fullBuffer.fData,
-										  &fullDstLen,
-										  (const Bytef *)
-											compressedBuffer->Buffer (),
-										  tileByteCount);
+						err = InflateWithoutStorage
+								(host,
+								 compressedBuffer->Buffer_uint8 (),
+								 tileByteCount,
+								 fullUncompressedSize.Get (),
+								 verifiedLen);
 
 						if (err == Z_OK &&
-							fullDstLen == fullUncompressedSize.Get ())
+							verifiedLen == fullUncompressedSize.Get ())
 							{
-							buffer = fullBuffer;
-							sampleCount = fullSampleCount;
-							uncompressedSize = fullUncompressedSize;
-							dstLen = fullDstLen;
-							decodedFullTile = true;
+
+							dng_pixel_buffer fullBuffer (fullTileArea,
+														 plane,
+														 planes,
+														 pixelType,
+														 pcInterleaved,
+														 NULL);
+
+							fullBuffer.fPixelSize = bytesPerSample.Get ();
+
+							dng_safe_uint32 fullBufferSize =
+								fullUncompressedSize;
+
+							if (fullBuffer.fPixelType == ttFloat)
+								{
+								fullBufferSize =
+									Max_uint32 (fullBufferSize.Get (),
+												(fullSampleCount * 4u).Get ());
+								}
+
+							// CR-4209661 T-H2: Decode into a separate,
+							// locally owned block. The visible-area buffer
+							// still points into uncompressedBuffer, so that
+							// block must stay alive unless this decode fully
+							// succeeds.
+
+							AutoPtr<dng_memory_block> retryBuffer
+								(host.Allocate (fullBufferSize.Get ()));
+
+							fullBuffer.fData = retryBuffer->Buffer ();
+
+							uLongf fullDstLen = fullUncompressedSize.Get ();
+
+							err = uncompress ((Bytef *) fullBuffer.fData,
+											  &fullDstLen,
+											  (const Bytef *)
+												compressedBuffer->Buffer (),
+											  tileByteCount);
+
+							if (err == Z_OK &&
+								fullDstLen == fullUncompressedSize.Get ())
+								{
+
+								buffer = fullBuffer;
+								sampleCount = fullSampleCount;
+								uncompressedSize = fullUncompressedSize;
+								dstLen = fullDstLen;
+								decodedFullTile = true;
+
+								// Transfer ownership only after buffer has
+								// been rebound to the retry block.
+
+								uncompressedBuffer.Reset
+									(retryBuffer.Release ());
+
+								}
+
 							}
 
 						}
@@ -2692,6 +2831,26 @@ void dng_read_image::ReadTile (dng_host &host,
 					{
 					xFactor = 4;
 					}
+
+				// CR-4209661 T-H5: DecodeFPDelta only decodes whole
+				// xFactor groups. When the tile width is not a multiple
+				// of xFactor, the encoder leaves the trailing samples raw
+				// in each row. Copy those raw remainder bytes into the
+				// shifted destination row too; otherwise they would hold
+				// uninitialized scratch-row or stale bytes.
+
+				const uint32 decodedRowBytes =
+					(dng_safe_uint32 (tileArea.W () / (uint32) xFactor) *
+					 dng_safe_uint32 (planes) *
+					 (uint32) xFactor *
+					 bytesPerSample).Get ();
+
+				const uint32 rowBytes =
+					(dng_safe_uint32 (tileArea.W ()) *
+					 dng_safe_uint32 (planes) *
+					 bytesPerSample).Get ();
+
+				const uint32 remainderBytes = rowBytes - decodedRowBytes;
 				
 				for (int32 row = tileArea.t; row < tileArea.b; row++)
 					{
@@ -2704,6 +2863,15 @@ void dng_read_image::ReadTile (dng_host &host,
 								   tileArea.W () / xFactor,
 								   planes		 * xFactor,
 								   bytesPerSample.Get ());
+
+					if (remainderBytes)
+						{
+
+						memcpy (dstPtr + decodedRowBytes,
+								srcPtr + decodedRowBytes,
+								remainderBytes);
+
+						}
 					
 					}
 				
@@ -3286,6 +3454,12 @@ class dng_interleave_task : public dng_area_task
 			,	fEncode    (encode)
 			
 			{
+
+			// CR-4209661 T-H3: Factors are used as divisors and strides
+			// below, so they must be strictly positive.
+
+			DNG_REQUIRE (fRowFactor >= 1 && fColFactor >= 1,
+						 "Invalid interleave factor");
 			
 			if (fRowFactor >= (int32) fSrcImage.Bounds ().H ())
 				{
@@ -3514,6 +3688,27 @@ void dng_read_image::Read (dng_host &host,
 		ifd.fColumnInterleaveFactor > 1)
 		{
 
+		// CR-4209661 T-H3: Only IsValidDNG bounds these tag values, and
+		// TIFF and other non-DNG reads reach this code without it. A zero
+		// factor is invalid. Factors at least as large as the image
+		// dimension already mean "no interleave" in dng_interleave_task,
+		// so clamp them to that dimension before narrowing to int32,
+		// rather than letting huge values wrap negative.
+
+		if (ifd.fRowInterleaveFactor	< 1 ||
+			ifd.fColumnInterleaveFactor < 1)
+			{
+			ThrowBadFormat ();
+			}
+
+		const int32 rowFactor =
+			(int32) Min_uint32 (ifd.fRowInterleaveFactor,
+								image.Bounds ().H ());
+
+		const int32 colFactor =
+			(int32) Min_uint32 (ifd.fColumnInterleaveFactor,
+								image.Bounds ().W ());
+
 		// First, read into a full interleaved temporary image.
 		
 		AutoPtr<dng_image> tempImage (host.Make_dng_image (image.Bounds (),
@@ -3537,8 +3732,8 @@ void dng_read_image::Read (dng_host &host,
 		Interleave2D (host,
 					  *tempImage,
 					  image,
-					  ifd.fRowInterleaveFactor,
-					  ifd.fColumnInterleaveFactor,
+					  rowFactor,
+					  colFactor,
 					  false);
 						
 		return;
@@ -3815,7 +4010,23 @@ void dng_read_image::Read (dng_host &host,
 	std::vector<dng_fingerprint> lossyTileDigests;
 	
 	if (lossyDigest)
+		{
+
+		// CR-4209661 T-L3: The digest hashes each tile's stored bytes,
+		// read into a buffer sized from the largest explicit tile byte
+		// count. Without explicit byte counts (e.g. uncompressed data) that
+		// buffer would be sized 0 while each tile's computed byte count is
+		// still read into it. Production callers request a digest only for
+		// lossy JPEG or JPEG XL data, which always has explicit counts.
+
+		if (!tileByteCount)
+			{
+			ThrowProgramError ("lossyDigest requires explicit tile byte counts");
+			}
+
 		lossyTileDigests.resize (tileCount);
+
+		}
 			
 	// Don't read planes we are not actually saving.
 	
@@ -3991,8 +4202,11 @@ void dng_read_image::Read (dng_host &host,
 					
 					dng_rect tileArea = ifd.TileArea (rowIndex, colIndex);
 					
-					uint32 subTileCount = (tileArea.H () + subTileLength - 1) /
-										  subTileLength;
+					// CR-4211050: Oversized strips must still execute the
+					// visible decode, even when ceiling addition would wrap.
+
+					uint32 subTileCount =
+						SafeUint32DivideUp (tileArea.H (), subTileLength);
 										  
 					for (uint32 subIndex = 0; subIndex < subTileCount; subIndex++)
 						{
@@ -4001,10 +4215,14 @@ void dng_read_image::Read (dng_host &host,
 					
 						dng_rect subArea (tileArea);
 						
-						subArea.t = tileArea.t + subIndex * subTileLength;
+						subArea.t = SafeInt32Add
+							(tileArea.t,
+							 ConvertUint32ToInt32
+								(SafeUint32Mult (subIndex, subTileLength)));
 						
-						subArea.b = Min_int32 (subArea.t + subTileLength,
-											   tileArea.b);
+						subArea.b = (int32) Min_uint64
+							((uint64) subArea.t + subTileLength,
+							 (uint64) tileArea.b);
 						
 						uint32 subByteCount;
 						
@@ -4099,9 +4317,24 @@ void dng_read_image::Read (dng_host &host,
 		}
 		
 	// Keep the JPEG table in the jpeg image, if any.
+
+	// CR-4209661 T-L4: lossyImage is declared as the base class, so check
+	// its actual type before transferring JPEG tables into it, rather than
+	// assuming the caller supplied a dng_jpeg_image.
 	
 	if (lossyImage && fJPEGTables.Get ())
-		((dng_jpeg_image *) lossyImage)->fJPEGTables.Reset (fJPEGTables.Release ());	
+		{
+
+		dng_jpeg_image *jpegImage = dynamic_cast<dng_jpeg_image *> (lossyImage);
+
+		if (!jpegImage)
+			{
+			ThrowProgramError ("JPEG tables require a dng_jpeg_image");
+			}
+
+		jpegImage->fJPEGTables.Reset (fJPEGTables.Release ());
+
+		}
 
 	}
 

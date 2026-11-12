@@ -229,6 +229,36 @@ void dng_area_spec::PutData (dng_stream &stream) const
 
 /*****************************************************************************/
 
+// CR-4209661 T-L8: Returns the first coordinate at or after start that lies
+// on the pitch grid anchored at origin (start >= origin). The arithmetic is
+// done in int64 because area coordinates can be far apart or near the int32
+// limits (e.g. scaled areas starting near INT32_MIN), so start - origin and
+// the final addition back to origin can overflow int32. A result past
+// INT32_MAX lies beyond any int32 end coordinate, so it is pinned there;
+// the caller's overlap is then empty.
+
+static int32 AlignUpToPitch (int32 start,
+							 int32 origin,
+							 uint32 pitch)
+	{
+
+	const int64 delta = (int64) start - (int64) origin;
+
+	const int64 aligned = (int64) origin +
+						  ((delta + (int64) pitch - 1) / (int64) pitch) *
+						  (int64) pitch;
+
+	if (aligned > (int64) 0x7FFFFFFF)
+		{
+		return 0x7FFFFFFF;
+		}
+
+	return (int32) aligned;
+
+	}
+
+/*****************************************************************************/
+
 dng_rect dng_area_spec::Overlap (const dng_rect &tile) const
 	{
 	
@@ -248,15 +278,11 @@ dng_rect dng_area_spec::Overlap (const dng_rect &tile) const
 		DNG_ASSERT (overlap.t >= fArea.t && overlap.l >= fArea.l,
 					"Overlap outside area");
 
-		overlap.t = fArea.t +
-			ConvertUint32ToInt32 (RoundUpUint32ToMultiple
-								  (static_cast<uint32> (overlap.t - fArea.t),
-								   fRowPitch));
-		
-		overlap.l = fArea.l +
-			ConvertUint32ToInt32 (RoundUpUint32ToMultiple
-								  (static_cast<uint32> (overlap.l - fArea.l),
-								   fColPitch));
+		// CR-4209661 T-L8: Align in int64 so adding the rounded offset
+		// back to fArea cannot overflow int32 near the coordinate limits.
+
+		overlap.t = AlignUpToPitch (overlap.t, fArea.t, fRowPitch);
+		overlap.l = AlignUpToPitch (overlap.l, fArea.l, fColPitch);
 		
 		if (overlap.NotEmpty ())
 			{
@@ -294,8 +320,8 @@ dng_rect dng_area_spec::ScaledOverlap (const dng_rect &tile) const
 	if (overlap.NotEmpty ())
 		{
 		
-		overlap.t = area.t + ((overlap.t - area.t + fRowPitch - 1) / fRowPitch) * fRowPitch;
-		overlap.l = area.l + ((overlap.l - area.l + fColPitch - 1) / fColPitch) * fColPitch;
+		overlap.t = AlignUpToPitch (overlap.t, area.t, fRowPitch);
+		overlap.l = AlignUpToPitch (overlap.l, area.l, fColPitch);
 		
 		if (overlap.NotEmpty ())
 			{

@@ -735,7 +735,13 @@ void dng_linearize_plane::Process (const dng_rect &srcTile)
 			
 			const int32 *lut = fScale_buffer->Buffer_int32 ();
 			
-			int32 b1 = 0;
+			// CR-4209661 T-M6: Each LUT and black table entry fits in
+			// int32, but their combination (lut - b1 - b2, plus the
+			// rounding bias) can overflow int32 for extreme file-supplied
+			// black level deltas. Accumulate in int64. After the 8-bit
+			// shift, the result is within +/- 2^25 and fits in int32.
+
+			int64 b1 = 0;
 			
 			if (fBlack_1D_rows)
 				{
@@ -772,7 +778,7 @@ void dng_linearize_plane::Process (const dng_rect &srcTile)
 				for (uint32 j = 0; j < count; j++)
 					{
 					
-					int32 x = lut [*srcPtr] - b1;
+					int64 x = (int64) lut [*srcPtr] - b1;
 					
 					if (b2_count)
 						{
@@ -788,7 +794,7 @@ void dng_linearize_plane::Process (const dng_rect &srcTile)
 						
 					x >>= 8;
 						
-					*dstPtr = Pin_uint16 (x);
+					*dstPtr = Pin_uint16 ((int32) x);
 					
 					srcPtr += sStep;
 					dstPtr += dStep;
@@ -805,7 +811,7 @@ void dng_linearize_plane::Process (const dng_rect &srcTile)
 				for (uint32 j = 0; j < count; j++)
 					{
 					
-					int32 x = lut [*srcPtr] - b1;
+					int64 x = (int64) lut [*srcPtr] - b1;
 					
 					if (b2_count)
 						{
@@ -821,7 +827,7 @@ void dng_linearize_plane::Process (const dng_rect &srcTile)
 						
 					x >>= 8;
 						
-					*dstPtr = Pin_uint16 (x);
+					*dstPtr = Pin_uint16 ((int32) x);
 					
 					srcPtr += sStep;
 					dstPtr += dStep;
@@ -1592,6 +1598,21 @@ void dng_linearization_info::Linearize (dng_host &host,
 	{
 
 	if (srcImage.Planes () > kMaxColorPlanes)
+		{
+		ThrowBadFormat ();
+		}
+
+	// CR-4209661 T-H4: The processor below writes only destination pixels
+	// that map from the ActiveArea's overlap with the source image. Stage
+	// 1 can shrink after the ActiveArea was parsed (e.g., a TrimBounds
+	// opcode in OpcodeList1), which would leave the rest of a non-zeroed
+	// destination unwritten. Require the ActiveArea to lie fully inside
+	// the source and to match the destination size, so every destination
+	// pixel is produced.
+
+	if (fActiveArea.IsEmpty ()							  ||
+		(fActiveArea & srcImage.Bounds ()) != fActiveArea ||
+		dstImage.Bounds ().Size () != fActiveArea.Size ())
 		{
 		ThrowBadFormat ();
 		}

@@ -1441,22 +1441,27 @@ dng_point dng_pixel_buffer::RepeatPhase (const dng_rect &srcArea,
 		return dng_point ();
 		}
 	
+	// CR-4209661 T-L7: Compute coordinate differences in int64 so extreme
+	// coordinates cannot overflow int32. Each phase is below its repeat.
+
 	if (srcArea.t >= dstArea.t)
 		{
-		phaseV = (repeatV - ((srcArea.t - dstArea.t) % repeatV)) % repeatV;
+		phaseV = (int32) ((repeatV - (((int64) srcArea.t - dstArea.t) %
+									  repeatV)) % repeatV);
 		}
 	else
 		{
-		phaseV = (dstArea.t - srcArea.t) % repeatV;
+		phaseV = (int32) (((int64) dstArea.t - srcArea.t) % repeatV);
 		}
 		
 	if (srcArea.l >= dstArea.l)
 		{
-		phaseH = (repeatH - ((srcArea.l - dstArea.l) % repeatH)) % repeatH;
+		phaseH = (int32) ((repeatH - (((int64) srcArea.l - dstArea.l) %
+									  repeatH)) % repeatH);
 		}
 	else
 		{
-		phaseH = (dstArea.l - srcArea.l) % repeatH;
+		phaseH = (int32) (((int64) dstArea.l - srcArea.l) % repeatH);
 		}
 		
 	return dng_point (phaseV, phaseH);
@@ -1465,14 +1470,75 @@ dng_point dng_pixel_buffer::RepeatPhase (const dng_rect &srcArea,
 	
 /*****************************************************************************/
 
+// CR-4209661 T-L7: Returns true if every source row (or column) that a
+// repeat reads lies within [limitStart, limitEnd). Destination index i
+// reads source index srcStart + (phase + i) % repeat. Without wraparound
+// that is a contiguous range starting at srcStart + phase; otherwise it
+// is conservatively the whole repeat cell.
+
+static bool RepeatSourceInside (int32 srcStart,
+								uint32 repeat,
+								uint32 phase,
+								uint32 count,
+								int32 limitStart,
+								int32 limitEnd)
+	{
+
+	int64 lo = srcStart;
+	int64 hi = (int64) srcStart + repeat;
+
+	if ((uint64) phase + count <= repeat)
+		{
+		lo = (int64) srcStart + phase;
+		hi = lo + count;
+		}
+
+	return lo >= limitStart && hi <= limitEnd;
+
+	}
+	
+/*****************************************************************************/
+
 void dng_pixel_buffer::RepeatArea (const dng_rect &srcArea,
 								   const dng_rect &dstArea)
 	{
+
+	// CR-4209661 T-L7: The repeat loops use raw pointer arithmetic with no
+	// clipping. Require the destination, and every source pixel the repeat
+	// actually reads, to lie within this buffer. A source cell may extend
+	// past a destination smaller than the cell (as in dng_image::GetRepeat),
+	// so only the rows and columns that are read are checked. An empty
+	// destination remains a no-op.
+
+	if (dstArea.IsEmpty ())
+		{
+		return;
+		}
+
+	DNG_REQUIRE (srcArea.NotEmpty (),
+				 "Empty srcArea in dng_pixel_buffer::RepeatArea");
+
+	DNG_REQUIRE ((dstArea & fArea) == dstArea,
+				 "dstArea outside buffer in dng_pixel_buffer::RepeatArea");
 	
 	dng_point repeat = srcArea.Size ();
 	
 	dng_point phase = RepeatPhase (srcArea,
 								   dstArea);
+
+	DNG_REQUIRE (RepeatSourceInside (srcArea.t,
+									 srcArea.H (),
+									 (uint32) phase.v,
+									 dstArea.H (),
+									 fArea.t,
+									 fArea.b) &&
+				 RepeatSourceInside (srcArea.l,
+									 srcArea.W (),
+									 (uint32) phase.h,
+									 dstArea.W (),
+									 fArea.l,
+									 fArea.r),
+				 "srcArea outside buffer in dng_pixel_buffer::RepeatArea");
 			
 	const void *sPtr = ConstPixel (srcArea.t,
 								   srcArea.l,

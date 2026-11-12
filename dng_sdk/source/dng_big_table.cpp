@@ -34,6 +34,172 @@
 
 /*****************************************************************************/
 
+dng_image_table_bytes::~dng_image_table_bytes ()
+	{
+
+	}
+
+/*****************************************************************************/
+
+dng_image_table_resident_bytes::dng_image_table_resident_bytes
+	(const std::shared_ptr<const dng_memory_block> &block)
+
+	:	fBlock (block)
+
+	{
+
+	DNG_REQUIRE (fBlock, "Missing image table bytes");
+
+	}
+
+/*****************************************************************************/
+
+uint32 dng_image_table_resident_bytes::Size () const
+	{
+
+	return fBlock->LogicalSize ();
+
+	}
+
+/*****************************************************************************/
+
+std::shared_ptr<const dng_memory_block> dng_image_table_resident_bytes::Acquire () const
+	{
+
+	return fBlock;
+
+	}
+
+/*****************************************************************************/
+
+uint64 dng_image_table_payload::DecodedBytes () const
+	{
+
+	return (uint64) fBounds.W () *
+		   (uint64) fBounds.H () *
+		   (uint64) fPlanes *
+		   (uint64) TagTypeSize (fPixelType);
+
+	}
+
+/*****************************************************************************/
+
+std::shared_ptr<const dng_image_table_bytes> dng_image_table_payload::CompressedBytes () const
+	{
+
+	dng_lock_std_mutex lock (fMutex);
+
+	return fCompressed;
+
+	}
+
+/*****************************************************************************/
+
+std::shared_ptr<const dng_image> dng_image_table_payload::PeekImage () const
+	{
+
+	dng_lock_std_mutex lock (fMutex);
+
+	if (fStrongImage)
+		return fStrongImage;
+
+	return fWeakImage.lock ();
+
+	}
+
+/*****************************************************************************/
+
+std::shared_ptr<const dng_image> dng_image_table_payload::ReleaseStrongImage ()
+	{
+
+	std::shared_ptr<const dng_image> released;
+
+	dng_lock_std_mutex lock (fMutex);
+
+	// Only release when a later decode of the compressed bytes reproduces the
+	// same image. That is not the case when the compressed bytes were added
+	// lazily (lossy) to a table that started from an uncompressed image.
+
+	if (fCompressed && fDecodedMatchesCompressed)
+		{
+
+		released.swap (fStrongImage);
+
+		}
+
+	return released;
+
+	}
+
+/*****************************************************************************/
+
+// Process-wide image table residency hook (CR-4209840). Defined before the
+// global big-table caches so that it outlives them during static
+// destruction.
+
+static dng_std_mutex gImageTableResidencyMutex;
+
+static std::shared_ptr<dng_image_table_residency> gImageTableResidency;
+
+/*****************************************************************************/
+
+dng_image_table_residency::~dng_image_table_residency ()
+	{
+
+	}
+
+/*****************************************************************************/
+
+void dng_image_table_set_residency (const std::shared_ptr<dng_image_table_residency> &residency)
+	{
+
+	std::shared_ptr<dng_image_table_residency> previous;
+
+		{
+
+		dng_lock_std_mutex lock (gImageTableResidencyMutex);
+
+		previous = gImageTableResidency;
+
+		gImageTableResidency = residency;
+
+		}
+
+	// The previous hook (if any) is released here, outside the lock.
+
+	}
+
+/*****************************************************************************/
+
+std::shared_ptr<dng_image_table_residency> dng_image_table_get_residency ()
+	{
+
+	dng_lock_std_mutex lock (gImageTableResidencyMutex);
+
+	return gImageTableResidency;
+
+	}
+
+/*****************************************************************************/
+
+static std::shared_ptr<const dng_image_table_bytes> WrapImageTableBytes
+	(const std::shared_ptr<const dng_memory_block> &block)
+	{
+
+	if (auto residency = dng_image_table_get_residency ())
+		{
+
+		if (auto bytes = residency->WrapBytes (block))
+			return bytes;
+
+		}
+
+	return std::make_shared<dng_image_table_resident_bytes> (block);
+
+	}
+
+/*****************************************************************************/
+
 class dng_big_table_cache
 	{
 
@@ -64,6 +230,11 @@ class dng_big_table_cache
 	protected:
 
 		dng_big_table_cache ();
+
+		dng_std_mutex & CacheMutex ()
+			{
+			return fMutex;
+			}
 
 		void UseTable (dng_lock_std_mutex &lock,
 					   const dng_fingerprint &fingerprint);
@@ -706,6 +877,22 @@ class dng_image_table_cache : public dng_big_table_cache
 			fTableData.insert (std::make_pair (imageTable->Fingerprint (),
 											   data));
 
+			// This is the single place where a payload becomes visible
+			// under its fingerprint (CR-4209840).
+
+			if (data.fPayload)
+				{
+
+				if (auto residency = dng_image_table_get_residency ())
+					{
+
+					residency->Register (imageTable->Fingerprint (),
+										 data.fPayload);
+
+					}
+
+				}
+
 			}
 
 		void EraseTableData (dng_lock_std_mutex & /* lock */,
@@ -717,7 +904,21 @@ class dng_image_table_cache : public dng_big_table_cache
 			if (it != fTableData.end ())
 				{
 
+				const bool hadPayload = (it->second.fPayload != nullptr);
+
 				fTableData.erase (it);
+
+				if (hadPayload)
+					{
+
+					if (auto residency = dng_image_table_get_residency ())
+						{
+
+						residency->Unregister (fingerprint);
+
+						}
+
+					}
 
 				}
 
@@ -777,7 +978,7 @@ class dng_packed_image_table_cache : public dng_big_table_cache
 
 				dng_image_table_data fImageData;
 
-				std::shared_ptr<const dng_memory_block> fBlock;
+				std::shared_ptr<const dng_image_table_bytes> fBlock;
 
 				// Image properties.
 
@@ -794,6 +995,16 @@ class dng_packed_image_table_cache : public dng_big_table_cache
 							dng_fingerprint_hash> fEntries;
 
 	public:
+
+		// Records packed bytes created after the table entered the cache
+		// (for example by dng_packed_image_table::Pack), so that the residency
+		// hook manages them (CR-4209840). Returns the canonical holder for the
+		// fingerprint: the cached holder if there already is one (the bytes
+		// are identical for equal fingerprints), otherwise block.
+
+		std::shared_ptr<const dng_image_table_bytes>
+			AdoptBlock (const dng_fingerprint &fingerprint,
+						const std::shared_ptr<const dng_image_table_bytes> &block);
 
 		void CacheClear (dng_lock_std_mutex &lock) override
 			{
@@ -814,7 +1025,10 @@ class dng_packed_image_table_cache : public dng_big_table_cache
 
 			entry_t entry;
 
-			entry.fBlock	 = src.ShareBlock ();
+			// Keep the byte holder, not the bytes, so that the cache does not
+			// force spilled bytes back into memory (CR-4209840).
+
+			entry.fBlock	 = src.ShareBytes ();
 			entry.fSize		 = src.fSize;
 			entry.fPlanes	 = src.fPlanes;
 			entry.fPixelType = src.fPixelType;
@@ -823,6 +1037,19 @@ class dng_packed_image_table_cache : public dng_big_table_cache
 				src.Table ().GetData (entry.fImageData);
 
 			fEntries.insert (std::make_pair (src.Fingerprint (), entry));
+
+			if (entry.fBlock)
+				{
+
+				if (auto residency = dng_image_table_get_residency ())
+					{
+
+					residency->RegisterPacked (src.Fingerprint (),
+											   entry.fBlock);
+
+					}
+
+				}
 
 			}
 
@@ -837,7 +1064,21 @@ class dng_packed_image_table_cache : public dng_big_table_cache
 			if (iter != fEntries.end ())
 				{
 
+				const bool hadBlock = (iter->second.fBlock != nullptr);
+
 				fEntries.erase (iter);
+
+				if (hadBlock)
+					{
+
+					if (auto residency = dng_image_table_get_residency ())
+						{
+
+						residency->UnregisterPacked (fingerprint);
+
+						}
+
+					}
 
 				}
 
@@ -875,6 +1116,13 @@ class dng_packed_image_table_cache : public dng_big_table_cache
 				AutoPtr<dng_image_table> temp (dst.MakeTable ());
 
 				temp->SetData (iter->second.fImageData);
+
+				// Give the inner table its identity in the image table cache,
+				// so that it keeps the payload registered with the residency
+				// hook and reports decodes under the right fingerprint
+				// (CR-4209840).
+
+				temp->AdoptFingerprint (fingerprint);
 				
 				dst.fTable.reset (temp.Release ());
 
@@ -893,6 +1141,42 @@ class dng_packed_image_table_cache : public dng_big_table_cache
 	};
 
 static dng_packed_image_table_cache gPackedImageTableCache;
+
+/*****************************************************************************/
+
+std::shared_ptr<const dng_image_table_bytes> dng_packed_image_table_cache::AdoptBlock
+	(const dng_fingerprint &fingerprint,
+	 const std::shared_ptr<const dng_image_table_bytes> &block)
+	{
+
+	if (!fingerprint.IsValid () || !block)
+		return block;
+
+	dng_lock_std_mutex lock (CacheMutex ());
+
+	auto iter = fEntries.find (fingerprint);
+
+	if (iter == fEntries.end ())
+		return block;
+
+	// Share an existing holder, so that repacking or packing another copy of
+	// the same table does not create unmanaged duplicate bytes.
+
+	if (iter->second.fBlock)
+		return iter->second.fBlock;
+
+	iter->second.fBlock = block;
+
+	if (auto residency = dng_image_table_get_residency ())
+		{
+
+		residency->RegisterPacked (fingerprint, block);
+
+		}
+
+	return block;
+
+	}
 
 /*****************************************************************************/
 
@@ -1664,21 +1948,42 @@ dng_memory_block* dng_big_table::EncodeAsString (dng_memory_allocator &allocator
 
 		uint8 *sPtr = block2->Buffer_uint8 ();
 
-		sPtr [compressedSize	] = 0;
-		sPtr [compressedSize + 1] = 0;
-		sPtr [compressedSize + 2] = 0;
+		// CR-4209661 T-M9: Do not write or read past the logical end of the
+		// source block (for non-compressing table types, compressedSize is
+		// the block's LogicalSize). The final partial 4-byte group is
+		// assembled from only the remaining bytes, with implicit zero
+		// padding, which produces the same encoding as before.
 
 		uint8 *dPtr = block3->Buffer_uint8 ();
 
 		while (compressedSize)
 			{
 
-			uint32 x0 = (((uint32) sPtr [0])	  ) +
-						(((uint32) sPtr [1]) <<	 8) +
-						(((uint32) sPtr [2]) << 16) +
-						(((uint32) sPtr [3]) << 24);
+			uint32 x0 = 0;
 
-			sPtr += 4;
+			if (compressedSize >= 4)
+				{
+
+				x0 = (((uint32) sPtr [0])	  ) +
+					 (((uint32) sPtr [1]) <<  8) +
+					 (((uint32) sPtr [2]) << 16) +
+					 (((uint32) sPtr [3]) << 24);
+
+				sPtr += 4;
+
+				}
+
+			else
+				{
+
+				// The loop always ends within this final partial group.
+
+				for (uint32 k = 0; k < compressedSize; k++)
+					{
+					x0 += ((uint32) sPtr [k]) << (8 * k);
+					}
+
+				}
 
 			uint32 x1 = x0 / 85;
 
@@ -2998,13 +3303,12 @@ dng_image_table::dng_image_table (const dng_image_table &table)
 
 	:	dng_big_table (table)
 
-	,	fImage (table.fImage)
-
-	,	fCompressedData (table.fCompressedData)
-
-	,	fCompressionType (table.fCompressionType)
+	,	fPayload (table.fPayload)
 
 	{
+
+	// fPinnedImage is intentionally not copied: each table object pins only
+	// the images returned by its own Image () calls.
 
 	}
 
@@ -3013,13 +3317,16 @@ dng_image_table::dng_image_table (const dng_image_table &table)
 dng_image_table & dng_image_table::operator= (const dng_image_table &table)
 	{
 
-	dng_big_table::operator= (table);
+	if (this != &table)
+		{
 
-	fImage = table.fImage;
+		dng_big_table::operator= (table);
 
-	fCompressedData = table.fCompressedData;
+		fPayload = table.fPayload;
 
-	fCompressionType = table.fCompressionType;
+		fPinnedImage.reset ();
+
+		}
 	
 	return *this;
 
@@ -3042,12 +3349,10 @@ bool dng_image_table::IsValid () const
 		return false;
 		}
 
-	if (!fImage.get ())
-		{
-		return false;
-		}
+	// A payload always has either a decoded image or compressed bytes from
+	// which the image can be decoded.
 
-	return true;
+	return fPayload != nullptr;
 
 	}
 
@@ -3064,14 +3369,41 @@ void dng_image_table::SetInvalid ()
 
 /*****************************************************************************/
 
+void dng_image_table::SetPayloadImage (const std::shared_ptr<const dng_image> &image)
+	{
+
+	fPinnedImage.reset ();
+
+	if (!image)
+		{
+
+		fPayload.reset ();
+
+		return;
+
+		}
+
+	std::shared_ptr<dng_image_table_payload> payload (new dng_image_table_payload);
+
+	payload->fBounds	= image->Bounds	   ();
+	payload->fPlanes	= image->Planes	   ();
+	payload->fPixelType = image->PixelType ();
+
+	payload->fStrongImage = image;
+	payload->fWeakImage	  = image;
+
+	fPayload = payload;
+
+	}
+
+/*****************************************************************************/
+
 void dng_image_table::SetImage (const dng_image *image,
 								const dng_image_table_compression_info *compressionInfo,
 								dng_abort_sniffer *sniffer)
 	{
 	
-	fImage = std::shared_ptr<const dng_image> (image);
-
-	fCompressedData.reset ();
+	SetPayloadImage (std::shared_ptr<const dng_image> (image));
 
 	if (compressionInfo && (compressionInfo->Type () > 0))
 		CompressImage (*compressionInfo,
@@ -3088,12 +3420,16 @@ void dng_image_table::SetImage (const std::shared_ptr<const dng_image> &image,
 								dng_abort_sniffer *sniffer)
 	{
 
-	if (fImage != image)
+	const std::shared_ptr<const dng_image> current =
+		fPayload ? fPayload->PeekImage () : std::shared_ptr<const dng_image> ();
+
+	const bool unchanged = image ? (current == image)
+								 : (fPayload == nullptr);
+
+	if (!unchanged)
 		{
 
-		fImage = image;
-
-		fCompressedData.reset ();
+		SetPayloadImage (image);
 	
 		if (compressionInfo && (compressionInfo->Type () > 0))
 			CompressImage (*compressionInfo,
@@ -3102,6 +3438,105 @@ void dng_image_table::SetImage (const std::shared_ptr<const dng_image> &image,
 		RecomputeFingerprint ();
 
 		}
+
+	}
+
+/*****************************************************************************/
+
+const dng_image & dng_image_table::Image () const
+	{
+
+	const std::shared_ptr<dng_image_table_payload> payload = fPayload;
+
+	DNG_REQUIRE (payload, "Invalid image table");
+
+		{
+
+		dng_lock_std_mutex lock (payload->fMutex);
+
+		if (fPinnedImage)
+			return *fPinnedImage;
+
+		}
+
+	const std::shared_ptr<const dng_image> image = ShareImage ();
+
+	DNG_REQUIRE (image, "Missing image table image");
+
+	dng_lock_std_mutex lock (payload->fMutex);
+
+	// Keep an existing pin: an earlier caller may still hold a reference to
+	// it.
+
+	if (!fPinnedImage)
+		fPinnedImage = image;
+
+	return *fPinnedImage;
+
+	}
+
+/*****************************************************************************/
+
+std::shared_ptr<const dng_image> dng_image_table::ShareImage () const
+	{
+
+	const std::shared_ptr<dng_image_table_payload> payload = fPayload;
+
+	if (!payload)
+		return std::shared_ptr<const dng_image> ();
+
+	std::shared_ptr<const dng_image> image;
+
+		{
+
+		dng_lock_std_mutex lock (payload->fMutex);
+
+		if (payload->fStrongImage)
+			return payload->fStrongImage;
+
+		image = payload->fWeakImage.lock ();
+
+		if (image || !payload->fCompressed)
+			return image;
+
+		// The decoded image was released and no reader holds it. Decode it
+		// again while holding the payload lock, so that concurrent readers of
+		// the same table wait for one decode instead of decoding in
+		// parallel.
+
+		image = DecodePayloadImage (*payload);
+
+		payload->fWeakImage = image;
+
+		}
+
+	// Let the residency hook decide whether to keep the new image resident.
+	// Called outside the payload lock (see the lock order comment).
+
+	if (auto residency = dng_image_table_get_residency ())
+		{
+
+		residency->NoteDecoded (Fingerprint (), image);
+
+		}
+
+	return image;
+
+	}
+
+/*****************************************************************************/
+
+std::shared_ptr<const dng_memory_block> dng_image_table::CompressedData () const
+	{
+
+	const std::shared_ptr<dng_image_table_payload> payload = fPayload;
+
+	if (!payload)
+		return std::shared_ptr<const dng_memory_block> ();
+
+	const auto bytes = payload->CompressedBytes ();
+
+	return bytes ? bytes->Acquire () : std::shared_ptr<const dng_memory_block> ();
 
 	}
 
@@ -3119,10 +3554,15 @@ dng_host * dng_image_table::MakeHost (dng_abort_sniffer *sniffer) const
 dng_fingerprint dng_image_table::ComputeFingerprint () const
 	{
 
+	if (!fPayload)
+		{
+		return dng_fingerprint ();
+		}
+
 	// If we're using lossy compression, then fingerprint the (compressed)
 	// stream itself, including the header.
 
-	if (fCompressedData)
+	if (fPayload->CompressedBytes ())
 		{
 		
 		AutoPtr<dng_host> host (MakeHost (nullptr));
@@ -3150,7 +3590,9 @@ dng_fingerprint dng_image_table::ComputeFingerprint () const
 
 	// Otherwise fingerprint the image itself (uncompressed case).
 
-	if (fImage.get ())
+	const std::shared_ptr<const dng_image> image = ShareImage ();
+
+	if (image)
 		{
 		
 		AutoPtr<dng_host> host (MakeHost (nullptr));
@@ -3161,19 +3603,19 @@ dng_fingerprint dng_image_table::ComputeFingerprint () const
 
 		stream.Put_uint32 (kImageTableVersion);
 
-		stream.Put_int32 (fImage->Bounds ().t);
-		stream.Put_int32 (fImage->Bounds ().l);
-		stream.Put_int32 (fImage->Bounds ().b);
-		stream.Put_int32 (fImage->Bounds ().r);
+		stream.Put_int32 (image->Bounds ().t);
+		stream.Put_int32 (image->Bounds ().l);
+		stream.Put_int32 (image->Bounds ().b);
+		stream.Put_int32 (image->Bounds ().r);
 		
-		stream.Put_uint32 (fImage->Planes ());
+		stream.Put_uint32 (image->Planes ());
 
-		stream.Put_uint32 (fImage->PixelType ());
+		stream.Put_uint32 (image->PixelType ());
 
 		dng_fingerprint imageDigest = dng_negative::FindFastImageDigest
 													(*host,
-													 *fImage,
-													 fImage->PixelType ());
+													 *image,
+													 image->PixelType ());
 													 
 		stream.Put (imageDigest);
 
@@ -3218,41 +3660,15 @@ static void CheckImageTableIFD (const dng_ifd &ifd)
 
 /*****************************************************************************/
 
-bool dng_image_table::GetStream (dng_stream &stream)
+void dng_image_table::DecodeCodestream (dng_host &host,
+										dng_stream &subStream,
+										AutoPtr<dng_image> &image,
+										uint32 &compressionType) const
 	{
-	
-	AutoPtr<dng_host> host (MakeHost (stream.Sniffer ()));
-	
-	if (stream.Get_uint32 () != btt_ImageTable)
-		{
-		return false;
-		}
-
-	if (stream.Get_uint32 () != kImageTableVersion)
-		{
-		ThrowBadFormat ("Unknown image table version");
-		}
-		
-	dng_point imageTL;
-	
-	imageTL.v = stream.Get_int32 ();
-	imageTL.h = stream.Get_int32 ();
-	
-	if (!stream.Data ())
-		{
-		ThrowProgramError ("Not a memory stream");
-		}
-	
-	dng_stream subStream ((uint8 *) stream.Data () + stream.Position (),
-						  (uint32) (stream.Length () - stream.Position ()));
-						  
-	subStream.SetSniffer (stream.Sniffer ());
-
-	AutoPtr<dng_image> image;
 
 	dng_info jxlInfo;
 
-	if (ParseJXL (*host,
+	if (ParseJXL (host,
 				  subStream,
 				  jxlInfo,
 				  true,						 // bare codestream
@@ -3274,11 +3690,11 @@ bool dng_image_table::GetStream (dng_stream &stream)
 
 		decoder.fNeedBoxMeta = false;
 
-		decoder.Decode (*host, subStream);
+		decoder.Decode (host, subStream);
 
 		image.Reset (decoder.fMainImage.Release ());
 
-		fCompressionType = ccJXL;
+		compressionType = ccJXL;
 		
 		}
 
@@ -3289,9 +3705,9 @@ bool dng_image_table::GetStream (dng_stream &stream)
 
 		dng_info info;
 		
-		info.Parse (*host, subStream);
+		info.Parse (host, subStream);
 
-		info.PostParse (*host);
+		info.PostParse (host);
 
 		if (info.fMagic != 42)
 			{
@@ -3307,26 +3723,149 @@ bool dng_image_table::GetStream (dng_stream &stream)
 
 		CheckImageTableIFD (ifd);
 
-		image.Reset (host->Make_dng_image (ifd.Bounds (),
-										   ifd.fSamplesPerPixel,
-										   ifd.PixelType ()));
+		// CR-4209661 T-H1: The shared-buffer image reader assumes uniform
+		// per-plane sample sizes and a consistent strip/tile layout. Apply
+		// the same reader validation used by other image decode entry
+		// points before allocating the image or decoding any pixels.
+
+		if (!ifd.CanRead ())
+			{
+			ThrowBadFormat ();
+			}
+
+		image.Reset (host.Make_dng_image (ifd.Bounds (),
+										  ifd.fSamplesPerPixel,
+										  ifd.PixelType ()));
 												   
-		ifd.ReadImage (*host,
+		ifd.ReadImage (host,
 					   subStream,
 					   *image);
 
-		fCompressionType = ifd.fCompression;
+		compressionType = ifd.fCompression;
 		
 		} // JXL vs TIFF
 
-	// Grab a copy of the (lossy) compressed data.
+	if (!image.Get ())
+		{
+		ThrowBadFormat ();
+		}
 
-	if (fCompressionType == ccJXL)
+	}
+
+/*****************************************************************************/
+
+std::shared_ptr<const dng_image> dng_image_table::DecodePayloadImage
+	(const dng_image_table_payload &payload) const
+	{
+
+	// Caller holds payload.fMutex.
+
+	DNG_REQUIRE (payload.fCompressed, "Missing image table bytes");
+
+	AutoPtr<dng_host> host (MakeHost (nullptr));
+
+	const std::shared_ptr<const dng_memory_block> block =
+		payload.fCompressed->Acquire ();
+
+	DNG_REQUIRE (block, "Missing image table bytes");
+
+	dng_stream stream (block->Buffer (),
+					   block->LogicalSize ());
+
+	AutoPtr<dng_image> image;
+
+	uint32 compressionType = 0;
+
+	DecodeCodestream (*host,
+					  stream,
+					  image,
+					  compressionType);
+
+	// Apply the same origin offset as the original read (see GetStream).
+
+	if (payload.fBounds.TL () != dng_point (0, 0))
+		{
+
+		AutoPtr<dng_image> tempImage (image->Clone ());
+
+		tempImage->Offset (payload.fBounds.TL ());
+
+		image.Reset (tempImage.Release ());
+
+		}
+
+	if (image->Bounds	 () != payload.fBounds ||
+		image->Planes	 () != payload.fPlanes ||
+		image->PixelType () != payload.fPixelType)
+		{
+
+		ThrowBadFormat ("Decoded image table does not match its properties");
+
+		}
+
+	return std::shared_ptr<const dng_image> (image.Release ());
+
+	}
+
+/*****************************************************************************/
+
+bool dng_image_table::GetStream (dng_stream &stream)
+	{
+
+	AutoPtr<dng_host> host (MakeHost (stream.Sniffer ()));
+
+	if (stream.Get_uint32 () != btt_ImageTable)
+		{
+		return false;
+		}
+
+	if (stream.Get_uint32 () != kImageTableVersion)
+		{
+		ThrowBadFormat ("Unknown image table version");
+		}
+
+	dng_point imageTL;
+
+	imageTL.v = stream.Get_int32 ();
+	imageTL.h = stream.Get_int32 ();
+
+	if (!stream.Data ())
+		{
+		ThrowProgramError ("Not a memory stream");
+		}
+
+	dng_stream subStream ((uint8 *) stream.Data () + stream.Position (),
+						  (uint32) (stream.Length () - stream.Position ()));
+
+	subStream.SetSniffer (stream.Sniffer ());
+
+	AutoPtr<dng_image> image;
+
+	uint32 compressionType = 0;
+
+	DecodeCodestream (*host,
+					  subStream,
+					  image,
+					  compressionType);
+
+	std::shared_ptr<dng_image_table_payload> payload (new dng_image_table_payload);
+
+	payload->fCompressionType = compressionType;
+
+	// Grab a copy of the (lossy) compressed data. The decoded image is then
+	// exactly reproducible from these bytes.
+
+	if (compressionType == ccJXL)
 		{
 
 		subStream.SetReadPosition (0);
 
-		fCompressedData.reset (subStream.AsMemoryBlock (host->Allocator ()));
+		std::shared_ptr<const dng_memory_block> block
+			(subStream.AsMemoryBlock (host->Allocator ()));
+
+		payload->fCompressed = WrapImageTableBytes (block);
+
+		payload->fDecodedMatchesCompressed = true;
 
 		}
 		
@@ -3340,8 +3879,18 @@ bool dng_image_table::GetStream (dng_stream &stream)
 		image.Reset (tempImage.Release ());
 		
 		}
-					  
-	fImage = std::shared_ptr<const dng_image> (image.Release ());
+
+	payload->fBounds	= image->Bounds	   ();
+	payload->fPlanes	= image->Planes	   ();
+	payload->fPixelType = image->PixelType ();
+
+	payload->fStrongImage.reset (image.Release ());
+
+	payload->fWeakImage = payload->fStrongImage;
+
+	fPayload = payload;
+
+	fPinnedImage.reset ();
 	
 	return true;
 		
@@ -3368,16 +3917,44 @@ void dng_image_table::PutCompressedStream (dng_stream &stream,
 										   const dng_image_table_compression_info &info) const
 	{
 
+	const std::shared_ptr<dng_image_table_payload> payload = fPayload;
+
+	DNG_REQUIRE (payload, "Called PutCompressedStream on invalid image table");
+
 	AutoPtr<dng_host> host (MakeHost (stream.Sniffer ()));
 	
 	stream.Put_uint32 (btt_ImageTable);
 
 	stream.Put_uint32 (kImageTableVersion);
 
-	stream.Put_int32 (fImage->Bounds ().t);
-	stream.Put_int32 (fImage->Bounds ().l);
+	stream.Put_int32 (payload->Bounds ().t);
+	stream.Put_int32 (payload->Bounds ().l);
 	
-	const dng_image *tiffImage = fImage.get ();
+	// If we have compressed data, then just write that directly. This never
+	// needs the decoded image (CR-4209840).
+
+	if (const auto compressed = payload->CompressedBytes ())
+		{
+
+		const std::shared_ptr<const dng_memory_block> block =
+			compressed->Acquire ();
+
+		DNG_REQUIRE (block, "Missing image table bytes");
+
+		stream.Put (block->Buffer		(),
+					block->LogicalSize ());
+
+		return;
+
+		}
+
+	// Otherwise use the provided compression info.
+
+	const std::shared_ptr<const dng_image> image = ShareImage ();
+
+	DNG_REQUIRE (image, "Missing image table image");
+
+	const dng_image *tiffImage = image.get ();
 	
 	AutoPtr<dng_image> tempImage;
 
@@ -3386,53 +3963,42 @@ void dng_image_table::PutCompressedStream (dng_stream &stream,
 		
 		tempImage.Reset (tiffImage->Clone ());
 		
-		tempImage->Offset (-fImage->Bounds ().TL ());
+		tempImage->Offset (-image->Bounds ().TL ());
 		
 		tiffImage = tempImage.Get ();
 		
 		}
-	
-	// If we have compressed data, then just write that directly.
 
-	if (fCompressedData)
+	dng_memory_stream tempStream (host->Allocator ());
+
+	tempStream.SetLittleEndian ();
+
+	info.Compress (*host,
+				   tempStream,
+				   *tiffImage);
+
+	// Remember the compressed data, so that later writes reproduce the same
+	// bytes. The in-memory image stays the original (pre-compression) image,
+	// so fDecodedMatchesCompressed stays false.
+
+	if (info.Type () != 0)
 		{
-
-		// printf ("--- writing compressed\n");
 		
-		stream.Put (fCompressedData->Buffer		 (),
-					fCompressedData->LogicalSize ());
-		
-		}
-
-	// Otherwise use the provided compression info.
-
-	else 
-		{
-
-		dng_memory_stream tempStream (host->Allocator ());
-
-		tempStream.SetLittleEndian ();
-		
-		info.Compress (*host,
-					   tempStream,
-					   *tiffImage);
-
-		// Remember the compressed data.
-
-		if (info.Type () != 0)
-			{
-			
-			tempStream.SetReadPosition (0);
-
-			fCompressedData.reset (tempStream.AsMemoryBlock (host->Allocator ()));
-			
-			}
-
 		tempStream.SetReadPosition (0);
 
-		tempStream.CopyToStream (stream, tempStream.Length ());
+		std::shared_ptr<const dng_memory_block> block
+			(tempStream.AsMemoryBlock (host->Allocator ()));
+
+		dng_lock_std_mutex lock (payload->fMutex);
+
+		if (!payload->fCompressed)
+			payload->fCompressed = WrapImageTableBytes (block);
 
 		}
+
+	tempStream.SetReadPosition (0);
+
+	tempStream.CopyToStream (stream, tempStream.Length ());
 		
 	}
 
@@ -3442,9 +4008,12 @@ void dng_image_table::CompressImage (const dng_image_table_compression_info &inf
 									 dng_abort_sniffer *sniffer)
 	{
 
-	fCompressionType = info.Type ();
+	// The payload is newly created by SetImage and not shared yet.
 
-	if (!fImage			  ||
+	if (fPayload)
+		fPayload->fCompressionType = info.Type ();
+
+	if (!fPayload		  ||
 		info.Type () == 0 ||
 		info.Type () == ccUncompressed)
 		{
@@ -3481,7 +4050,8 @@ void dng_image_table::CompressImage (const dng_image_table_compression_info &inf
 
 	GetStream (readStream);
 
-	fCompressionType = info.Type ();
+	if (fPayload)
+		fPayload->fCompressionType = info.Type ();
 
 	}
 
@@ -3490,11 +4060,9 @@ void dng_image_table::CompressImage (const dng_image_table_compression_info &inf
 void dng_image_table::SetData (const dng_image_table_data &data)
 	{
 	
-	fImage           = data.fImage;
+	fPayload = data.fPayload;
 
-	fCompressedData  = data.fCompressedData;
-
-	fCompressionType = data.fCompressionType;
+	fPinnedImage.reset ();
 	
 	}
 
@@ -3503,12 +4071,30 @@ void dng_image_table::SetData (const dng_image_table_data &data)
 void dng_image_table::GetData (dng_image_table_data &data) const
 	{
 	
-	data.fImage			  = fImage;
-
-	data.fCompressedData  = fCompressedData;
-
-	data.fCompressionType = fCompressionType;
+	data.fPayload = fPayload;
 	
+	}
+
+/*****************************************************************************/
+
+void dng_image_table::AdoptFingerprint (const dng_fingerprint &fingerprint)
+	{
+
+	if (!fPayload || !fingerprint.IsValid () || Fingerprint () == fingerprint)
+		return;
+
+	// Share the cached data for this fingerprint if present; otherwise add
+	// this table's data to the cache under the fingerprint.
+
+	if (!ExtractFromCache (fingerprint))
+		{
+
+		SetFingerprintDirect (fingerprint);
+
+		dng_big_table_cache::Add (&gImageTableCache, *this);
+
+		}
+
 	}
 
 /*****************************************************************************/
@@ -3587,7 +4173,7 @@ bool dng_packed_image_table::IsValid () const
 uint32 dng_packed_image_table::PackedBytes () const
 	{
 			
-	return fBlock ? fBlock->LogicalSize () : 0;
+	return fBlock ? fBlock->Size () : 0;
 			
 	}
 
@@ -3723,9 +4309,15 @@ void dng_packed_image_table::Unpack (dng_abort_sniffer *sniffer)
 			
 	AutoPtr<dng_image_table> table (MakeTable ());
 
+	// May read spilled bytes back from disk (CR-4209840).
+
+	const std::shared_ptr<const dng_memory_block> block = fBlock->Acquire ();
+
+	DNG_REQUIRE (block, "Cannot unpack invalid block");
+
 	if (!table->DecodeFromBinary (*host,
-								  fBlock->Buffer_uint8 (),
-								  fBlock->LogicalSize ()))
+								  block->Buffer_uint8 (),
+								  block->LogicalSize ()))
 		{
 
 		ThrowBadFormat ("Could not Unpack block to cr_image_table");
@@ -3763,10 +4355,15 @@ void dng_packed_image_table::Pack (dng_abort_sniffer *sniffer)
 
 	uint32 compressedSize = 0;
 
-	fBlock.reset (fTable->EncodeAsBinary (host->Allocator (),
-										  compressedSize));
+	std::shared_ptr<const dng_memory_block> block
+		(fTable->EncodeAsBinary (host->Allocator (),
+								 compressedSize));
+
+	fBlock = WrapImageTableBytes (block);
 
 	fTable.reset ();
+
+	fBlock = gPackedImageTableCache.AdoptBlock (Fingerprint (), fBlock);
 
 	}
 
@@ -3831,7 +4428,7 @@ bool dng_packed_image_table::GetStream (dng_stream &stream)
 
 	stream.Get (block->Buffer (), bytes);
 
-	fBlock.reset (block.Release ());
+	fBlock = WrapImageTableBytes (std::shared_ptr<const dng_memory_block> (block.Release ()));
 
 	return true;
 
@@ -3872,7 +4469,7 @@ void dng_packed_image_table::PutStream (dng_stream &stream,
 	std::shared_ptr<const dng_memory_block> block;
 
 	if (fBlock)
-		block = fBlock;
+		block = fBlock->Acquire ();
 
 	// Otherwise, first encode the table into a temporary block.
 

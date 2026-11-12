@@ -39,8 +39,9 @@ class dng_mosaic_info
 		dng_point fCFAPatternSize;
 
 		/// CFA pattern from CFAPattern tag in the \ref spec_tiff_ep "TIFF/EP specification."
+		/// Storage outside fCFAPatternSize is initialized but is not a sample.
 
-		uint8 fCFAPattern [kMaxCFAPattern] [kMaxCFAPattern];
+		uint8 fCFAPattern [kMaxCFAPattern] [kMaxCFAPattern] = {};
 		
 		/// Number of color planes in DNG input.
 

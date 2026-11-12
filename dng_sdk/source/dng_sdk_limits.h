@@ -116,6 +116,35 @@ const uint32 kMaxParseDepth = 10;
 
 /*****************************************************************************/
 
+/// CR-4209661 T-M1: Maximum total number of MakerNote IFD entries parsed by
+/// a single dng_info object. kMaxParseDepth bounds recursion depth but not
+/// breadth, so a MakerNote IFD whose entries refer back to itself could
+/// otherwise cause exponential parse work. Real MakerNotes use at most a
+/// few thousand entries in total, so this limit is very conservative.
+
+const uint32 kMaxMakerNoteEntries = 1024 * 1024;
+
+/*****************************************************************************/
+
+/// CR-4209661 A1-11: Budget for the total out-of-line tag payload bytes
+/// processed from one logical file (see dng_tag_payload_budget), as a
+/// multiple of the largest stream length seen plus a fixed allowance.
+/// Valid payloads do not overlap except through nesting (e.g. MakerNote
+/// or DNGPrivateData contents), so real files stay well below this.
+/// Aliased IFDs and tags that repeatedly reference the same payload are
+/// what can exceed it.
+
+const uint64 kTagPayloadBudgetLengthFactor = 4;
+
+const uint64 kTagPayloadBudgetAllowance = 64 * 1024 * 1024;
+
+/// CR-4209661 A1-11: Out-of-line tag payloads at least this large also
+/// trigger an abort check before they are parsed.
+
+const uint64 kTagPayloadAbortCheckBytes = 64 * 1024;
+
+/*****************************************************************************/
+
 #endif	// __dng_sdk_limits__
 	
 /*****************************************************************************/

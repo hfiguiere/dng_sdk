@@ -122,20 +122,32 @@ void dng_hue_sat_map::SetDivisions (uint32 hueDivisions,
 		return;
 		}
 
+	// CR-4209661 T-M8: Compute all sizes and allocate and zero the new
+	// table before changing any member. A size overflow or allocation
+	// failure then leaves this map unchanged, with its dimensions still
+	// consistent with its existing buffer.
+
+	const uint32 hueStep = satDivisions;
+	const uint32 valStep = SafeUint32Mult (hueDivisions, hueStep);
+
+	dng_safe_uint32 size = (dng_safe_uint32 (valDivisions) *
+							dng_safe_uint32 (hueDivisions) *
+							dng_safe_uint32 (satDivisions));
+
+	size *= (uint32) sizeof (HSBModify);
+
+	dng_ref_counted_block deltas (size.Get ());
+
+	DoZeroBytes (deltas.Buffer (), size.Get ());
+
 	fHueDivisions = hueDivisions;
 	fSatDivisions = satDivisions;
 	fValDivisions = valDivisions;
 	
-	fHueStep = satDivisions;
-	fValStep = SafeUint32Mult (hueDivisions, fHueStep);
+	fHueStep = hueStep;
+	fValStep = valStep;
 
-	dng_safe_uint32 size (DeltasCount ());
-
-	size *= (uint32) sizeof (HSBModify);
-	
-	fDeltas.Allocate (size.Get ());
-	
-	DoZeroBytes (fDeltas.Buffer (), size.Get ());
+	fDeltas = deltas;
 
 	fRuntimeFingerprint.Clear ();
 

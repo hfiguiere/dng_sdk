@@ -1464,6 +1464,38 @@ bool dng_camera_profile::IsValid (uint32 channels) const
 
 /*****************************************************************************/
 
+// CR-4209661 T-M2: Hue/sat map and look table data counts are validated in
+// dng_camera_profile_info::ParseTag against the dimensions known when the
+// data tag is parsed. A later duplicate dimensions tag can change those
+// dimensions, so recheck the saved count against the final dimensions
+// before allocating the map. Both the full encoding and the encoding that
+// omits saturation zero are accepted. Returns false for a mismatch, in
+// which case the map is omitted, as the parser does for a data tag whose
+// count does not match.
+
+static bool HueSatMapCountMatches (uint32 count,
+								   uint32 hues,
+								   uint32 sats,
+								   uint32 vals,
+								   bool &skipSat0)
+	{
+
+	skipSat0 = (count == SafeUint32Mult (hues,
+										 SafeUint32Sub (sats, 1),
+										 vals,
+										 3));
+
+	if (skipSat0)
+		{
+		return true;
+		}
+
+	return count == SafeUint32Mult (hues, sats, vals, 3);
+
+	}
+
+/*****************************************************************************/
+
 void dng_camera_profile::ReadHueSatMap (dng_stream &stream,
 										dng_hue_sat_map &hueSatMap,
 										uint32 hues,
@@ -1611,18 +1643,20 @@ void dng_camera_profile::Parse (dng_stream &stream,
 
 	SetProfileCalibrationSignature (profileInfo.fProfileCalibrationSignature.Get ());
 
+	bool skipSat0 = false;
+
 	if (profileInfo.fHueSatDeltas1Offset != 0 &&
-		profileInfo.fHueSatDeltas1Count	 != 0)
+		profileInfo.fHueSatDeltas1Count	 != 0 &&
+		HueSatMapCountMatches (profileInfo.fHueSatDeltas1Count,
+							   profileInfo.fProfileHues,
+							   profileInfo.fProfileSats,
+							   profileInfo.fProfileVals,
+							   skipSat0))
 		{
 
 		TempBigEndian setEndianness (stream, profileInfo.fBigEndian);
 
 		stream.SetReadPosition (profileInfo.fHueSatDeltas1Offset);
-		
-		bool skipSat0 = (profileInfo.fHueSatDeltas1Count ==
-						 SafeUint32Mult (profileInfo.fProfileHues,
-										 SafeUint32Sub (profileInfo.fProfileSats, 1),
-										 profileInfo.fProfileVals, 3));
 
 		ReadHueSatMap (stream,
 					   fHueSatDeltas1,
@@ -1634,17 +1668,17 @@ void dng_camera_profile::Parse (dng_stream &stream,
 		}
 
 	if (profileInfo.fHueSatDeltas2Offset != 0 &&
-		profileInfo.fHueSatDeltas2Count	 != 0)
+		profileInfo.fHueSatDeltas2Count	 != 0 &&
+		HueSatMapCountMatches (profileInfo.fHueSatDeltas2Count,
+							   profileInfo.fProfileHues,
+							   profileInfo.fProfileSats,
+							   profileInfo.fProfileVals,
+							   skipSat0))
 		{
 
 		TempBigEndian setEndianness (stream, profileInfo.fBigEndian);
 
 		stream.SetReadPosition (profileInfo.fHueSatDeltas2Offset);
-
-		bool skipSat0 = (profileInfo.fHueSatDeltas2Count ==
-						 SafeUint32Mult (profileInfo.fProfileHues,
-										 SafeUint32Sub (profileInfo.fProfileSats, 1),
-										 profileInfo.fProfileVals, 3));
 
 		ReadHueSatMap (stream,
 					   fHueSatDeltas2,
@@ -1656,17 +1690,17 @@ void dng_camera_profile::Parse (dng_stream &stream,
 		}
 
 	if (profileInfo.fHueSatDeltas3Offset != 0 &&
-		profileInfo.fHueSatDeltas3Count	 != 0)
+		profileInfo.fHueSatDeltas3Count	 != 0 &&
+		HueSatMapCountMatches (profileInfo.fHueSatDeltas3Count,
+							   profileInfo.fProfileHues,
+							   profileInfo.fProfileSats,
+							   profileInfo.fProfileVals,
+							   skipSat0))
 		{
 
 		TempBigEndian setEndianness (stream, profileInfo.fBigEndian);
 
 		stream.SetReadPosition (profileInfo.fHueSatDeltas3Offset);
-
-		bool skipSat0 = (profileInfo.fHueSatDeltas3Count ==
-						 SafeUint32Mult (profileInfo.fProfileHues,
-										 SafeUint32Sub (profileInfo.fProfileSats, 1),
-										 profileInfo.fProfileVals, 3));
 
 		ReadHueSatMap (stream,
 					   fHueSatDeltas3,
@@ -1678,17 +1712,17 @@ void dng_camera_profile::Parse (dng_stream &stream,
 		}
 
 	if (profileInfo.fLookTableOffset != 0 &&
-		profileInfo.fLookTableCount	 != 0)
+		profileInfo.fLookTableCount	 != 0 &&
+		HueSatMapCountMatches (profileInfo.fLookTableCount,
+							   profileInfo.fLookTableHues,
+							   profileInfo.fLookTableSats,
+							   profileInfo.fLookTableVals,
+							   skipSat0))
 		{
 
 		TempBigEndian setEndianness (stream, profileInfo.fBigEndian);
 
 		stream.SetReadPosition (profileInfo.fLookTableOffset);
-
-		bool skipSat0 = (profileInfo.fLookTableCount ==
-						 SafeUint32Mult (profileInfo.fLookTableHues,
-										 SafeUint32Sub (profileInfo.fLookTableSats, 1),
-										 profileInfo.fLookTableVals, 3));
 
 		ReadHueSatMap (stream,
 					   fLookTable,

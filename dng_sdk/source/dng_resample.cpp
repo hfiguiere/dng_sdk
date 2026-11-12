@@ -606,6 +606,13 @@ dng_resample_task::dng_resample_task (const dng_image &srcImage,
 	,	fSrcTileSize ()
 	
 	{
+
+	// CR-4209661 T-L6: ProcessArea iterates over the destination planes
+	// and reads the same plane from the source buffer, so the source must
+	// have at least as many planes as the destination.
+
+	DNG_REQUIRE (srcImage.Planes () >= dstImage.Planes (),
+				 "dng_resample_task requires src planes >= dst planes");
 	
 	if (srcImage.PixelSize	() <= 2 &&
 		dstImage.PixelSize	() <= 2 &&

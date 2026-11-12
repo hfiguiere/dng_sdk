@@ -237,6 +237,35 @@ bool ParseDateTimeTag (dng_stream &stream,
 							
 /*****************************************************************************/
 
+/// CR-4209661 A1-11: Aggregate budget for out-of-line tag payload bytes
+/// parsed from one logical file. The limit is kTagPayloadBudgetLengthFactor
+/// times the largest stream length seen so far, plus
+/// kTagPayloadBudgetAllowance (see dng_sdk_limits.h). The limit never
+/// shrinks, so shorter nested streams (e.g. MakerNote or DNGPrivateData
+/// substreams) share the root file's budget rather than reducing it.
+
+class dng_tag_payload_budget
+	{
+
+	private:
+
+		uint64 fBytes = 0;
+
+		uint64 fLimit = 0;
+
+	public:
+
+		/// Charges tagDataSize bytes for a payload read from a stream of
+		/// length streamLength. Returns false, without charging, if the
+		/// budget would be exceeded.
+
+		bool Consume (uint64 streamLength,
+					  uint64 tagDataSize);
+
+	};
+
+/*****************************************************************************/
+
 #endif
 	
 /*****************************************************************************/

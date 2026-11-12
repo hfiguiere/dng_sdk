@@ -1175,7 +1175,7 @@
 					"$(inherited)",
 				);
 				OTHER_CPLUSPLUSFLAGS = (
-					"-std=c++11",
+					"-std=c++17",
 					"-fstack-protector",
 					"-DNDEBUG",
 				);
@@ -1263,7 +1263,7 @@
 					"$(inherited)",
 				);
 				OTHER_CPLUSPLUSFLAGS = (
-					"-std=c++11",
+					"-std=c++17",
 					"-fstack-protector",
 					"-DNDEBUG=1",
 					"-D_NDEBUG=1",
@@ -1386,7 +1386,7 @@
 					"$(inherited)",
 				);
 				OTHER_CPLUSPLUSFLAGS = (
-					"-std=c++11",
+					"-std=c++17",
 					"-fstack-protector",
 					"-DNDEBUG",
 				);
@@ -1508,7 +1508,7 @@
 					"$(inherited)",
 				);
 				OTHER_CPLUSPLUSFLAGS = (
-					"-std=c++11",
+					"-std=c++17",
 					"-fstack-protector",
 					"-DDEBUG=1",
 					"-D_DEBUG=1",

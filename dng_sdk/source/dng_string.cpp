@@ -1938,7 +1938,12 @@ void dng_string::NormalizeAsCommaSeparatedNumbers ()
 			// Support number formats such as "3", "+3.0", "-3.1416", "314.16e-2",
 			// "0.31416E1", but no hex/octal number representations.
 
-			if (isdigit ((int) c) || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E')
+			// CR-4209661 T-M7: c is a decoded Unicode scalar value, which
+			// may exceed the unsigned char range that isdigit accepts
+			// (undefined behavior). Test for ASCII digits explicitly.
+
+			if ((c >= '0' && c <= '9') ||
+				c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E')
 				{
 				
 				newData.push_back ((char) c);

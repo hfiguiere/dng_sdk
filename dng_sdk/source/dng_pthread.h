@@ -72,7 +72,9 @@ typedef unsigned long dng_pthread_key_t;
 #define DNG_PTHREAD_COND_INITIALIZER ((struct dng_pthread_cond_impl *)-1)
 
 struct _dng_pthread_once_t {
-	int inited;
+	// CR-4209661 T-L2: inited is long (same size and alignment as int on
+	// Windows) so it can be read and published with Interlocked operations.
+	long inited;
 	long semaphore;
 };
 

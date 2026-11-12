@@ -61,6 +61,12 @@ additional dependencies:
 
 Release Notes / Changelog:
 
+1.7.1 2802 November 10, 2026
+
+    - Big table memory management enhancements.
+
+    - Vulnerability issue fixes.
+
 1.7.1 2768 October 13, 2026
 
     - Exif Lens Vignette Info support.

@@ -259,6 +259,18 @@ namespace
 		}
 	}
 
+	// CR-4208475 Q-M3 / CR-4209661: A wait on this thread's semaphore failed,
+	// but a lock owner had already granted this thread the lock and
+	// signaled the semaphore. Consume that signal so a later wait on the
+	// same semaphore cannot return early. If it cannot be consumed, retire
+	// the thread's semaphore so a fresh one is created on next use.
+
+	void ConsumeGrantSignal(HANDLE semaphore)
+	{
+		if (::WaitForSingleObject(semaphore, 0) != WAIT_OBJECT_0)
+			FreeThreadSemaphore();
+	}
+
 	struct trampoline_args
 	{
 		void *(*func)(void *);
@@ -910,17 +922,22 @@ int dng_pthread_once(dng_pthread_once_t *once, void (*init_func)())
 	if (once == NULL || init_func == NULL)
 		return EINVAL;
 
-	if (once->inited)
+	// CR-4209661 T-L2: Read and publish inited with Interlocked operations
+	// (full memory barriers) so any thread that observes inited != 0 also
+	// observes all of init_func's writes, including on weakly ordered
+	// processors such as ARM64.
+
+	if (::InterlockedCompareExchange(&once->inited, 0, 0) != 0)
 		return 0;
 
 	if (::InterlockedIncrement(&once->semaphore) == 0)
 	{
 		init_func();
-		once->inited = 1;
+		::InterlockedExchange(&once->inited, 1);
 	}
 	else
 	{
-		while (!once->inited)
+		while (::InterlockedCompareExchange(&once->inited, 0, 0) == 0)
 			Sleep(0);
 	}
 
@@ -1032,6 +1049,41 @@ struct dng_pthread_rwlock_impl
 
 		::ReleaseSemaphore(semaphore, 1, NULL);
 	}
+
+	// CR-4208475 Q-M3 / CR-4209661: Unlink a stack waiter whose wait failed,
+	// so a later unlock cannot access its expired storage. Must be called
+	// with mutex held. Returns true if the waiter was still queued (it was
+	// never granted the lock), or false if an unlock had already removed it
+	// and granted it the lock. WakeHeadWaiter does not maintain prev links,
+	// so search forward from the head.
+
+	bool RemoveWaiter (rw_waiter *waiter)
+	{
+		rw_waiter *previous = NULL;
+
+		for (rw_waiter *current = head_waiter;
+			 current != NULL;
+			 previous = current, current = current->next)
+		{
+			if (current == waiter)
+			{
+				if (previous != NULL)
+					previous->next = current->next;
+				else
+					head_waiter = current->next;
+
+				if (current->next != NULL)
+					current->next->prev = previous;
+
+				if (tail_waiter == current)
+					tail_waiter = previous;
+
+				return true;
+			}
+		}
+
+		return false;
+	}
 #endif
 	
 	// Non copyable
@@ -1121,6 +1173,12 @@ int dng_pthread_rwlock_rdlock(dng_pthread_rwlock_t *rwlock)
 		{
 			semaphore = GetThreadSemaphore();
 
+			// CR-4208475 Q-M3 / CR-4209661: Never enqueue a stack waiter
+			// without a valid, thread-owned semaphore.
+
+			if (semaphore == NULL)
+				return ERROR_NOT_ENOUGH_MEMORY;
+
 			this_wait.next = NULL;
 			this_wait.semaphore = semaphore;
 			this_wait.is_writer = false;
@@ -1142,7 +1200,29 @@ int dng_pthread_rwlock_rdlock(dng_pthread_rwlock_t *rwlock)
 	}
 
 	if (result == 0 && doWait)
-		result = (WaitForSingleObject(semaphore, INFINITE) == WAIT_OBJECT_0) ? 0 : -1;
+	{
+		if (WaitForSingleObject(semaphore, INFINITE) != WAIT_OBJECT_0)
+		{
+			// CR-4208475 Q-M3 / CR-4209661: The wait failed. If this waiter
+			// is still queued, unlink it and fail. Otherwise an unlock has
+			// already granted this thread the read lock, so keep it to
+			// leave the reader accounting consistent, and consume the
+			// grant's semaphore signal.
+
+			bool stillQueued;
+
+			{
+				ScopedLock lock (real_rwlock.mutex);
+
+				stillQueued = real_rwlock.RemoveWaiter (&this_wait);
+			}
+
+			if (stillQueued)
+				result = -1;
+			else
+				ConsumeGrantSignal (semaphore);
+		}
+	}
 
 	return result;
 #endif
@@ -1289,6 +1369,13 @@ int dng_pthread_rwlock_wrlock(dng_pthread_rwlock_t *rwlock)
 			{
 			semaphore = GetThreadSemaphore();
 
+			// CR-4208475 Q-M3 / CR-4209661: Never enqueue a stack waiter
+			// or count a waiting writer without a valid, thread-owned
+			// semaphore.
+
+			if (semaphore == NULL)
+				return ERROR_NOT_ENOUGH_MEMORY;
+
 			this_wait.next = NULL;
 			this_wait.semaphore = semaphore;
 			this_wait.is_writer = true;
@@ -1312,7 +1399,33 @@ int dng_pthread_rwlock_wrlock(dng_pthread_rwlock_t *rwlock)
 	}
 
 	if (result == 0 && doWait)
-		result = (WaitForSingleObject(semaphore, INFINITE) == WAIT_OBJECT_0) ? 0 : -1;
+	{
+		if (WaitForSingleObject(semaphore, INFINITE) != WAIT_OBJECT_0)
+		{
+			// CR-4208475 Q-M3 / CR-4209661: The wait failed. If this waiter
+			// is still queued, unlink it, stop counting it as a waiting
+			// writer, and fail. Otherwise an unlock has already granted
+			// this thread the write lock, so keep it to leave the writer
+			// accounting consistent, and consume the grant's semaphore
+			// signal.
+
+			bool stillQueued;
+
+			{
+				ScopedLock lock (real_rwlock.mutex);
+
+				stillQueued = real_rwlock.RemoveWaiter (&this_wait);
+
+				if (stillQueued)
+					real_rwlock.writers_waiting--;
+			}
+
+			if (stillQueued)
+				result = -1;
+			else
+				ConsumeGrantSignal (semaphore);
+		}
+	}
 
 	return result;
 #endif

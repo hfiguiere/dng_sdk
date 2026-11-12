@@ -22,6 +22,7 @@
 #include "dng_errors.h"
 #include "dng_exif.h"
 #include "dng_ifd.h"
+#include "dng_parse_utils.h"
 #include "dng_sdk_limits.h"
 #include "dng_shared.h"
 #include "dng_uncopyable.h"
@@ -76,6 +77,16 @@ class dng_info: private dng_uncopyable
 		uint32 fMakerNoteNextIFD;
 
 		uint32 fParseDepth = 0;
+
+		// CR-4209661 T-M1: Running total of MakerNote IFD entries parsed by
+		// this object, bounded by kMaxMakerNoteEntries.
+
+		uint32 fMakerNoteEntryCount = 0;
+
+		// CR-4209661 A1-11: Aggregate out-of-line tag payload bytes
+		// processed by this object. See ConsumeTagPayloadBudget.
+
+		dng_tag_payload_budget fTagPayloadBudget;
 
 	public:
 	
@@ -177,6 +188,16 @@ class dng_info: private dng_uncopyable
 									 
 		virtual void ParseDNGPrivateData (dng_host &host,
 										  dng_stream &stream);
+
+		// CR-4209661 A1-11: Charge tagDataSize out-of-line tag payload
+		// bytes against this object's aggregate payload budget (see
+		// dng_tag_payload_budget). Returns false, without charging, if the
+		// budget would be exceeded; the caller then skips the tag. Also
+		// checks for abort before large payloads.
+
+		bool ConsumeTagPayloadBudget (dng_host &host,
+									  dng_stream &stream,
+									  uint64 tagDataSize);
 
 	protected:
 

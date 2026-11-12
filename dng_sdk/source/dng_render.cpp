@@ -1019,6 +1019,19 @@ void dng_render_task::Start (uint32 threadCount,
 		
 		}
 		
+	// CR-4211049: Dispatch uses the actual stage-3 planes, including enhanced
+	// images. Only the one-plane copy path can run without a populated camera
+	// transform; do not infer a color space from a different profile count.
+
+	if (fSrcPlanes != 1 &&
+		((fSrcPlanes != 3 && fSrcPlanes != 4) ||
+		 fCameraWhite.Count () < fSrcPlanes ||
+		 fCameraToRGB.Rows () != 3 ||
+		 fCameraToRGB.Cols () < fSrcPlanes))
+		{
+		ThrowBadFormat ("Missing camera transform for stage-3 image");
+		}
+
 	// Compute exposure/shadows ramp.
 
 	fBaselineExposure = (fNegative.TotalBaselineExposure (profileID) -
