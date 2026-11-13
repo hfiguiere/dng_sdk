@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-project('dng_sdk', 'cpp', version: '1.7')
+project('dng_sdk', 'cpp', version: '1.7.1.2802')
 
 zlib = dependency('zlib')
 expat = dependency('expat')
